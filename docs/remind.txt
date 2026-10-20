@@ -7,3 +7,127 @@
 别停留在“可能吃力”，周一就做这个测试：从教务系统截20张真实课表+写20条提醒指令，分别喂给GLM-4-9B和Qwen2.5-7B（Ollama直接拉），统计课表字段抽取准确率和时间解析准确率。半天出结果。测出来90%+，架构争论结束、数据进申报书；测出来70%，那就调模型/调prompt，或把该任务划入授权升级清单——无论哪个结果，你都拿到了一个别人没有的东西：实测数字。这正是我第一轮说的“把名词做成数据”，只不过这次是把架构选型做成数据。
 
 最后一句：你今天的这个疑问，答辩时评委几乎必然会问出来。现在把它想透、测掉，它就从“硬伤”变成你答辩时主动亮出来的深度点——“我们实测过本地模型在课表抽取上达到XX%准确率，未达标任务采用授权升级机制”，这句话说完，全场没有第二支大一队伍接得住。
+
+
+AI plan recommand:
+下面是 仍然值得打磨的 6 处细节 ，按优先级排：
+
+### 1. Backend/models/ 注释写错了（高）
+你写的注释是：
+
+1
+
+`-models- (ORM 模型) //用于识别用户上传的课表图片，提取课程信息、时间、地点等`
+
+"识别课表图片"是 AI / OCR 层的职责 ，不是 ORM 模型的职责。`models/` 里应该放的是 SQLAlchemy / Peewee 的表结构定义（User、Schedule、Reminder、Review、Consult、Task、Knowledge 等）。建议改成：
+
+1
+
+`-models- (ORM 模型) //用于定义数据库表结构，包括用户、课表、提醒、复习计划、咨询记录、任务、知识库等`
+
+图片解析/OCR 建议单独放到`skill/ocr_schedule.py` 或`AI/` 下的`ocr.py` ，否则读者会误以为 ORM 在做视觉识别。
+
+### 2. Skill 层命名未统一（中）
+你保留了`agent_search.py` /`agent_system.py` /`agent_gpa.py` /`agent_review.py` ，但新加了`base.py` 。既然已经决定用`skill_` 前缀（`base.py` 的存在暗示了这一点），建议一并改掉，否则两套命名并存：
+
+1
+2
+3
+4
+5
+6
+
+`skill/
+├── base.py
+├── skill_search.py
+├── skill_system.py
+├── skill_gpa.py
+└── skill_review.py`
+
+同理，`Backend/usr/` 目录名也偏"旧风格"——既然里面是`auth.py` /`schedule.py` /`reminder.py` ……，不如直接叫`Backend/modules/` 或`Backend/routes/` ，和`service/` 、`schemas/` 风格对齐。
+
+### 3. middleware.py / exception.py 文件会膨胀（中）
+把所有中间件塞进一个`middleware.py` 、所有异常塞进一个`exception.py` ，项目稍大后这两个文件会很长。建议改为 包 ：
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+
+`Backend/
+├── middleware/
+│   ├── __init__.py
+│   ├── auth.py       # JWT 校验
+│   ├── cors.py
+│   ├── logger.py     # 请求日志
+│   └── rate_limit.py
+└── exceptions/
+    ├── __init__.py
+    ├── auth.py       # Token 过期/无效
+    ├── schedule.py   # 课表冲突
+    └── common.py     # 通用 4xx/5xx`
+
+这样`main.py` /`app.py` 里 import 也更清晰。
+
+### 4. docs/reminder.txt 定位尴尬（低）
+`reminder.txt` 放在`docs/` 里，但内容是"开发过程中所遇到的问题、解决方法"——这更像 项目笔记/踩坑记录 ，和 API 文档、数据库文档性质不同。两个选择：
+
+- 改名为`docs/NOTES.md` 或`docs/TROUBLESHOOTING.md` ，并升级为 Markdown；
+- 或者移到项目根目录叫`DEV_NOTES.md` ，和 README 平级。
+另外`plan.md` 本身已经是项目计划文档，`docs/plan.md` 和根目录`plan.md` 容易重复。建议根目录只留`README.md` +`plan.md` （开发计划），`docs/` 放技术文档（API、数据库、部署手册），职责分开。
+
+### 5. 测试目录太单薄（中）
+`test/test.py` 一个文件扛不住 Agent 项目。至少拆成：
+
+1
+2
+3
+4
+5
+6
+7
+8
+
+`test/
+├── __init__.py
+├── conftest.py          # pytest 夹具（测试库、临时 DB、mock 模型）
+├── test_backend/        # 路由 + service + schemas
+├── test_skill/          # 各 skill 的输入输出
+├── test_ai/             # orchestrator、model_router、prompt
+├── test_mcp/            # 地图/天气 mock
+└── test_e2e/            # 端到端：一句自然语言 → 多个工具联动`
+
+Agent 项目最核心的测试是 orchestrator 的意图识别 + 工具链编排 ，建议优先写这部分的 mock 测试。
+
+### 6. 缺一个"定时提醒"的归属（高）
+你的项目核心卖点之一是"每节课前主动提醒"，但当前结构里：
+
+- `scripts/schedule.py` 叫"任务调度脚本"——名字和`Backend/usr/schedule.py` （课表） 严重冲突 ，极易误 import；
+- 真正的"主动提醒"逻辑（查课表 → 算通勤 → 发提醒）散落在哪并不明确。
+建议：
+
+1
+2
+3
+4
+5
+6
+7
+
+`scripts/
+├── migrate.py
+├── seed.py
+└── scheduler.py        # 重命名，APScheduler / Celery 入口
+
+skill/
+└── skill_remind.py     # 主动提醒的核心 skill：查课表 + 查天气/地图 + 推送`
+
+`skill_remind.py` 由`scripts/scheduler.py` 定时触发，也允许用户通过自然语言由 orchestrator 调用。 "主动服务"的闭环就串起来了。
