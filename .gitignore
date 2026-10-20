@@ -1,0 +1,8 @@
+# .gitignore
+.env
+Data/*.db
+Data/upload/
+__pycache__/
+*.pyc
+node_modules/
+dist/
