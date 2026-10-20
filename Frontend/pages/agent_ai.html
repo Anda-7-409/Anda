@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<!-- 程序服务主要实现页 --集成AI_agnet -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>安答 · AI Agent 工作台</title>
+<style>
+    /* 程序服务主要实现页 --集成AI_agnet */
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; font-family:"Microsoft YaHei",sans-serif; background:#f5f7fa; color:#333; font-size:14px; }
+a { color:#1a73e8; text-decoration:none; }
+/* 全局样式 */
+
+/* 三栏总布局 */
+/* 左中右布局 */
+.layout { display:flex; height:100vh; width:100vw; overflow:hidden; }
+.col { display:flex; flex-direction:column; height:100%; background:#fff; }
+.col-left { width:280px; border-right:1px solid #e4e7ed; }
+.col-center { flex:1; }
+.col-right { width:320px; border-left:1px solid #e4e7ed; }
+
+/* 通用面板 */
+.panel { display:flex; flex-direction:column; overflow:hidden; }
+.panel-header { flex-shrink:0; padding:12px 16px; font-weight:bold; font-size:14px; border-bottom:1px solid #eef0f3; background:#fafbfc; display:flex; align-items:center; justify-content:space-between; }
+.panel-body { flex:1; overflow-y:auto; padding:8px; }
+
+/* 左栏上下分栏 */
+.col-left .file-manager { flex:0 0 45%; border-bottom:1px solid #eef0f3; }
+.col-left .history { flex:1; }
+
+/* 文件管理器树 */
+.fm-tree { list-style:none; padding-left:6px; }
+.fm-tree li { padding:4px 6px; cursor:pointer; border-radius:4px; font-size:13px; }
+.fm-tree li:hover { background:#eef5ff; }
+.fm-tree .folder::before { content:"📁 "; }
+.fm-tree .file::before { content:"📄 "; }
+
+/* 历史对话 */
+.history-new { width:100%; padding:7px; background:#1a73e8; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:13px; margin-bottom:8px; }
+.history-new:hover { background:#1557b0; }
+.history-item { padding:10px 12px; border-radius:6px; cursor:pointer; margin-bottom:4px; }
+.history-item:hover { background:#eef5ff; }
+.history-item.active { background:#e0edff; }
+.history-title { font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.history-time { font-size:11px; color:#999; margin-top:2px; }
+
+/* 中间对话区 */
+.chat-header { flex-shrink:0; padding:14px 20px; border-bottom:1px solid #eef0f3; background:#fff; display:flex; align-items:center; justify-content:space-between; }
+.chat-header .title { font-size:16px; font-weight:bold; }
+.chat-header .status { font-size:12px; color:#43a047; }
+.chat-messages { flex:1; overflow-y:auto; padding:20px; background:#f5f7fa; }
+.msg { margin-bottom:16px; display:flex; }
+.msg.user { justify-content:flex-end; }
+.msg.tool { justify-content:center; }
+.msg .bubble { max-width:70%; padding:10px 14px; border-radius:10px; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+.msg.user .bubble { background:#1a73e8; color:#fff; border-bottom-right-radius:2px; }
+.msg.ai .bubble { background:#fff; color:#333; border:1px solid #e4e7ed; border-bottom-left-radius:2px; }
+.msg.tool .bubble { background:#f0f4ff; color:#1a73e8; font-size:12px; border:1px dashed #c3d6f9; }
+.chat-input { flex-shrink:0; padding:12px 20px; border-top:1px solid #eef0f3; background:#fff; }
+.chat-input textarea { width:100%; resize:none; border:1px solid #e4e7ed; border-radius:8px; padding:10px; font-size:14px; font-family:inherit; outline:none; height:60px; }
+.chat-input textarea:focus { border-color:#1a73e8; }
+.chat-input-row { display:flex; justify-content:flex-end; margin-top:8px; }
+.send-btn { padding:6px 18px; background:#1a73e8; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:13px; }
+.send-btn:disabled { background:#9dc3f5; cursor:not-allowed; }
+.send-btn:hover:not(:disabled) { background:#1557b0; }
+
+/* 右栏上下分栏 */
+.col-right .schedule { flex:0 0 50%; border-bottom:1px solid #eef0f3; }
+.col-right .skills-mcp { flex:1; }
+
+/* 日程卡片 */
+.sch-item { padding:10px; border-left:3px solid #1a73e8; background:#f0f4ff; border-radius:4px; margin-bottom:8px; }
+.sch-item .t { font-weight:600; font-size:13px; }
+.sch-item .meta { font-size:12px; color:#666; margin-top:3px; }
+
+/* 技能/MCP 标签 */
+.section-title { font-size:12px; color:#999; margin:10px 4px 6px; }
+.tag-row { display:flex; flex-wrap:wrap; gap:6px; padding:0 4px; }
+.tag { padding:4px 10px; background:#eef5ff; color:#1a73e8; border-radius:12px; font-size:12px; }
+.tag:hover { background:#dce8ff; }
+</style>
+</head>
+<body>
+    <!-- 三栏总布局 -->
+<div class="layout">
+  <!-- 左栏 -->
+  <aside class="col col-left">
+    <!-- 文件管理器 -->
+    <section class="panel file-manager">
+        <!-- 文件管理器标题 -->
+      <div class="panel-header"><span>📂 文件管理器</span></div>
+        <!-- 文件管理器树 -->
+      <div class="panel-body"><ul class="fm-tree" id="fm-tree"></ul></div>
+        <!-- 文件管理器树点击事件 -->
+        <script>
+            document.getElementById('fm-tree').addEventListener('click', (e) => {
+                if (e.target.tagName === 'LI') {
+                    e.target.classList.toggle('active');
+                }
+            });
+        </script>
+    </section>
+    <!-- 历史对话 -->
+    <section class="panel history">
+        <!-- 历史对话标题 -->
+      <div class="panel-header"><span>💬 历史对话</span></div>
+        <!-- 历史对话内容 -->
+      <div class="panel-body">
+        <!-- 新对话按钮 -->
+        <button class="history-new" id="new-chat">+ 新对话</button>
+        <!-- 历史对话列表 -->
+        <div id="history-list"></div>
+      </div>
+    </section>
+  </aside>
+
+  <!-- 中栏 -->
+  <!-- 对话区 -->
+  <main class="col col-center">
+    <!-- 对话区标题 -->
+    <div class="chat-header">
+        <!-- 对话区标题 -->
+      <span class="title">安答 AI Agent</span>
+        <!-- 对话区状态 -->
+      <span class="status">● 在线</span>
+    </div>
+    <!-- 对话区消息 -->
+    <div class="chat-messages" id="chat-messages"></div>
+    <!-- 对话区输入 -->
+    <div class="chat-input">
+        <!-- 对话区输入文本框 -->
+      <textarea id="chat-input" placeholder="输入自然语言以与我们的安答对话~ （Ctrl+Enter 发送）"></textarea>
+        <!-- 对话区输入发送按钮 -->
+      <div class="chat-input-row"><button class="send-btn" id="send-btn">发送</button></div>
+    </div>
+  </main>
+
+  <!-- 右栏 -->
+  <!-- 日程卡片 -->
+  <aside class="col col-right">
+    <!-- 日程卡片标题 -->
+    <section class="panel schedule">
+        <!-- 日程卡片标题 -->
+      <div class="panel-header"><span>今日日程</span></div>
+        <!-- 日程卡片内容 -->
+      <div class="panel-body" id="schedule-list"></div>
+    </section>
+    <!-- 技能/MCP卡片 -->
+    <section class="panel skills-mcp">
+        <!-- 技能/MCP卡片标题 -->
+      <div class="panel-header"><span> 技能 and MCP</span></div>
+        <!-- 技能/MCP卡片内容 -->
+      <div class="panel-body">
+        <!-- 技能/MCP卡片内容 -->
+        <div class="section-title">可用技能 (skill)</div>
+        <-row" id="-row" id="skill-list"></div>
+        <!-- MCP 服务器 -->
+               <div class="section-title">MCP 服务器</div>
+               <!-- MCP 服务器内容 -->
+        <div class="tag-row" id="mcp-list"></div>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<script>
+// 未登录跳回首页
+// 从登录状态获取 token
+const token = localStorage.getItem('token');
+// 如果 token 不存在，跳回首页
+if (!token) { location.href = '../index.html'; }
+// 定义 API 函数
+const api = async (url, opts={}) => {
+  try {
+    // 发送 API 请求
+    const res = await fetch(url, { headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+token }, ...opts });
+    // 解析 JSON 响应
+    const data = await res.json();
+    // 返回 API 响应
+    return { ok: res.ok, data };
+    // 如果 API 请求失败，返回错误响应
+  } catch { return { ok:false, data:{} }; }
+};
+const $ = id => document.getElementById(id);
+
+// ===== 左栏上：文件管理器（对应 Data/upload 结构，mock） =====
+const fileTree = [
+    // 文件管理器树根节点
+  { type:'folder', name:'upload', children:[
+    // 子文件夹节点
+    { type:'folder', name:'1001 (小明)', children:[ {type:'file', name:'课表截图.png'}, {type:'file', name:'成绩单.pdf'} ] },
+    // 子文件夹节点
+    { type:'folder', name:'1002 (小红)', children:[ {type:'file', name:'复习大纲.docx'} ] },
+  ]}
+];
+function renderTree(nodes, parent) {
+    // 递归渲染文件管理器树
+  nodes.forEach(n => {
+    // 渲染当前节点
+    // 创建列表项
+    // 设置列表项类名
+    // 设置列表项文本内容
+    // 将列表项添加到父元素
+       const li = document.createElement('li');
+       // 设置列表项类名
+       // 设置列表项文本内容
+       // 将列表项添加到父元素
+    li.className = n.type; li.textContent = n.name;
+    // 如果当前节点有子节点，递归渲染子节点
+    // 创建子节点列表
+    // 设置子节点列表类名
+    // 设置子节点列表内边距
+    // 渲染子节点
+    // 将子节点列表添加到父元素
+       parent.appendChild(li);
+       // 递归渲染子节点
+       // 创建子节点列表
+       // 设置子节点列表类名
+       // 设置子节点列表内边距
+       // 渲染子节点
+       // 将子节点列表添加到父元素
+    if (n.children) {
+        // 创建子节点列表
+        // 设置子节点列表类名
+        // 设置子节点列表内边距
+        // 渲染子节点
+        // 将子节点列表添加到父元素
+      const ul = document.createElement('ul');
+      // 设置子节点列表类名
+      // 设置子节点列表内边距
+      ul.className = 'fm-tree'; ul.style.paddingLeft = '16px';
+      // 递归渲染子节点
+      renderTree(n.children, ul); parent.appendChild(ul);
+      // 渲染子节点
+    }
+  });
+}
+// 渲染文件管理器树
+renderTree(fileTree, $('fm-tree'));
+
+// ===== 左栏下：历史对话（localStorage 持久化） =====
+// 从 localStorage 中获取历史对话
+let history = JSON.parse(localStorage.getItem('agent_history') || '[]');
+// 渲染历史对话列表
+let currentChatId = null;
+// 保存历史对话到 localStorage
+function saveHistory(){ localStorage.setItem('agent_history', JSON.stringify(history)); }
+// 渲染历史对话列表
+function renderHistory() {
+    // 清空历史对话列表
+  const box = $('history-list'); box.innerHTML = '';
+    // 渲染历史对话列表
+    // 遍历历史对话列表
+    // 创建列表项
+    // 设置列表项类名
+    // 设置列表项文本内容
+    // 将列表项添加到父元素
+  history.forEach(h => {
+    // 渲染当前列表项
+    // 创建列表项
+    // 设置列表项类名
+    // 设置列表项文本内容
+    // 将列表项添加到父元素
+    const div = document.createElement('div');
+    // 设置列表项类名
+    // 设置列表项文本内容
+    // 将列表项添加到父元素
+    div.className = 'history-item' + (h.id===currentChatId?' active':'');
+    // 设置列表项文本内容
+    // 将列表项添加到父元素
+    div.innerHTML = `<div class="history-title">${h.title}</div><div class="history-time">${h.time}</div>`;
+    // 点击列表项时，切换到该对话
+    // 渲空对话消息
+    // 遍历该对话的所有消息
+    // 渲染消息
+    // 将消息添加到父元素
+    // 渲染历史对话列表
+    div.onclick = () => selectChat(h.id);
+    // 将列表项添加到父元素
+    box.appendChild(div);
+  });
+}
+// 切换到指定对话
+function selectChat(id) {
+    // 切换到指定对话
+  currentChatId = id;
+    // 渲空对话消息
+  const h = history.find(x=>x.id===id);
+    // 渲染指定对话的所有消息
+    // 渲空对话消息
+  $('chat-messages').innerHTML = '';
+    // 渲染指定对话的所有消息
+    // 渁�历该对话的所有消息
+    // 渲染消息
+    // 将消息添加到父元素
+    // 渲染历史对话列表
+  (h?.messages||[]).forEach(m => appendMessage(m.role, m.content, m.tool));
+    // 渲染历史对话列表
+  renderHistory();
+}
+function newChat() {
+    // 创建新对话
+  currentChatId = 'c_' + Date.now();
+    // 渲空对话消息
+  $('chat-messages').innerHTML='';
+    // 渲染新对话的所有消息
+    // 渲染新对话的所有消息
+    // 渲染新对话的所有消息
+    // 渲染新对话的所有消息
+    // 渲染新对话的所有消息
+  history.unshift({ id:currentChatId, title:'新对话', time:new Date().toLocaleString(), messages:[] });
+    // 保存新对话到 localStorage
+  saveHistory(); renderHistory(); $('chat-messages').innerHTML='';
+}
+// 点击创建新对话按钮时，创建新对话
+$('new-chat').onclick = newChat;
+
+// ===== 中栏：对话 =====
+// 渲染消息
+function appendMessage(role, content, toolName) {
+    // 渲染消息
+  const box = $('chat-messages');
+  const div = document.createElement('div');
+    // 设置消息类名
+  div.className = 'msg ' + (role==='user'?'user':(role==='tool'?'tool':'ai'));
+    // 设置消息文本内容
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+    // 设置消息文本内容
+  bubble.textContent = toolName ? `调用工具: ${toolName}\n${content}` : content;
+    // 将消息添加到父元素
+  div.appendChild(bubble); box.appendChild(div);
+    // 滚动到最底部
+  box.scrollTop = box.scrollHeight;
+}
+async function send() {
+    // 发送消息
+    // 渲空对话消息
+  const input = $('chat-input'); const text = input.value.trim();
+    // 检查输入是否为空
+  if (!text) return;
+    // 禁用发送按钮
+    // 渲空输入框
+    // 渲染用户消息
+  const btn = $('send-btn'); btn.disabled = true; input.value='';
+    // 渲染用户消息
+  appendMessage('user', text);
+  if (!currentChatId) newChat();
+    // 渲染新对话的所有消息
+  const h = history.find(x=>x.id===currentChatId);
+
+  h.messages.push({role:'user', content:text});
+  if (h.title==='新对话') h.title = text.slice(0,15);
+  saveHistory(); renderHistory();
+  try {
+    const {ok, data} = await api('/agent/chat', { method:'POST', body:JSON.stringify({utterance:text}) });
+    if (ok && data?.data) {
+      const d = data.data;
+      (d.tool_calls||[]).forEach(t => appendMessage('tool', JSON.stringify(t.result||{}, null, 2), t.tool_name));
+      appendMessage('ai', d.answer || data.message || '（无回复）');
+      h.messages.push({role:'ai', content:d.answer||''});
+    } else {
+      appendMessage('ai', '服务暂不可用（' + (data.message||'后端未启动') + '）');
+    }
+  } catch {
+    appendMessage('ai', '网络错误，请稍后重试');
+  } finally { saveHistory(); btn.disabled = false; input.focus(); }
+}
+$('send-btn').onclick = send;
+$('chat-input').addEventListener('keydown', e => { if (e.ctrlKey && e.key==='Enter') send(); });
+
+// ===== 右栏上：今日日程（调 /schedule/today，失败用 mock） =====
+(async () => {
+  const box = $('schedule-list');
+  const {ok, data} = await api('/schedule/today');
+  const courses = (ok && data?.data?.length) ? data.data : [
+    {name:'高等数学', classroom:'教南109', start_slot:1, end_slot:2, teacher:'花老师'},
+    {name:'大学英语', classroom:'教南307', start_slot:3, end_slot:4, teacher:'余老师'},
+  ];
+  box.innerHTML = courses.length ? courses.map(c=>`
+    <div class="sch-item"><div class="t">${c.name}</div>
+    <div class="meta">第${c.start_slot}-${c.end_slot}节 · ${c.classroom||''} ${c.teacher||''}</div></div>`).join('')
+    : '<div style="color:#999;text-align:center;padding:20px">今日无课程</div>';
+})();
+
+// ===== 右栏下：技能 & MCP（对照 plan.md 的 skill/ 与 MCP/） =====
+const skills = [
+  {name:'search', desc:'查询课表、提醒等用户数据'},
+  {name:'web_search', desc:'网络搜索:查询最新消息等'},
+  {name:'system', desc:'日程写入、提醒设置等系统操作'},
+  {name:'gpa', desc:'根据成绩与学分计算 GPA'},
+  {name:'review', desc:'生成复习计划'},
+];
+const mcps = [
+  {name:'mcp_map', desc:'高德地图：位置、路径、导航'},
+  {name:'mcp_weather', desc:'天气查询：课前出行建议'},
+];
+// 渲染技能标签
+const skillBox = $('skill-list');
+skills.forEach(s => { const t=document.createElement('div'); t.className='tag'; t.textContent=s.name; t.title=s.desc; skillBox.appendChild(t); });
+// 渲染MCP标签
+const mcpBox = $('mcp-list');
+mcps.forEach(m => { const t=document.createElement('div'); t.className='tag'; t.textContent=m.name; t.title=m.desc; mcpBox.appendChild(t); });
+
+// 初始化
+renderHistory();
+// 初始化时，选择第一个对话
+if (history.length) selectChat(history[0].id); else newChat();
+</script>
+</body>
+</html>

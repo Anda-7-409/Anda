@@ -60,6 +60,7 @@
                 task_service.py (用户任务记录业务逻辑) //用于处理用户任务记录相关业务逻辑，包括设置、查询、修改、删除等操作
                 OCR_service.py (用户 OCR 业务逻辑) //用于处理用户 OCR 任务相关业务逻辑，包括任务类型、任务内容、任务状态等操作
                 agent_service.py (用户智能体业务逻辑) //用于处理用户智能体相关业务逻辑，包括智能体管理、智能体任务等操作
+                email_service.py (邮件发送业务逻辑) //用于通过QQ邮箱SMTP（smtp.qq.com:465 SSL）发送注册激活链接与密码重置链接，发件账号与授权码从 .env 读取
 
         -schemas- (请求响应模型) //用于验证用户请求参数、响应数据格式等
                 __init__.py (请求响应模型初始化) //用于初始化请求响应模型模块，包括数据库连接、模型加载等操作 统一导出，方便`from Backend.schemas import ScheduleCreate`
@@ -84,8 +85,10 @@
 
             -assets- (静态资源模块) //用于存放前端静态资源，如图片、字体、图标等
 
-            -pages- (页面模块) //用于处理用户操作，包括登录注册、课表管理、提醒设置、复习计划、咨询记录、任务记录等
-            login.html (登录注册页面) //用于用户登录注册，包括用户名、密码、邮箱等信息
+            -pages- (页面模块) //用于处理用户操作，包括登录注册、课表管理、提醒设置、复习计划、咨询记录、任务记录等（登录功能已并入 index.html：JS fetch 调用 /auth/login，token 存 localStorage，后续请求带 Authorization 头）
+            register.html (注册页面) //用于用户注册，包括用户名、密码、邮箱等信息（注册成功后提示查收激活邮件，需点击邮件链接激活后才能登录）
+            forgot-password.html (忘记密码页面) //用于输入注册邮箱并请求发送密码重置链接（调用 POST /auth/forgot-password）
+            reset-password.html (重置密码页面) //从邮件重置链接打开（?token=xxx），输入新密码完成重置（调用 POST /auth/reset-password）
             schedule.html (用户课表页面) //用于显示用户课表，包括课程信息、时间、地点等
             reminder.html (用户提醒设置页面) //用于设置用户提醒，包括作业、考试、复习等
             review.html (用户复习计划页面) //用于显示用户所有复习计划，包括复习时间、复习内容等
@@ -138,16 +141,20 @@
         reminder.txt (用户提醒文档) //用于保存开发过程中所遇到的问题、解决方法等，方便后续开发
 
 requirements.txt  //项目依赖模块 用于指定项目依赖的Python库，确保项目在不同环境下正常运行
-.env.example  //环境变量配置示例
-.env (环境变量配置) //用于配置环境变量，如API密钥、数据库连接信息等，确保项目在不同环境下正常运行
+.env.example  //环境变量配置示例（含 QQ_EMAIL_USER / QQ_EMAIL_AUTH_CODE 邮箱SMTP配置、GLM API Key、数据库连接等）
+.env (环境变量配置) //用于配置环境变量，如API密钥、数据库连接信息、QQ邮箱SMTP发件账号与授权码等，确保项目在不同环境下正常运行
 
 ### 接口信息
-        -auth (认证模块)   --Post,Post,Post,Get   ## 1. 认证模块 /auth（对应 routes/auth.py）
-            /login (登录接口) # 请求体 {username, password}  --返回{token,expires_in}  //用于用户登录，返回token和过期时间
-            /register (注册接口) # 请求体 {username, password，email}  --返回{code,message,data:{user_id}}  //用于用户注册，返回用户ID
-            /logout (退出登录接口) # 请求体 None  --返回{message}  //用于用户退出登录，返回成功信息
-            /me (获取用户信息接口) # 请求体 None  --返回{token_id,username,email}  //用于获取用户信息，返回用户ID、用户名、邮箱
-            /update (更新用户信息接口) # 请求体 {username,email,password}  --返回{code,message}  //用于更新用户信息，返回成功信息
+        -auth (认证模块)   --Post,Post,Get,Post,Get,Put,Post,Post   ## 1. 认证模块 /auth（对应 routes/auth.py）
+            /login (登录接口) # 请求体 {username, password}  --返回{code,message,data:{token,expires_in}}  //用于用户登录，返回token和过期时间（未激活账号拒绝登录并提示查收激活邮件）
+            /register (注册接口) # 请求体 {username, password, email}  --返回{code,message}  //用于用户注册：创建未激活账号，并通过QQ邮箱SMTP发送激活链接（/auth/verify?token=xxx），用户点击邮件链接完成激活
+            /verify (邮箱激活接口) --Get # 邮件激活链接打开 ?token=xxx  --校验通过后激活账号，302跳转到 /index.html  //注册激活链接落地接口
+            /logout (退出登录接口) # 请求体 None  --返回{code,message}  //用于用户退出登录，返回成功信息
+            /me (获取用户信息接口) # 请求体 None  --返回{code,message,data:{user_id,username,email}}  //用于获取用户信息，返回用户ID、用户名、邮箱
+            /update (更新用户信息接口) # 请求体 {username?,email?,password?}  --返回{code,message}  //登录后修改个人信息（字段均可选）
+            /forgot-password (忘记密码接口) # 请求体 {email}  --返回{code,message}  //通过QQ邮箱SMTP发送密码重置链接（链接指向 /pages/reset-password.html?token=xxx）
+            /reset-password (重置密码接口) # 请求体 {token, new_password}  --返回{code,message}  //凭邮件链接中的一次性token重置密码
+<!-- 邮箱流程说明：① 注册/重置均通过QQ邮箱SMTP发送链接（smtp.qq.com:465 SSL，发件账号+授权码从 .env 读取，授权码≠QQ登录密码）② 激活与重置 token 存于 user 表（verify_token/reset_token/token_expires），15分钟有效、一次性使用 -->
 <!-- 认证方式：除`/auth/*` 外，所有接口要求 Header`Authorization: Bearer <token>` -->
         -schedule (课表模块)   --Post Get    ## 2. 课表模块`/schedule` （对应`routes/schedule.py` ）
             /courses (手动添加课程接口) # 请求体 {token_id,course_name, course_time, course_location,start_time,end_time,range}  --返回{code,message}  //用于手动添加课程，返回成功信息
