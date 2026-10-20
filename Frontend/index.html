@@ -1,31 +1,48 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-    <!-- 第一版不要样式文件！！！ -->
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>安答：校园AI Agent助手</title>
-    <link rel="stylesheet" href="css/index.css">
+    <!-- 第一版不要样式文件！！！样式内联，后续再拆分 -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", sans-serif; background: #f5f7fa; }
+        .container { max-width: 420px; margin: 60px auto; padding: 24px; }
+        .logo { text-align: center; font-size: 28px; font-weight: bold; color: #1a73e8; margin-bottom: 8px; }
+        .title { text-align: center; font-size: 22px; font-weight: bold; color: #333; }
+        .subtitle { text-align: center; color: #666; font-size: 14px; margin: 8px 0 16px; }
+        .notice { color: #333; font-size: 13px; text-align: center; margin-bottom: 16px; }
+        .login-form { background: #fff; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 14px; color: #333; margin-bottom: 6px; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .login-btn { width: 100%; padding: 10px; background: #1a73e8; color: #fff; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; }
+        .login-btn:disabled { background: #9dc3f5; cursor: not-allowed; }
+        .login-btn:hover:not(:disabled) { background: #1557b0; }
+        #login-msg { text-align: center; font-size: 13px; color: #e53935; min-height: 18px; margin-top: 8px; }
+        .auth-links { margin-top: 16px; text-align: center; font-size: 13px; }
+        .auth-links a { color: #1a73e8; text-decoration: none; margin: 0 8px; }
+        .footer { text-align: center; color: #999; font-size: 12px; margin-top: 32px; }
+    </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">
-                <img src="./assets/logo.png" alt="logo">
-            </div>
+            <!-- assets/logo.png 暂未创建，先用文字 logo 占位 -->
+            <div class="logo">安答</div>
         </div>
         <div class="main">
             <!-- 核心展示区 -->
             <div class="hero-section">
                 <div class="title">安答：校园AI Agent助手</div>
                 <div class="subtitle">从“被动问答”到“主动服务” —— 一句自然语言驱动课表、提醒与办事查询</div>
-                <div class="notice" style="display: block; color: #333; font-size: 14px;">原版官方功能请转移至 ->安徽工业大学->智慧校园->安工小智</div>
+                <div class="notice">原版官方功能请转移至 ->安徽工业大学->智慧校园->安工小智</div>
             </div>
 
-            <!-- 认证表单区 -->
+            <!-- 认证表单区：JS fetch 提交，token 存 localStorage -->
             <div class="auth-section">
-                <form id="login-form" class="login-form" action="/auth/login" method="POST">
+                <form id="login-form" class="login-form">
                     <div class="form-group">
                         <label for="username">用户名</label>
                         <input type="text" id="username" name="username" placeholder="请输入用户名" required>
@@ -35,10 +52,11 @@
                         <input type="password" id="password" name="password" placeholder="请输入密码" required>
                     </div>
                     <button type="submit" class="login-btn">登录</button>
+                    <div id="login-msg"></div>
                 </form>
-                <!-- 补全注册与辅助入口 -->
                 <div class="auth-links">
                     <a href="./pages/register.html">没有账号？立即注册</a>
+                    <!-- 忘记密码链接：先输入邮箱申请重置链接（QQ邮箱SMTP发送） -->
                     <a href="./pages/forgot-password.html">忘记密码？</a>
                 </div>
             </div>
@@ -47,5 +65,36 @@
             <div class="copyright">© 2026 安答. All rights reserved.</div>
         </div>
     </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); // 阻止整页跳转
+            const msg = document.getElementById('login-msg');
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            msg.textContent = '';
+            try {
+                const res = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value.trim(),
+                        password: document.getElementById('password').value,
+                    }),
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('token', data.data.token);
+                    location.href = './pages/schedule.html'; // schedule.html 第 1 期实现
+                } else {
+                    msg.textContent = data.message || '登录失败';
+                }
+            } catch (err) {
+                msg.textContent = '网络错误，请稍后重试';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    </script>
 </body>
 </html>

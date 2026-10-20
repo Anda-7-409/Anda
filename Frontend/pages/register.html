@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 安答：校园AI Agent助手</title>
+    <!-- 第一版不要样式文件！！！样式内联，与 index.html 保持一致 -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", sans-serif; background: #f5f7fa; }
+        .container { max-width: 420px; margin: 60px auto; padding: 24px; }
+        .logo { text-align: center; font-size: 28px; font-weight: bold; color: #1a73e8; margin-bottom: 8px; }
+        .title { text-align: center; font-size: 22px; font-weight: bold; color: #333; }
+        .subtitle { text-align: center; color: #666; font-size: 14px; margin: 8px 0 24px; }
+        .register-form { background: #fff; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 14px; color: #333; margin-bottom: 6px; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .submit-btn { width: 100%; padding: 10px; background: #1a73e8; color: #fff; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; }
+        .submit-btn:disabled { background: #9dc3f5; cursor: not-allowed; }
+        .submit-btn:hover:not(:disabled) { background: #1557b0; }
+        #register-msg { text-align: center; font-size: 13px; color: #e53935; min-height: 18px; margin-top: 8px; }
+        .auth-links { margin-top: 16px; text-align: center; font-size: 13px; }
+        .auth-links a { color: #1a73e8; text-decoration: none; margin: 0 8px; }
+        .footer { text-align: center; color: #999; font-size: 12px; margin-top: 32px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">安答</div>
+        </div>
+        <div class="main">
+            <div class="auth-section">
+                <div class="title">注册账号</div>
+                <div class="subtitle">填写以下信息完成注册，激活邮件将发送至您的邮箱</div>
+                <!-- JS fetch 提交到 /auth/register，成功后提示查收激活邮件（QQ邮箱SMTP发送激活链接，点击后账号才激活） -->
+                <form id="register-form" class="register-form">
+                    <div class="form-group">
+                        <label for="username">用户名</label>
+                        <input type="text" id="username" name="username" placeholder="请输入用户名" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">密码</label>
+                        <input type="password" id="password" name="password" placeholder="请输入密码（至少6位）" minlength="6" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">邮箱</label>
+                        <input type="email" id="email" name="email" placeholder="请输入邮箱" required>
+                    </div>
+                    <button type="submit" class="submit-btn">注册</button>
+                    <div id="register-msg"></div>
+                </form>
+                <div class="auth-links">
+                    <a href="../index.html">已有账号？返回登录</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="copyright">© 2026 安答. All rights reserved.</div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); // 阻止整页跳转
+            const msg = document.getElementById('register-msg');
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            msg.textContent = '';
+            try {
+                const res = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value.trim(),
+                        password: document.getElementById('password').value,
+                        email: document.getElementById('email').value.trim(),
+                    }),
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    msg.style.color = '#43a047';
+                    // 注册成功不再跳转：账号此时未激活，需点击QQ邮箱中的激活链接（GET /auth/verify?token=xxx）后才能登录
+                    msg.textContent = '注册成功！激活邮件已发送到您的邮箱，请查收并点击链接完成激活（如未收到请检查垃圾箱）';
+                } else {
+                    msg.textContent = data.message || '注册失败';
+                }
+            } catch (err) {
+                msg.textContent = '网络错误，请稍后重试';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
