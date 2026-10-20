@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <!-- 第一版不要样式文件！！！ -->
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安答：校园AI Agent助手</title>
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <img src="./assets/logo.png" alt="logo">
+            </div>
+        </div>
+        <div class="main">
+            <!-- 核心展示区 -->
+            <div class="hero-section">
+                <div class="title">安答：校园AI Agent助手</div>
+                <div class="subtitle">从“被动问答”到“主动服务” —— 一句自然语言驱动课表、提醒与办事查询</div>
+                <div class="notice" style="display: block; color: #333; font-size: 14px;">原版官方功能请转移至 ->安徽工业大学->智慧校园->安工小智</div>
+            </div>
+
+            <!-- 认证表单区 -->
+            <div class="auth-section">
+                <form id="login-form" class="login-form" action="/auth/login" method="POST">
+                    <div class="form-group">
+                        <label for="username">用户名</label>
+                        <input type="text" id="username" name="username" placeholder="请输入用户名" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">密码</label>
+                        <input type="password" id="password" name="password" placeholder="请输入密码" required>
+                    </div>
+                    <button type="submit" class="login-btn">登录</button>
+                </form>
+                <!-- 补全注册与辅助入口 -->
+                <div class="auth-links">
+                    <a href="./pages/register.html">没有账号？立即注册</a>
+                    <a href="./pages/forgot-password.html">忘记密码？</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <div class="copyright">© 2026 安答. All rights reserved.</div>
+        </div>
+    </div>
+</body>
+</html>
