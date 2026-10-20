@@ -199,3 +199,5 @@ requirements.txt  //项目依赖模块 用于指定项目依赖的Python库，�
 
         -APScheduler (定时触发模块)  
 <!-- 定时触发`scripts/scheduler.py` 每分钟扫描：① 课前提醒（查课表+天气+通勤→推送）② 到点提醒（查 reminder 表） -->
+## 提醒
+    1.前端样式文件到最后修改添加，在目前只需实现功能即可
