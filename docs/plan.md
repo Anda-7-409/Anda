@@ -142,15 +142,60 @@ requirements.txt  //项目依赖模块 用于指定项目依赖的Python库，�
 .env (环境变量配置) //用于配置环境变量，如API密钥、数据库连接信息等，确保项目在不同环境下正常运行
 
 ### 接口信息
-        -auth (认证模块)   --Post,Post,Post,Get
+        -auth (认证模块)   --Post,Post,Post,Get   ## 1. 认证模块 /auth（对应 routes/auth.py）
             /login (登录接口) # 请求体 {username, password}  --返回{token,expires_in}  //用于用户登录，返回token和过期时间
             /register (注册接口) # 请求体 {username, password，email}  --返回{code,message,data:{user_id}}  //用于用户注册，返回用户ID
             /logout (退出登录接口) # 请求体 None  --返回{message}  //用于用户退出登录，返回成功信息
-            /me (获取用户信息接口) # 请求体 None  --返回{user_id,username,email}  //用于获取用户信息，返回用户ID、用户名、邮箱
+            /me (获取用户信息接口) # 请求体 None  --返回{token_id,username,email}  //用于获取用户信息，返回用户ID、用户名、邮箱
             /update (更新用户信息接口) # 请求体 {username,email,password}  --返回{code,message}  //用于更新用户信息，返回成功信息
+<!-- 认证方式：除`/auth/*` 外，所有接口要求 Header`Authorization: Bearer <token>` -->
+        -schedule (课表模块)   --Post Get    ## 2. 课表模块`/schedule` （对应`routes/schedule.py` ）
+            /courses (手动添加课程接口) # 请求体 {token_id,course_name, course_time, course_location,start_time,end_time,range}  --返回{code,message}  //用于手动添加课程，返回成功信息
+            -import (导入课表接口) --Post Post 
+                /image (导入课表图片接口) # 请求体 {multipart/form-data:file}  --返回{code,message,data:{courses}}  //用于用户导入课表图片，系统自动识别解析课程信息并批量写入数据库
+                /confirm (确认导入课表接口) # 请求体 {token_id,courses:[{course_name, course_time, course_location,start_time,end_time,range}]}  --返回{code,message}  //用于用户确认导入课表，系统根据用户确认的课程信息批量写入数据库
+            /courses (查询课表接口) # 请求体 {token_id}  --返回{code,message,data:{courses}}  //用于用户查询课表，返回用户所有课程信息
+            -courses (查询课表接口) --PUT DELETE
+                /{course_id} (修改课程接口) # 请求体 {token_id, course_id, course_name, course_time, course_location,start_time,end_time,range}  --返回{code,message}  //用于用户修改课程，返回成功信息
+                /{course_id} (删除课程接口) # 请求体 {token_id, course_id}  --返回{code,message}  //用于用户删除课程，返回成功信息
+            -today (查询今日课表接口) --Get
+                /{token_id} (查询今日课表接口) # 请求体 {token_id}  --返回{code,message,data:{courses}}  //用于用户查询今日课表，返回用户今日所有课程信息
+        
+ <!-- 图片导入拆成「预览 + 确认」两步，让用户改完再入库，确保用户课表信息与数据库保持一致 -->
 
-        -schedule (课表模块)   
-            /course (手动添加课程接口) # 请求体 {user_id, course_name, course_time, course_location,start_time,end_time,range}  --返回{code,message}  //用于手动添加课程，返回成功信息
-            
+        -reminder (提醒模块)   --Post Get PUT DELETE PUT ## 3. 提醒模块`/reminder` （对应`routes/reminder.py` ）
+            /set (设置提醒接口) # 请求体 {token_id, reminder_type, reminder_time}  --返回{code,message}  //用于用户设置提醒，返回成功信息
+            /get (获取提醒接口) # 请求体 {token_id}  --返回{code,message,data:{reminder_type, reminder_time}}  //用于用户获取提醒，返回用户提醒类型、提醒时间
+            /{token_id} (修改提醒接口) # 请求体 {token_id, reminder_type, reminder_time}  --返回{code,message}  //用于用户修改提醒，返回成功信息
+            /{token_id} (删除提醒接口) # 请求体 {token_id}  --返回{code,message}  //用于用户删除提醒，返回成功信息
+            /{token_id}/done (确认提醒接口) # 请求体 {token_id}  --返回{code,message}  //用于用户确认提醒，返回成功信息
+            /{token_id}/undo (取消提醒接口) # 请求体 {token_id}  --返回{code,message}  //用于用户取消提醒，返回成功信息
+        
+        -review (复习模块)   --Post Get PUT DELETE ## 4. 复习模块`/review` （对应`routes/review.py` ）
+            /generate (生成复习表接口) # 请求体 {token_id}  --返回{code,message}  //用于用户生成复习表，返回成功信息
+            /Get (获取复习表接口) # 请求体 {token_id}  --返回{code,message,data:{reminders}}  //用于用户获取复习表，返回用户所有提醒信息
+            /{token_id} (修改复习表接口) # 请求体 {token_id, reminders:[{reminder_type, reminder_time}]}  --返回{code,message}  //用于用户修改复习表，返回成功信息
+            /{token_id} (删除复习表接口) # 请求体 {token_id}  --返回{code,message}  //用于用户删除复习表，返回成功信息
 
+        -consult (咨询模块)   -- Get Get DELETE ## 5. 咨询模块`/consult` （对应`routes/consult.py` ）
+            /consult (咨询接口) # 请求体 {token_id, question}  --返回{code,message,data:{answer}}  //用于用户咨询，返回咨询答案
+            /{token_id} (查询咨询接口) # 请求体 {token_id}  --返回{code,message,data:{consults}}  //用于用户查询咨询，返回用户所有咨询信息
+            /{token_id} (删除咨询接口) # 请求体 {token_id}  --返回{code,message}  //用于用户删除咨询，返回成功信息
 
+        -task (任务模块)   -- Get Get DELETE ## 6. 任务模块`/task` （对应`routes/task.py` ）
+            /task (查询任务接口) # 请求体 {token_id}  --返回{code,message,data:{tasks}}  //Agent 执行过的任务列表（`?type=&status=` ）
+            /{token_id} (任务详情接口) # 请求体 {token_id}  --返回{code,message,data:{task}}  //任务详情（含工具调用链）
+        
+        -agent (智能体模块)   -- Post Post Get ## 7. 智能体模块`/agent` （对应`routes/agent.py` ）
+            /chat (智能体接口)  # 请求体 {utterance, context?}  --返回{answer, tool_calls:[{tool_name, status, result}], actions_taken, needs_confirm, confirm_payload}
+            /confirm (确认智能体危险操作接口)  # 请求体 {confirm_token}  --返回{answer, tool_calls:[{tool_name, status, result}], actions_taken, needs_confirm, confirm_payload}  //用于用户确认智能体危险操作，返回成功信息       
+            /stream (智能体流式接口)  # 请求体 {utterance, context?}  --返回{answer, tool_calls:[{tool_name, status, result}], actions_taken, needs_confirm, confirm_payload}  //用于用户智能体流式输出，返回智能体流式输出
+
+        -upload (上传模块)   -- Post ## 8. 上传模块`/upload` （对应`Data/upload/{user_id}`返回 file_id））
+
+        -frontend (前端模块)   -- Get Get  
+            /     # index.html 
+            /pages/{name}  //静态页面路由（FastAPI`StaticFiles` 挂载即可， 不用手写 ）
+
+        -APScheduler (定时触发模块)  
+<!-- 定时触发`scripts/scheduler.py` 每分钟扫描：① 课前提醒（查课表+天气+通勤→推送）② 到点提醒（查 reminder 表） -->
