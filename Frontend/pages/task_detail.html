@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <!-- 任务详情页面 用于显示用户任务的详细信息，如任务类型、任务内容、任务状态、工具调用链等 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- task_detail.html 用户任务详情页面 用于显示用户任务的详细信息，如任务类型、任务内容、任务状态、工具调用链等 -->
+    <title>任务详情 · 安答</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", sans-serif; background: #f5f7fa; color: #333; font-size: 14px; }
+        .container { max-width: 760px; margin: 40px auto; padding: 0 16px; }
+        .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .back-btn { padding: 6px 14px; background: #fff; color: #1a73e8; border: 1px solid #c3d6f9; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .back-btn:hover { background: #eef5ff; }
+        .page-title { font-size: 20px; font-weight: bold; }
+        .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 16px; }
+        .meta-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 4px; }
+        .meta-item .label { font-size: 12px; color: #999; margin-bottom: 4px; }
+        .meta-item .value { font-size: 14px; font-weight: 600; word-break: break-all; }
+        .status-tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; }
+        .status-success { background: #e6f6ec; color: #2e9e5b; }
+        .status-running { background: #fff7e0; color: #c78a00; }
+        .status-failed { background: #fdecec; color: #e53935; }
+        .status-pending { background: #eef0f3; color: #666; }
+        .section-title { font-size: 14px; font-weight: bold; margin: 18px 0 10px; }
+        .content-box { background: #f8fafc; border: 1px solid #eef0f3; border-radius: 6px; padding: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+        .tool-step { display: flex; gap: 10px; padding: 10px 12px; border-left: 3px solid #1a73e8; background: #f0f4ff; border-radius: 4px; margin-bottom: 8px; }
+        .tool-step .step-index { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: #1a73e8; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+        .tool-step .step-main { flex: 1; min-width: 0; }
+        .tool-step .step-name { font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
+        .tool-step .step-result { font-size: 12px; color: #555; margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
+        .empty { color: #999; text-align: center; padding: 30px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶栏：返回工作台 + 页面标题 -->
+        <div class="topbar">
+            <button class="back-btn" id="back-btn">← 返回工作台</button>
+            <div class="page-title">任务详情</div>
+            <div style="width:84px"></div>
+        </div>
+
+        <!-- 任务基本信息 -->
+        <div class="card">
+            <div class="meta-grid">
+                <div class="meta-item"><div class="label">任务 ID</div><div class="value" id="task-id">-</div></div>
+                <div class="meta-item"><div class="label">任务类型</div><div class="value" id="task-type">-</div></div>
+                <div class="meta-item"><div class="label">任务状态</div><div class="value" id="task-status">-</div></div>
+                <div class="meta-item"><div class="label">创建时间</div><div class="value" id="task-time">-</div></div>
+            </div>
+            <div class="section-title">任务内容</div>
+            <div class="content-box" id="task-content">加载中…</div>
+        </div>
+
+        <!-- 工具调用链 -->
+        <div class="card">
+            <div class="section-title" style="margin-top:0">工具调用链</div>
+            <div id="tool-chain" class="empty">暂无工具调用记录</div>
+        </div>
+    </div>
+
+    <script>
+        // 未登录跳回首页（与 agent_ai.html 保持一致）
+        const token = localStorage.getItem('token');
+        if (!token) location.href = '../index.html';
+
+        const $ = id => document.getElementById(id);
+
+        // 返回工作台
+        $('back-btn').onclick = () => location.href = './agent_ai.html';
+
+        // API 封装：带 Authorization，失败兜底不抛异常
+        const api = async (url) => {
+            try {
+                const res = await fetch(url, { headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } });
+                const data = await res.json();
+                return { ok: res.ok, data };
+            } catch { return { ok: false, data: {} }; }
+        };
+
+        // 状态 -> 样式映射
+        function statusTag(status) {
+            const map = {
+                success: ['status-success', '成功'],
+                done: ['status-success', '完成'],
+                running: ['status-running', '执行中'],
+                failed: ['status-failed', '失败'],
+                error: ['status-failed', '失败'],
+                pending: ['status-pending', '待执行'],
+            };
+            const [cls, text] = map[status] || ['status-pending', status || '未知'];
+            return `<span class="status-tag ${cls}">${text}</span>`;
+        }
+
+        // 渲染任务详情
+        function renderTask(t) {
+            $('task-id').textContent = t.task_id ?? t.id ?? '-';
+            $('task-type').textContent = t.type || t.task_type || '-';
+            $('task-status').innerHTML = statusTag(t.status);
+            $('task-time').textContent = t.created_at || t.time || '-';
+            $('task-content').textContent = t.content || t.question || t.utterance || '（无任务内容）';
+
+            // 工具调用链
+            const chain = t.tool_calls || [];
+            const box = $('tool-chain');
+            if (!chain.length) { box.className = 'empty'; box.textContent = '暂无工具调用记录'; return; }
+            box.className = '';
+            box.innerHTML = chain.map((c, i) => `
+                <div class="tool-step">
+                    <div class="step-index">${i + 1}</div>
+                    <div class="step-main">
+                        <div class="step-name"><span>${c.tool_name || '未知工具'}</span>${statusTag(c.status)}</div>
+                        <div class="step-result">${escapeHtml(JSON.stringify(c.result ?? c, null, 2))}</div>
+                    </div>
+                </div>`).join('');
+        }
+
+        // 简易 HTML 转义，防止结果内容破坏页面
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+        }
+
+        // 入口：URL 取任务 ID -> 拉详情 -> 失败用 mock 兜底
+        (async () => {
+            const params = new URLSearchParams(location.search);
+            const taskId = params.get('id');
+
+            let task = null;
+            if (taskId) {
+                const { ok, data } = await api('/task/' + encodeURIComponent(taskId));
+                if (ok && data?.data) task = data.data;
+            }
+
+            if (!task) {
+                // 兜底 mock：后端未实现 / 未启动时页面仍可预览
+                task = {
+                    task_id: taskId || 'T-1001',
+                    type: '复习计划生成',
+                    status: 'success',
+                    created_at: '2026-10-21 09:30:00',
+                    content: '根据本周课表与考试安排，为高等数学生成 3 天复习计划',
+                    tool_calls: [
+                        { tool_name: 'search.schedule', status: 'success', result: { courses: ['高等数学', '大学英语'] } },
+                        { tool_name: 'review.generate', status: 'success', result: { days: 3, focus: '高等数学' } },
+                        { tool_name: 'system.reminder_set', status: 'success', result: { reminder_time: '08:20' } },
+                    ],
+                };
+            }
+            renderTask(task);
+        })();
+    </script>
+</body>
+</html>
