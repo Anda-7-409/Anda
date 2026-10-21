@@ -9,6 +9,7 @@ def create_app() -> FastAPI:
     # lifespan：启动时初始化数据库，关闭时释放连接（引用 database.py，建好后再填）
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        # 初始化数据库连接 启动钩子 
         # TODO: init_db()  建 app.db 表（等 database.py）
         yield
         # TODO: close_db() 释放连接
