@@ -77,5 +77,44 @@
             }
         });
     </script>
+        <script>
+    (function () {
+        const live2d_path = 'https://gcore.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/';
+        function loadResource(url, type) {
+            return new Promise(function (resolve, reject) {
+                let tag;
+                if (type === 'css') {
+                    tag = document.createElement('link');
+                    tag.rel = 'stylesheet';
+                    tag.href = url;
+                } else if (type === 'js') {
+                    tag = document.createElement('script');
+                    tag.type = 'module';
+                    tag.src = url;
+                }
+                if (tag) {
+                    tag.onload = function () { resolve(url); };
+                    tag.onerror = function () { reject(url); };
+                    document.head.appendChild(tag);
+                }
+            });
+        }
+        Promise.all([
+            loadResource(live2d_path + 'waifu.css', 'css'),
+            loadResource(live2d_path + 'waifu-tips.js', 'js'),
+        ]).then(function () {
+            initWidget({
+                waifuPath: live2d_path + 'waifu-tips.json',
+                cdnPath: 'https://gcore.jsdelivr.net/gh/fghrsh/live2d_api/',
+                cubism2Path: live2d_path + 'live2d.min.js',
+                cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
+                tools: ['hitokoto', 'asteroids', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'],
+                logLevel: 'warn',
+                drag: false,
+            });
+        });
+    })();
+    </script>
+</body>
 </body>
 </html>
