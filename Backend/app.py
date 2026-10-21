@@ -18,7 +18,8 @@ def create_app() -> FastAPI:
     # TODO: 配置 CORS            → add_cors(app)      等 middleware/cors.py
     # TODO: 注册异常处理         → register_exceptions(app)  等 exception/
     # TODO: 注册中间件（日志/限流）→ add_middleware(app) 等 middleware/
-    # TODO: 注册路由             → register_routes(app) 等 routes/（一个模块一个 router）
+    # 注册路由（一个模块一个 router，接口详见 plan.md）
+    register_routes(app)
     # TODO: 挂载静态文件         → mount_static(app)   生产模式挂 Frontend/
 
     # 自检接口：启动后访问 http://localhost:8000/health 验证服务是否正常
@@ -27,6 +28,12 @@ def create_app() -> FastAPI:
         return {"code": 0, "message": "ok", "data": {"service": "anda-api"}}
 
     return app
+
+
+def register_routes(app: FastAPI):
+    from .routes import auth
+    app.include_router(auth.router, prefix="/auth")
+    # TODO: schedule / reminder / review / consult / task / agent 的 router 建好后逐个追加
 
 
 app = create_app()
