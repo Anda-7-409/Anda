@@ -5,16 +5,21 @@
         .title { text-align: center; font-size: 22px; font-weight: bold; color: #333;letter-spacing:2px;font-weight:600;letter-spacing:2px;line-height:1.3; }
         .subtitle { text-align: center; color: #666; font-size: 14px; margin: 8px 0 16px;letter-spacing:0.5px;line-height:1.7;letter-spacing:0.5px; }
         .notice { color: #333; font-size: 13px; text-align: center; margin-bottom: 16px; line-height: 22px;}
-        .login-form { background: #fff; border-radius: 16px; padding: 32px 28px; box-shadow: 0 1px 2px rgba(26,115,232,.10)，0 4px 12px rgba(26,115,232,.10),0 20px 40px rgba(26,115,232,.14); border: 1px solid rgba(255,255,255,.8); }
+        .login-form { background: #fff; border-radius: 16px; padding: 32px 28px; box-shadow: 0 1px 2px rgba(26,115,232,.10),0 4px 12px rgba(26,115,232,.10),0 20px 40px rgba(26,115,232,.14); border: 1px solid rgba(255,255,255,.8); }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 14px; color: #333; margin-bottom: 6px; font-weight:500;}
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;box-shadow: inset 0 1px 3px rgba(0,0,0,.65); line-height:1.5;}
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;box-shadow: inset 0 1px 3px rgba(0,0,0,.06); line-height:1.5;}
         .form-group input:focus{outline:none;border-color:#1a73e8;box-shadow:0 0 0 3px rgba(26,115,232,.15);}
-        .login-btn { width: 100%; padding: 10px; background:linear-gradient(180deg,#4d9af0 0%,#1a73e8 60%,#1557b0 100%) ; color: #fff; border: none; border-radius: 6px; font-size: 15px;font-weight:500;letter-spacing:1px; cursor: pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 0 #0f4c96,0 4px 10px rgba(26,115,232,.35);transition:all .15s ease;}
+        .login-btn { width: 100%; padding: 11px; background: linear-gradient(135deg, #1a73e8, #6366f1, #9333ea ,#6366f1,#1a73e8);background-size: 300% 300%; animation: gradient-move 5s ease infinite; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; letter-spacing: 1px; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 2px 0 #4c1d95, 0 6px 16px rgba(124,92,240,.45); transition: all .15s ease; }
         .login-btn:disabled { background: #9dc3f5; cursor: not-allowed;box-shadow:none; }
-        .login-btn:active:not(:disabled){transform:translateY(2px);box-shadow:none;}
+        .login-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 0 0 #4c1d95, 0 3px 8px rgba(124,92,240,.4); }
         .login-btn:hover:not(:disabled) { filter:brightness(1.08); }
         #login-msg { text-align: center; font-size: 13px; color: #e53935; min-height: 18px; margin-top: 8px; }
         .auth-links { margin-top: 16px; text-align: center; font-size: 13px; }
         .auth-links a { color: #1a73e8; text-decoration: none; margin: 0 8px; }
         .footer { text-align: center; color: #999; font-size: 12px; margin-top: 32px; }
+        @keyframes gradient-move {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
