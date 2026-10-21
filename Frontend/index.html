@@ -85,7 +85,7 @@
                 const data = await res.json();
                 if (res.ok) {
                     localStorage.setItem('token', data.data.token);
-                    location.href = './pages/schedule.html'; // schedule.html 第 1 期实现
+                    location.href = './pages/agent_ai.html'; // agent_ai.html 第 1 期实现
                 } else {
                     msg.textContent = data.message || '登录失败';
                 }

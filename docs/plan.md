@@ -85,12 +85,12 @@
 
             -assets- (静态资源模块) //用于存放前端静态资源，如图片、字体、图标等 @
 
-            -pages- (页面模块) //用于处理用户操作，包括登录注册、课表管理、提醒设置、复习计划、咨询记录、任务记录等（登录功能已并入 index.html：JS fetch 调用 /auth/login，token 存 localStorage，后续请求带 Authorization 头）
-            register.html (注册页面) //用于用户注册，包括用户名、密码、邮箱等信息（注册成功后提示查收激活邮件，需点击邮件链接激活后才能登录） @
-            forgot-password.html (忘记密码页面) //用于输入注册邮箱并请求发送密码重置链接（调用 POST /auth/forgot-password） @
-            reset-password.html (重置密码页面) //从邮件重置链接打开（?token=xxx），输入新密码完成重置（调用 POST /auth/reset-password）@
-            agent_ai.html (用户课表页面) //通过三栏布局用户上传的文件关于对话历史、日程提醒、AI对话、工具调用等集成到一个页面 @
-            task_detail.html (用户任务详情页面) //用于显示用户任务的详细信息，如任务类型、任务内容、任务状态等
+            -pages- (页面模块) //用于处理用户操作，包括登录注册、课表管理、提醒设置、复习计划、咨询记录、任务记录等（登录功能已并入 index.html：JS fetch 调用 /auth/login，token 存 localStorage，后续请求带 Authorization 头）@
+                register.html (注册页面) //用于用户注册，包括用户名、密码、邮箱等信息（注册成功后提示查收激活邮件，需点击邮件链接激活后才能登录） @
+                forgot-password.html (忘记密码页面) //用于输入注册邮箱并请求发送密码重置链接（调用 POST /auth/forgot-password） @
+                reset-password.html (重置密码页面) //从邮件重置链接打开（?token=xxx），输入新密码完成重置（调用 POST /auth/reset-password）@
+                agent_ai.html (用户课表页面) //通过三栏布局用户上传的文件关于对话历史、日程提醒、AI对话、工具调用等集成到一个页面 @
+                task_detail.html (用户任务详情页面) //用于显示用户任务的详细信息，如任务类型、任务内容、任务状态等
 
 -skill-  //技能模块
         __init__.py (初始化数据库,统一调用连接) //用于初始化技能模块，确保所有技能相关操作在统一的连接下进行

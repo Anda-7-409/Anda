@@ -131,3 +131,9 @@ skill/
 └── skill_remind.py     # 主动提醒的核心 skill：查课表 + 查天气/地图 + 推送`
 
 `skill_remind.py` 由`scripts/scheduler.py` 定时触发，也允许用户通过自然语言由 orchestrator 调用。 "主动服务"的闭环就串起来了。
+
+
+### 询问AI得知：
+### "同时部署"只在开发期成立
+- 开发模式 ：Vite(5173) + FastAPI(8000) 两个进程同时跑 ✅
+- 生产模式 ：可以只跑 FastAPI 一个——用`npm run build` 打包出静态文件，再让 FastAPI 用`StaticFiles` 挂载，一个端口搞定，Vite 退役。plan.md 里`/frontend` 那节写的正是这个方案。
