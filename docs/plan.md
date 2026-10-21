@@ -75,25 +75,21 @@
                 agent.py (用户智能体请求响应模型) //用于定义用户智能体相关请求响应模型，包括智能体管理、智能体任务等操作 Agent 对话
                 
 -Frontend-  //前端模块
-        index.html (前端网页) //用于显示项目介绍、登录注册入口等
-        package.json (前端依赖管理) //用于管理前端依赖，包括框架、库等插件
+        index.html (前端网页) //用于显示项目介绍、登录注册入口等   @
+        package.json (前端依赖管理) //用于管理前端依赖，包括框架、库等插件   
         <!-- npm install (安装前端依赖) //用于安装前端依赖，包括框架、库等插件
         npm run dev (启动前端开发环境) //用于启动前端开发环境，包括热更新、错误提示等功能 -->
         vite.config.js (Vite 配置文件) //用于配置 Vite 环境，包括插件、路径别名等
         <!-- npm run build (构建前端代码) //用于构建前端代码，包括压缩、合并等操作 -->
         <!-- npm run preview (预览前端代码) //用于预览前端代码，包括热更新、错误提示等功能 -->
 
-            -assets- (静态资源模块) //用于存放前端静态资源，如图片、字体、图标等
+            -assets- (静态资源模块) //用于存放前端静态资源，如图片、字体、图标等 @
 
             -pages- (页面模块) //用于处理用户操作，包括登录注册、课表管理、提醒设置、复习计划、咨询记录、任务记录等（登录功能已并入 index.html：JS fetch 调用 /auth/login，token 存 localStorage，后续请求带 Authorization 头）
-            register.html (注册页面) //用于用户注册，包括用户名、密码、邮箱等信息（注册成功后提示查收激活邮件，需点击邮件链接激活后才能登录）
-            forgot-password.html (忘记密码页面) //用于输入注册邮箱并请求发送密码重置链接（调用 POST /auth/forgot-password）
-            reset-password.html (重置密码页面) //从邮件重置链接打开（?token=xxx），输入新密码完成重置（调用 POST /auth/reset-password）
-            schedule.html (用户课表页面) //用于显示用户课表，包括课程信息、时间、地点等
-            reminder.html (用户提醒设置页面) //用于设置用户提醒，包括作业、考试、复习等
-            review.html (用户复习计划页面) //用于显示用户所有复习计划，包括复习时间、复习内容等
-            consult.html (用户咨询记录页面) //用于显示用户所有咨询记录，包括咨询内容、咨询时间、咨询状态等
-            task.html (用户任务记录页面) //用于显示用户所有任务的记录，包括任务类型、任务内容、任务状态等
+            register.html (注册页面) //用于用户注册，包括用户名、密码、邮箱等信息（注册成功后提示查收激活邮件，需点击邮件链接激活后才能登录） @
+            forgot-password.html (忘记密码页面) //用于输入注册邮箱并请求发送密码重置链接（调用 POST /auth/forgot-password） @
+            reset-password.html (重置密码页面) //从邮件重置链接打开（?token=xxx），输入新密码完成重置（调用 POST /auth/reset-password）@
+            agent_ai.html (用户课表页面) //通过三栏布局用户上传的文件关于对话历史、日程提醒、AI对话、工具调用等集成到一个页面 @
             task_detail.html (用户任务详情页面) //用于显示用户任务的详细信息，如任务类型、任务内容、任务状态等
 
 -skill-  //技能模块
