@@ -54,3 +54,14 @@ def list_files(user_id: int) -> dict:
         "uploaded_at": time.strftime("%Y-%m-%d %H:%M", time.localtime(p.stat().st_mtime)),
     } for p in entries]
     return {"ok": True, "data": files}
+
+
+def get_file_path(user_id: int, filename: str) -> dict:
+    # 下载/预览共用：解析出真实路径，只允许读自己目录下的文件
+    safe_name = Path(filename or "").name.strip()  # 只取文件名，防路径穿越
+    if not safe_name:
+        return {"ok": False, "message": "文件名不能为空哦~ ?-?"}
+    target = UPLOAD_DIR / str(user_id) / safe_name
+    if not target.is_file():
+        return {"ok": False, "message": "文件不存在或已被删除哦 ~"}
+    return {"ok": True, "data": {"path": target, "file_name": safe_name}}
