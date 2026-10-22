@@ -13,6 +13,9 @@ def create_app() -> FastAPI:
         # 初始化数据库连接 启动钩子 
         # TODO: init_db()  建 app.db 表（等 database.py）
         init_db()
+        # 模型滚动体检：后台线程定期探测不可用候选模型，恢复自动上线
+        from AI import health
+        health.start()
         # 关闭数据库连接 关闭钩子
         # TODO: close_db() 释放连接
         yield
@@ -31,7 +34,8 @@ def create_app() -> FastAPI:
     # 自检接口：启动后访问 http://localhost:8000/health 验证服务是否正常
     @app.get("/health")
     def health():
-        return {"code": 0, "message": "ok", "data": {"service": "anda-api"}}
+        from AI import model_router
+        return {"code": 0, "message": "ok", "data": {"service": "anda-api", "models": model_router.status()}}
 
     return app
 
