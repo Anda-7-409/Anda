@@ -76,9 +76,27 @@ a { color:#1a73e8; text-decoration:none; }
 .send-btn:disabled { background:#9dc3f5; cursor:not-allowed; }
 .send-btn:hover:not(:disabled) { transform:translateY(-1px);box-shadow:0 2px 0 #1557b0,0 6px 18px rgba(26,115,232,.5); }
 .send-btn:active:not(:disabled){transform:translateY(1px);}
+/* 斜杠命令菜单 */
+.slash-menu { display:none; position:absolute; bottom:100%; left:20px; width:320px; max-height:240px; overflow-y:auto; background:#fff; border:1px solid #e4e7ed; border-radius:10px; box-shadow:0 8px 24px rgba(16,24,40,.14); padding:6px; z-index:10; }
+.slash-menu.show { display:block; }
+.slash-group { font-size:11px; color:#999; padding:6px 10px 2px; }
+.slash-item { padding:8px 10px; border-radius:8px; cursor:pointer; }
+.slash-item:hover, .slash-item.hl { background:#eef5ff; }
+.slash-item .name { font-size:13px; font-weight:600; color:#1a73e8; }
+.slash-item .desc { font-size:12px; color:#666; margin-top:2px; }
+/* 提醒面板 */
+.reminder-box { display:none; padding:10px 12px 0; gap:6px; }
+.reminder-box.show { display:flex; }
+.reminder-box input { border:1px solid #e4e7ed; border-radius:6px; font-size:13px; outline:none; }
+#reminder-input { flex:1; padding:7px 10px; }
+#reminder-time { padding:6px 8px; color:#666; }
+.reminder-box button { border:none; background:#722ed1; color:#fff; border-radius:6px; padding:0 14px; cursor:pointer; font-size:13px; }
+.reminder-item { border-left-color:#722ed1; background:#faf8ff; }
+.reminder-item:hover { background:#f3edff; }
+.reminder-item .time { font-size:11px; color:#722ed1; font-weight:600; margin-top:3px; }
 /* 右栏上下分栏 */
 .col-right .schedule { flex:0 0 50%; border-bottom:1px solid #eef0f3; }
-.col-right .skills-mcp { flex:1; }
+.col-right .reminders { flex:1; }
 
 /* 日程卡片 */
 .sch-item { padding:12px 14px; border-left:3px solid #1a73e8; background:#f8faff; border-radius:8px; margin-bottom:10px; box-shadow:0 1px 3px rgba(26,115,232,.08);transition:all .2s ease; }
@@ -154,6 +172,8 @@ a { color:#1a73e8; text-decoration:none; }
     <div class="chat-input">
         <!-- 对话区输入文本框 -->
       <textarea id="chat-input" placeholder="输入自然语言以与我们的安答对话~ （Ctrl+Enter 发送）"></textarea>
+            <!-- 斜杠命令菜单（/ 呼出） -->
+      <div class="slash-menu" id="slash-menu"></div>
         <!-- 对话区输入发送按钮 -->
       <div class="chat-input-row">
   <button class="upload-btn" id="upload-btn" title="上传文件 / 照片">＋</button>
@@ -176,20 +196,15 @@ a { color:#1a73e8; text-decoration:none; }
       <!-- 日程卡片内容 -->
       <div class="panel-body" id="schedule-list"></div>
     </section>
-    <!-- 技能/MCP卡片 -->
-    <section class="panel skills-mcp">
-        <!-- 技能/MCP卡片标题 -->
-      <div class="panel-header"><span> 技能 and MCP</span></div>
-        <!-- 技能/MCP卡片内容 -->
-      <div class="panel-body">
-        <!-- 技能/MCP卡片内容 -->
-        <div class="section-title">可用技能 (skill)</div>
-        <div class="tag-row" id="skill-list"></div>
-        <!-- MCP 服务器 -->
-               <div class="section-title">MCP 服务器</div>
-               <!-- MCP 服务器内容 -->
-        <div class="tag-row" id="mcp-list"></div>
+        <!-- 提醒卡片 -->
+    <section class="panel reminders">
+      <div class="panel-header"><span>提醒</span><span class="add-btn" id="add-reminder-btn" title="添加提醒">+</span></div>
+      <div class="reminder-box" id="reminder-box">
+        <input id="reminder-input" placeholder="提醒内容，如：交高数作业">
+        <input type="time" id="reminder-time">
+        <button id="reminder-confirm">添加</button>
       </div>
+      <div class="panel-body" id="reminder-list"></div>
     </section>
   </aside>
 </div>
@@ -548,12 +563,93 @@ const mcps = [
   {name:'mcp_map', desc:'高德地图：位置、路径、导航'},
   {name:'mcp_weather', desc:'天气查询：课前出行建议'},
 ];
-// 渲染技能标签
-const skillBox = $('skill-list');
-skills.forEach(s => { const t=document.createElement('div'); t.className='tag'; t.textContent=s.name; t.title=s.desc; skillBox.appendChild(t); });
-// 渲染MCP标签
-const mcpBox = $('mcp-list');
-mcps.forEach(m => { const t=document.createElement('div'); t.className='tag'; t.textContent=m.name; t.title=m.desc; mcpBox.appendChild(t); });
+// ===== 斜杠菜单：/ 呼出技能与 MCP =====
+const menu = $('slash-menu'), chatInput = $('chat-input');
+const allCmds = [
+  ...skills.map(s => ({name:s.name, desc:s.desc, type:'技能'})),
+  ...mcps.map(m => ({name:m.name, desc:m.desc, type:'MCP'})),
+];
+let slashOn = false, hlIndex = 0, flatCmds = [], flatItems = [];
+
+const closeSlash = () => { menu.classList.remove('show'); slashOn = false; };
+
+function pickCmd(c) {
+  chatInput.value = '/' + c.name + ' ' + chatInput.value.replace(/^\/\S*\s*/, '');
+  closeSlash(); chatInput.focus();
+}
+
+function updateHl() {
+  flatItems.forEach((el,i) => el.classList.toggle('hl', i===hlIndex));
+  flatItems[hlIndex]?.scrollIntoView({block:'nearest'});
+}
+
+function showSlash(hits) {
+  menu.innerHTML = '';
+  ['技能','MCP'].forEach(type => {
+    const arr = hits.filter(c => c.type===type);
+    if (!arr.length) return;
+    const g = document.createElement('div'); g.className='slash-group';
+    g.textContent = type==='技能' ? '技能 Skill' : 'MCP 服务器';
+    menu.appendChild(g);
+    arr.forEach(c => {
+      const item = document.createElement('div'); item.className='slash-item';
+      const n = document.createElement('div'); n.className='name'; n.textContent = '/' + c.name;
+      const d = document.createElement('div'); d.className='desc'; d.textContent = c.desc;
+      item.append(n, d);
+      item.onclick = () => pickCmd(c);
+      menu.appendChild(item);
+      flatCmds.push(c); flatItems.push(item);
+    });
+  });
+  hlIndex = 0; updateHl();
+  menu.classList.add('show'); slashOn = true;
+}
+
+chatInput.addEventListener('input', () => {
+  flatCmds = []; flatItems = [];
+  const v = chatInput.value;
+  if (!v.startsWith('/')) { closeSlash(); return; }
+  const q = v.slice(1).split(/\s/)[0].toLowerCase();
+  const hits = allCmds.filter(c => c.name.includes(q) || c.desc.toLowerCase().includes(q));
+  hits.length ? showSlash(hits) : closeSlash();
+});
+
+chatInput.addEventListener('keydown', e => {
+  if (!slashOn) return;
+  if (e.key==='Escape') closeSlash();
+  else if (e.key==='ArrowDown') { e.preventDefault(); hlIndex=(hlIndex+1)%flatItems.length; updateHl(); }
+  else if (e.key==='ArrowUp') { e.preventDefault(); hlIndex=(hlIndex-1+flatItems.length)%flatItems.length; updateHl(); }
+  else if (e.key==='Enter') { e.preventDefault(); pickCmd(flatCmds[hlIndex]); }
+});
+// ===== 提醒面板（存 localStorage，刷新不丢） =====
+const reminders = JSON.parse(localStorage.getItem('reminders') || '[]');
+const reminderBox = $('reminder-box');
+function saveReminders() { localStorage.setItem('reminders', JSON.stringify(reminders)); }
+function renderReminder(r) {
+  const div = document.createElement('div');
+  div.className = 'sch-item reminder-item';
+  const t = document.createElement('div');
+  t.className = 't'; t.textContent = r.text;
+  const del = document.createElement('span');
+  del.className = 'memo-del'; del.textContent = '×';
+  del.onclick = () => { div.remove(); reminders.splice(reminders.indexOf(r), 1); saveReminders(); };
+  t.appendChild(del);
+  div.appendChild(t);
+  if (r.time) { const meta = document.createElement('div'); meta.className='time'; meta.textContent='⏰ ' + r.time; div.appendChild(meta); }
+  $('reminder-list').appendChild(div);
+}
+function addReminder() {
+  const input = $('reminder-input'); const text = input.value.trim();
+  if (!text) return;
+  const r = { text, time: $('reminder-time').value };
+  reminders.push(r); saveReminders(); renderReminder(r);
+  input.value = ''; $('reminder-time').value = '';
+  reminderBox.classList.remove('show');
+}
+$('add-reminder-btn').onclick = () => { reminderBox.classList.toggle('show'); $('reminder-input').focus(); };
+$('reminder-input').addEventListener('keydown', e => { if (e.key === 'Enter') addReminder(); });
+$('reminder-confirm').onclick = addReminder;
+reminders.forEach(renderReminder);
 
 // 初始化
 renderHistory();
