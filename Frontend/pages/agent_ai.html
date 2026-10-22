@@ -55,16 +55,17 @@ a { color:#1a73e8; text-decoration:none; }
 .msg.tool { justify-content:center; }
 .msg .bubble { max-width:70%; padding:10px 14px; border-radius:10px; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
 .msg.user .bubble { background:#1a73e8; color:#fff; border-bottom-right-radius:2px; }
-.msg.ai .bubble { background:#fff; color:#333; border:1px solid #e4e7ed; border-bottom-left-radius:2px; }
+.msg.ai .bubble { background:#fff; color:#333; border:1px solid #eef0f4; border-bottom-left-radius:2px; box-shadow:0 1px 2px rgba(16,24,40,.04),0 4px 10px rgba(16,24,40,.06);transition:box-shadow .2s ease;}
+.msg.ai .bubble:hover{box-shadow:0 2px 4px rgba(16,24,40,.06),08px 18px rgba(16,24,40,.10);}
 .msg.tool .bubble { background:#f0f4ff; color:#1a73e8; font-size:12px; border:1px dashed #c3d6f9; }
 .chat-input { flex-shrink:0; padding:12px 20px; border-top:1px solid #eef0f3; background:#fff; }
 .chat-input textarea { width:100%; resize:none; border:1px solid #e4e7ed; border-radius:8px; padding:10px; font-size:14px; font-family:inherit; outline:none; height:60px; }
 .chat-input textarea:focus { border-color:#1a73e8; }
 .chat-input-row { display:flex; justify-content:flex-end; margin-top:8px; }
-.send-btn { padding:6px 18px; background:#1a73e8; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:13px; }
+.send-btn { padding:8px 24px; background:linear-gradient(180deg,#69b1ff 0%,#5048e5 45%,#722ed1 100%); color:#fff; border:none; border-radius:20px; cursor:pointer; font-size:14px;font-weight:600;box-shadow:0 2px 0 #1557b0,0 4px 12px rgba(26,115,232,.35);transition:all .2s ease; }
 .send-btn:disabled { background:#9dc3f5; cursor:not-allowed; }
-.send-btn:hover:not(:disabled) { background:#1557b0; }
-
+.send-btn:hover:not(:disabled) { transform:translateY(-1px);box-shadow:0 2px 0 #1557b0,0 6px 18px rgba(26,115,232,.5); }
+.send-btn:active:not(:disabled){transform:translateY(1px);}
 /* 右栏上下分栏 */
 .col-right .schedule { flex:0 0 50%; border-bottom:1px solid #eef0f3; }
 .col-right .skills-mcp { flex:1; }
