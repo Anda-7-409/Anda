@@ -137,3 +137,5 @@ skill/
 ### "同时部署"只在开发期成立
 - 开发模式 ：Vite(5173) + FastAPI(8000) 两个进程同时跑 ✅
 - 生产模式 ：可以只跑 FastAPI 一个——用`npm run build` 打包出静态文件，再让 FastAPI 用`StaticFiles` 挂载，一个端口搞定，Vite 退役。plan.md 里`/frontend` 那节写的正是这个方案。
+
+浏览器把请求交给 Vite，Vite 把`/auth` 开头的请求转发给后端；后端的 FastAPI 按路径命中 auth.py 里的函数，函数算出结果后把响应原路返回，经 Vite 带回浏览器。
