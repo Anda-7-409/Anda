@@ -68,6 +68,10 @@ a { color:#1a73e8; text-decoration:none; }
 .chat-input textarea:focus { border-color:#1a73e8;box-shadow:0 0 0 3px rgba(26,115,232,.15); }
 .chat-input-row { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
 .upload-btn { width:34px; height:34px; border:none; border-radius:50%; background:#f0f4ff;color:#1a73e8; font-size:18px; cursor:pointer; line-height:1; user-select:none; transition:all .15s; }
+.input-right { display:flex; align-items:center; gap:8px; }
+.model-select { height:34px; border:1px solid #e4e7ed; border-radius:17px; background:#fff;color:#5048e5; font-size:12px; font-weight:600; padding:0 10px 0 14px; cursor:pointer;outline:none; transition:all .15s; }
+.model-select:hover { border-color:#b8c6ff; box-shadow:0 2px 8px rgba(80,72,229,.15); }
+.model-select:focus { border-color:#5048e5; }
 .upload-btn:hover { background:#1a73e8; color:#fff; transform:scale(1.1); }
 .send-btn { padding:8px 24px; height:34px;background:linear-gradient(180deg,#69b1ff 0%,#5048e5 45%,#722ed1 100%); color:#fff; border:none; border-radius:20px; cursor:pointer; font-size:14px;font-weight:600;box-shadow:0 2px 0 #1557b0,0 4px 12px rgba(26,115,232,.35);transition:all .2s ease; }
 .send-btn:disabled { background:#9dc3f5; cursor:not-allowed; }
@@ -152,8 +156,18 @@ a { color:#1a73e8; text-decoration:none; }
         <!-- 对话区输入文本框 -->
       <textarea id="chat-input" placeholder="输入自然语言以与我们的安答对话~ （Ctrl+Enter 发送）"></textarea>
         <!-- 对话区输入发送按钮 -->
-      <div class="chat-input-row"> <button class="upload-btn" id="upload-btn" title="上传文件 / 照片">＋</button><input type="file" id="file-input" multiple hidden><button class="send-btn" id="send-btn">发送</button></div>
-    </div>
+      <div class="chat-input-row">
+  <button class="upload-btn" id="upload-btn" title="上传文件 / 照片">＋</button>
+  <input type="file" id="file-input" multiple hidden>
+  <div class="input-right">
+    <select id="model-select" class="model-select" title="选择模型">
+      <option value="glm-4.7">GLM-4.7（最强）</option>
+      <option value="glm-4-air" selected>GLM-4 Air（均衡）</option>
+      <option value="glm-4-flash">GLM-4 Flash（免费快速）</option>
+    </select>
+    <button class="send-btn" id="send-btn">发送</button>
+  </div>
+</div>
   </main>
 
   <!-- 右栏 -->
@@ -408,6 +422,12 @@ async function send() {
 $('send-btn').onclick = send;
 // ===== 输入区左下角：上传文件（真身藏在替身后面） =====
 $('upload-btn').onclick = () => $('file-input').click();
+// ===== 模型选择器：记住当前选的模型 =====
+let currentModel = $('model-select').value;
+$('model-select').addEventListener('change', e => {
+  currentModel = e.target.value;
+  appendMessage('ai', '已切换模型：' + e.target.options[e.target.selectedIndex].text);
+});
 $('file-input').addEventListener('change', e => {
   const files = [...e.target.files];
   if (!files.length) return;
