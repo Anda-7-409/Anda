@@ -41,23 +41,29 @@ def register_user(db: Session, username: str, password: str, email: str) -> dict
     # 注册用户
     # TODO: 验证邮箱格式
     # TODO: 验证密码强度
-    # TODO: 生成随机验证码并发送到用户
-    # TODO: 存储用户信息到数据库
-    # TODO: 返回用户信息
-    if db.query(User).filter(User.email == email).first():
+    existing = db.query(User).filter(User.email == email).first()
+    if existing and existing.is_active:
         return {"ok": False, "message": "hi ~ 你的邮箱已经注册了哦~，回忆一下去登录吧 -0v0-"}
-    if db.query(User).filter(User.username == username).first():
+    name_owner = db.query(User).filter(User.username == username).first()
+    if name_owner and (not existing or name_owner.id != existing.id):
         return {"ok": False, "message": "emmm ~ 你的用户名已经注册了哦~ -?v?-"}
     token = secrets.token_urlsafe(32)
-    user = User(
-        email=email, 
-        username=username,
-        password_hash=hash_password(password), 
-        is_active=False,
-        verify_token=token,
-        token_expires=_expires(TOKEN_TTL_SECONDS),
-    )
-    db.add(user)
+    if existing:
+        # 邮箱已注册但未激活：视为重新注册，刷新账号信息并重发激活邮件
+        existing.username = username
+        existing.password_hash = hash_password(password)
+        existing.verify_token = token
+        existing.token_expires = _expires(TOKEN_TTL_SECONDS)
+    else:
+        user = User(
+            email=email,
+            username=username,
+            password_hash=hash_password(password),
+            is_active=False,
+            verify_token=token,
+            token_expires=_expires(TOKEN_TTL_SECONDS),
+        )
+        db.add(user)
     db.commit()
     url = f"{FRONTEND_BASE_URL}/auth/verify?token={token}"
     sent = email_service.send_email(
@@ -88,7 +94,7 @@ def login(db: Session, username: str, password: str) -> dict:
     if not user:
         return {"ok": False, "message": "emmm ~ 没有这个用户名哦~ 先去注册吧 -?v?-"}
     if not user.is_active:
-        return {"ok": False, "message": "账号还没激活呢，去邮箱查收激活邮件吧 --v--"}
+        return {"ok": False, "message": "账号还没激活呢，去邮箱查收激活邮件吧；若没收到邮件，用同一邮箱重新提交注册即可重发激活邮件 --v--"}
     if not verify_password(password, user.password_hash):
         return {"ok": False, "message": "hi ~ 密码不对哦~ 再回忆一下 -0v0-"}
     token = secrets.token_urlsafe(32)
