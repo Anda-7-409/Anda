@@ -5,11 +5,12 @@ import requests
 
 from Backend.config import OLLAMA_MODEL, OLLAMA_TIMEOUT_SECONDS, OLLAMA_URL
 
-def chat(messages: List[dict]) -> Optional[str]:
+def chat(messages: List[dict], model: Optional[str] = None) -> Optional[str]:
+    # model 参数供候选池滚动测试逐个指定模型，不传则用 config 默认槽位
     try:
         resp = requests.post(
             f"{OLLAMA_URL.rstrip('/')}/api/chat",
-            json={"model": OLLAMA_MODEL, "messages": messages, "stream": False},
+            json={"model": model or OLLAMA_MODEL, "messages": messages, "stream": False},
             timeout=OLLAMA_TIMEOUT_SECONDS,
         )
         data = resp.json()
