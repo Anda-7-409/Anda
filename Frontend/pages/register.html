@@ -7,22 +7,29 @@
     <!-- 第一版不要样式文件！！！样式内联，与 index.html 保持一致 -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: "Microsoft YaHei", sans-serif; background: #f5f7fa; }
+        body { font-family: "PingFang SC","Microsoft YaHei", "Segoe UI", sans-serif; min-height: 100vh; background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%); background-attachment: fixed; }
         .container { max-width: 420px; margin: 60px auto; padding: 24px; }
         .logo { text-align: center; font-size: 28px; font-weight: bold; color: #1a73e8; margin-bottom: 8px; }
-        .title { text-align: center; font-size: 22px; font-weight: bold; color: #333; }
-        .subtitle { text-align: center; color: #666; font-size: 14px; margin: 8px 0 24px; }
-        .register-form { background: #fff; border-radius: 8px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .title { text-align: center; font-size: 22px; font-weight: 600; color: #333; letter-spacing: 2px; line-height: 1.3; }
+        .subtitle { text-align: center; color: #666; font-size: 14px; margin: 8px 0 24px; letter-spacing: 0.5px; line-height: 1.7; }
+        .register-form { background: #fff; border-radius: 16px; padding: 32px 28px; box-shadow: 0 1px 2px rgba(26,115,232,.10), 0 4px 12px rgba(26,115,232,.10), 0 20px 40px rgba(26,115,232,.14); border: 1px solid rgba(255,255,255,.8); }
         .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 14px; color: #333; margin-bottom: 6px; }
-        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-        .submit-btn { width: 100%; padding: 10px; background: #1a73e8; color: #fff; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; }
-        .submit-btn:disabled { background: #9dc3f5; cursor: not-allowed; }
-        .submit-btn:hover:not(:disabled) { background: #1557b0; }
+        .form-group label { display: block; font-size: 14px; color: #333; margin-bottom: 6px; font-weight: 500; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; box-shadow: inset 0 1px 3px rgba(0,0,0,.06); line-height: 1.5; }
+        .form-group input:focus { outline: none; border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,.15); }
+        .submit-btn { width: 100%; padding: 11px; background: linear-gradient(135deg, #1a73e8, #6366f1, #9333ea, #6366f1, #1a73e8); background-size: 300% 300%; animation: gradient-move 5s ease infinite; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; letter-spacing: 1px; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 2px 0 #4c1d95, 0 6px 16px rgba(124,92,240,.45); transition: all .15s ease; }
+        .submit-btn:disabled { background: #9dc3f5; cursor: not-allowed; box-shadow: none; }
+        .submit-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 0 0 #4c1d95, 0 3px 8px rgba(124,92,240,.4); }
+        .submit-btn:hover:not(:disabled) { filter: brightness(1.08); }
         #register-msg { text-align: center; font-size: 13px; color: #e53935; min-height: 18px; margin-top: 8px; }
         .auth-links { margin-top: 16px; text-align: center; font-size: 13px; }
         .auth-links a { color: #1a73e8; text-decoration: none; margin: 0 8px; }
         .footer { text-align: center; color: #999; font-size: 12px; margin-top: 32px; }
+        @keyframes gradient-move {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
     </style>
 </head>
 <body>
@@ -92,6 +99,45 @@
                 btn.disabled = false;
             }
         });
+    </script>
+    
+        <script>
+    (function () {
+        const live2d_path = 'https://gcore.jsdelivr.net/npm/live2d-widgets@1.0.1/dist/';
+        function loadResource(url, type) {
+            return new Promise(function (resolve, reject) {
+                let tag;
+                if (type === 'css') {
+                    tag = document.createElement('link');
+                    tag.rel = 'stylesheet';
+                    tag.href = url;
+                } else if (type === 'js') {
+                    tag = document.createElement('script');
+                    tag.type = 'module';
+                    tag.src = url;
+                }
+                if (tag) {
+                    tag.onload = function () { resolve(url); };
+                    tag.onerror = function () { reject(url); };
+                    document.head.appendChild(tag);
+                }
+            });
+        }
+        Promise.all([
+            loadResource(live2d_path + 'waifu.css', 'css'),
+            loadResource(live2d_path + 'waifu-tips.js', 'js'),
+        ]).then(function () {
+            initWidget({
+                waifuPath: live2d_path + 'waifu-tips.json',
+                cdnPath: 'https://gcore.jsdelivr.net/gh/fghrsh/live2d_api/',
+                cubism2Path: live2d_path + 'live2d.min.js',
+                cubism5Path: 'https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js',
+                tools: ['hitokoto', 'asteroids', 'switch-model', 'switch-texture', 'photo', 'info', 'quit'],
+                logLevel: 'warn',
+                drag: false,
+            });
+        });
+    })();
     </script>
 </body>
 </html>
