@@ -42,6 +42,8 @@ OLLAMA_TIMEOUT_SECONDS = int(os.environ.get("OLLAMA_TIMEOUT_SECONDS", "120"))
 # —— 模型槽位（按能力分工，.env 可覆盖；带自定义键名回退，新槽位无需改代码）——
 # 对话/复杂任务主模型（回退链：GLM_MODEL → GLM_MODEL_TOOL → glm-4-flash）
 GLM_MODEL = os.environ.get("GLM_MODEL") or os.environ.get("GLM_MODEL_TOOL") or "glm-4-flash"
+# 第二候选GLM模型（.env: GLM_MODEL_AGAIN，候选池中次于主模型）
+GLM_MODEL_AGAIN = os.environ.get("GLM_MODEL_AGAIN", "")
 # 本地模型（回退链：OLLAMA_MODEL → LOCAL_OLLAMA_MODEL → qwen2.5）
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL") or os.environ.get("LOCAL_OLLAMA_MODEL") or "qwen2.5"
 # 图片理解槽：多模态，等 /schedule/import/image 接入时启用（GLM-4.6V 系列）
