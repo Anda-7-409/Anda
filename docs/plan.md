@@ -108,17 +108,17 @@
         mcp_weather.py (调用天气mcp接口) //用于调用天气mcp接口，获取用户天气信息
 -AI-  //AI模块
         __init__.py (初始化数据库,统一调用连接) //用于初始化AI连接，确保所有AI相关操作在统一的连接下进行
-        model_router.py (模型路由) //用于路由用户任务到不同的模型，如glm模型、ollama模型等
-        glm.py (调用glm模型) //用于调用glm模型，处理用户任务，如查询课表、查询提醒等任务
-        ollama.py (调用ollama模型) //用于调用ollama模型，处理用户任务，如查询课表、查询提醒等任务
-        memory.py (上下文记忆) //用于存储用户上下文信息，如用户课表、用户提醒设置、用户复习计划等
-        orchestrator.py (任务协调器) //用于协调用户任务，如查询课表、查询提醒等任务，调用glm模型或ollama模型处理,能够让AI使用Agent
+        model_router.py (模型路由) //用于路由用户任务到不同的模型，如glm模型、ollama模型等  如果电脑上没有 ollama或调用失败，则自动使用 glm模型 @
+        glm.py (调用glm模型) //用于调用glm模型，处理用户任务，如查询课表、查询提醒等任务 @
+        ollama.py (调用ollama模型) //用于调用ollama模型，处理用户任务，如查询课表、查询提醒等任务 @
+        memory.py (上下文记忆) //用于存储用户上下文信息，如用户课表、用户提醒设置、用户复习计划等 
+        orchestrator.py (任务协调器) //用于协调用户任务，如查询课表、查询提醒等任务，调用glm模型或ollama模型处理,能够让AI使用Agent 
 
         -OCR- (OCR模块) //用于识别用户上传的课表图片，提取课程信息、时间、地点等
             ocr.py (OCR识别) //用于调用OCR模型，识别用户上传的课表图片，提取课程信息、时间、地点等
 
-        -prompt- (提示词模块) //用于生成AI模型的提示词，包括用户输入、系统知识库等信息
-            prompt.py (提示词生成) //用于根据用户输入、系统知识库等信息生成AI模型的提示词，确保模型能够正确理解用户需求
+        -prompt- (提示词模块) //用于生成AI模型的提示词，包括用户输入、系统知识库等信息 @
+            prompt.py (提示词生成) //用于根据用户输入、系统知识库等信息生成AI模型的提示词，确保模型能够正确理解用户需求 @
         
 -cloudflared_tunnel  //Cloudflare Tunnel模块
         start.bat (启动Cloudflare Tunnel) //用于启动Cloudflare Tunnel
