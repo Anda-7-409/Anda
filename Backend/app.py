@@ -37,9 +37,10 @@ def create_app() -> FastAPI:
 
 
 def register_routes(app: FastAPI):
-    from .routes import auth
+    from .routes import auth, agent
     app.include_router(auth.router, prefix="/auth")
-    # TODO: schedule / reminder / review / consult / task / agent 的 router 建好后逐个追加
+    app.include_router(agent.router, prefix="/agent")
+    # TODO: schedule / reminder / review / consult / task 的 router 建好后逐个追加
 
 
 app = create_app()
