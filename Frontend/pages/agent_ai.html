@@ -31,12 +31,47 @@ a { color:#1a73e8; text-decoration:none; }
 .col-left .file-manager { flex:0 0 45%; border-bottom:1px solid #eef0f3; }
 .col-left .history { flex:1; }
 
-/* 文件管理器树 */
-.fm-tree { list-style:none; padding-left:6px; }
-.fm-tree li { padding:4px 6px; cursor:pointer; border-radius:4px; font-size:13px; }
-.fm-tree li:hover { background:#eef5ff; }
-.fm-tree .folder::before { content:"📁 "; }
-.fm-tree .file::before { content:"📄 "; }
+/* 资源管理器（VS Code 式树状图，浅色与页面协调） */
+/* 折叠箭头（closed 时旋转 -90° 收拢） */
+.fm-chevron { flex-shrink:0; width:12px; font-size:9px; color:#8a94a6; text-align:center; cursor:pointer; transition:transform .12s; }
+.fm-chevron.closed { transform:rotate(-90deg); }
+/* 根行：箭头 + 标题，工具条 hover 浮现 */
+.fm-root { display:flex; align-items:center; gap:4px; padding:5px 10px; font-size:13px; font-weight:600; user-select:none; cursor:pointer; }
+.fm-root:hover { background:#eef5ff; }
+.fm-toolbar { margin-left:auto; display:none; gap:2px; }
+.fm-root:hover .fm-toolbar { display:flex; }
+.fm-toolbar button { border:none; background:transparent; color:#5b6b83; cursor:pointer; font-size:13px; width:22px; height:22px; padding:0; line-height:1; border-radius:4px; }
+.fm-toolbar button:hover { background:#dce8ff; color:#1a73e8; }
+/* 树：层级缩进 + 竖线导轨（资源管理器的 ├─ 线） */
+.fm-tree, .fm-children { list-style:none; }
+.fm-tree { padding:0 4px 4px; }
+.fm-children { margin:0 0 0 10px; padding-left:8px; border-left:1px solid #e4e7ed; }
+.fm-row { display:flex; align-items:center; gap:5px; padding:3px 6px; border-radius:4px; font-size:13px; color:#333; white-space:nowrap; overflow:hidden; cursor:pointer; }
+.fm-row:hover { background:#eef5ff; }
+.fm-row.selected { background:#e0edff; }
+.fm-row .fm-name { overflow:hidden; text-overflow:ellipsis; }
+.fm-row .fm-count { color:#999; font-size:11px; margin-left:2px; }
+.fm-row .fm-size { color:#999; font-size:11px; margin-left:auto; padding-left:8px; flex-shrink:0; }
+.fm-row .fm-dl { display:none; flex-shrink:0; border:none; background:transparent; color:#1a73e8; cursor:pointer; font-size:12px; padding:2px 4px; border-radius:4px; }
+.fm-row:hover .fm-dl { display:inline; }
+.fm-row .fm-dl:hover { background:#dce8ff; }
+.fm-tree .fm-msg { padding:3px 6px 3px 27px; font-size:12px; color:#999; cursor:default; }
+/* 文件预览遮罩层 */
+.preview-mask { display:none; position:fixed; inset:0; background:rgba(16,24,40,.45); z-index:50; align-items:center; justify-content:center; }
+.preview-mask.show { display:flex; }
+.preview-card { width:min(860px,92vw); height:min(620px,86vh); background:#fff; border-radius:12px; box-shadow:0 24px 64px rgba(16,24,40,.35); display:flex; flex-direction:column; overflow:hidden; }
+.preview-bar { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; border-bottom:1px solid #eef0f3; font-size:13px; font-weight:600; }
+.preview-bar .pv-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.preview-bar .pv-actions { display:flex; gap:8px; flex-shrink:0; }
+.preview-bar button { border:1px solid #e4e7ed; background:#fff; color:#1a73e8; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:12px; }
+.preview-bar button:hover { background:#eef5ff; }
+.preview-body { flex:1; overflow:auto; background:#f5f7fa; display:flex; align-items:center; justify-content:center; }
+.preview-body img { max-width:100%; max-height:100%; object-fit:contain; }
+.preview-body iframe { width:100%; height:100%; border:none; background:#fff; }
+.preview-body pre { width:100%; height:100%; overflow:auto; margin:0; padding:16px; font-size:12.5px; line-height:1.6; white-space:pre-wrap; word-break:break-word; background:#fff; color:#333; }
+.preview-body .pv-hint { color:#999; font-size:13px; }
+/* 轻提示 */
+.toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); background:#333c4d; color:#fff; padding:9px 18px; border-radius:8px; font-size:13px; z-index:60; box-shadow:0 6px 20px rgba(16,24,40,.25); }
 
 /* 历史对话 */
 .history-new { width:100%; padding:9px; background:linear-gradient(135deg,#4f8cff 0%,#1a73e8 50%,#6366f1 100%); color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; margin-bottom:10px;box-shadow:0 2px 0 #1557b0,0 4px 10px rgba(26,115,232,.30);transition:all .2s ease; }
@@ -127,20 +162,22 @@ a { color:#1a73e8; text-decoration:none; }
 <div class="layout">
   <!-- 左栏 -->
   <aside class="col col-left">
-    <!-- 文件管理器 -->
+    <!-- 文件管理器（VS Code 资源管理器风格） -->
     <section class="panel file-manager">
-        <!-- 文件管理器标题 -->
+        <!-- 面板标题 -->
       <div class="panel-header"><span>📂 文件管理器</span></div>
-        <!-- 文件管理器树 -->
+      <!-- 根行：折叠箭头 + 工具条（上传/刷新/全部折叠，hover 浮现） -->
+      <div class="fm-root" id="fm-root">
+        <span class="fm-chevron" id="fm-root-chevron">▼</span>
+        <span>我的文件</span>
+        <span class="fm-toolbar">
+          <button id="fm-upload" title="上传文件">⇪</button>
+          <button id="fm-refresh" title="刷新">⟳</button>
+          <button id="fm-collapse" title="全部折叠">⊟</button>
+        </span>
+      </div>
+      <!-- 树内容 -->
       <div class="panel-body"><ul class="fm-tree" id="fm-tree"></ul></div>
-        <!-- 文件管理器树点击事件 -->
-        <script>
-            document.getElementById('fm-tree').addEventListener('click', (e) => {
-                if (e.target.tagName === 'LI') {
-                    e.target.classList.toggle('active');
-                }
-            });
-        </script>
     </section>
     <!-- 历史对话 -->
     <section class="panel history">
@@ -209,6 +246,20 @@ a { color:#1a73e8; text-decoration:none; }
   </aside>
 </div>
 
+<!-- 文件预览遮罩层（点击遮罩空白处关闭） -->
+<div class="preview-mask" id="preview-mask">
+  <div class="preview-card">
+    <div class="preview-bar">
+      <span class="pv-name" id="preview-title"></span>
+      <span class="pv-actions">
+        <button id="preview-download">⬇ 下载</button>
+        <button id="preview-close">✕ 关闭</button>
+      </span>
+    </div>
+    <div class="preview-body" id="preview-body"></div>
+  </div>
+</div>
+
 <script>
 // 未登录跳回首页
 // 从登录状态获取 token
@@ -230,50 +281,221 @@ const api = async (url, opts={}) => {
 };
 const $ = id => document.getElementById(id);
 
-// ===== 左栏上：文件管理器（真实数据：GET /upload 拉取当前登录用户自己上传的文件） =====
+// ===== 左栏上：资源管理器（VS Code 风格，真实数据：GET /upload/ 当前用户自己的文件） =====
+// 上传目录本身是平的，这里按扩展名分到虚拟文件夹展示（图片/文档/表格/演示/压缩包）
+const FM_GROUPS = [
+  { key:'图片',   icon:'🖼', exts:['png','jpg','jpeg','gif','webp','bmp'] },
+  { key:'文档',   icon:'📄', exts:['pdf','doc','docx','txt','md'] },
+  { key:'表格',   icon:'📊', exts:['xls','xlsx','csv'] },
+  { key:'演示',   icon:'📽', exts:['ppt','pptx'] },
+  { key:'压缩包', icon:'🗜', exts:['zip'] },
+];
+const fmOpenGroups = new Set(FM_GROUPS.map(g => g.key));  // 展开的分组（默认全展开）
+let fmRootOpen = true;                                     // 根节点是否展开
+
+const fmGroupOf = name => {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  return FM_GROUPS.find(g => g.exts.includes(ext)) || { key:'其他', icon:'📦' };
+};
+
+// 状态行（空态/重试/过期提示统一走这里）
+function fmMsg(text, color) {
+  const li = document.createElement('li');
+  li.className = 'fm-msg';
+  li.style.color = color || '';
+  li.textContent = text;
+  return li;
+}
+
+// 每类文件的专属图标（像资源管理器按类型着色）
+const FM_ICONS = { png:'🖼️', jpg:'🖼️', jpeg:'🖼️', gif:'🖼️', webp:'🖼️', bmp:'🖼️', pdf:'📕', doc:'📘', docx:'📘', xls:'📗', xlsx:'📗', csv:'📊', ppt:'📙', pptx:'📙', txt:'📃', md:'📝', zip:'🗜️' };
+const extOf = name => (name.split('.').pop() || '').toLowerCase();
+const iconOf = name => FM_ICONS[extOf(name)] || '📄';
+
+// 渲染树：我的文件 → 类型文件夹（可折叠）→ 文件（点击预览，悬停出下载）
+function renderFm(files) {
+  const box = $('fm-tree');
+  box.innerHTML = '';
+  const fmt = n => n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(1) + ' KB' : (n/1048576).toFixed(1) + ' MB';
+  if (!files.length) {
+    box.appendChild(fmMsg('还没有文件，点 ⇪ 或对话框 ＋ 上传一个吧 ~'));
+    return;
+  }
+  const groups = new Map();
+  files.forEach(f => {
+    const g = fmGroupOf(f.file_name);
+    if (!groups.has(g.key)) groups.set(g.key, []);
+    groups.get(g.key).push(f);
+  });
+  groups.forEach((items, key) => {
+    const node = document.createElement('li');            // 类型文件夹节点
+    const open = fmOpenGroups.has(key);
+    const row = document.createElement('div');
+    row.className = 'fm-row';
+    const chev = document.createElement('span');
+    chev.className = 'fm-chevron' + (open ? '' : ' closed');
+    chev.textContent = '▼';
+    const icon = document.createElement('span');
+    icon.textContent = '📁';
+    const name = document.createElement('span');
+    name.className = 'fm-name';
+    name.textContent = key;
+    const count = document.createElement('span');
+    count.className = 'fm-count';
+    count.textContent = items.length;
+    row.append(chev, icon, name, count);
+    row.onclick = () => { fmOpenGroups.has(key) ? fmOpenGroups.delete(key) : fmOpenGroups.add(key); renderFm(files); };
+    node.appendChild(row);
+    if (open) {
+      const kids = document.createElement('ul');          // 子层级：缩进 + 竖线导轨
+      kids.className = 'fm-children';
+      items.forEach(f => {
+        const li = document.createElement('li');
+        li.className = 'fm-row';
+        const ghost = document.createElement('span');     // 占位，让文件图标与文件夹图标对齐
+        ghost.className = 'fm-chevron';
+        ghost.style.visibility = 'hidden';
+        const fi = document.createElement('span');
+        fi.textContent = iconOf(f.file_name);
+        const fn = document.createElement('span');
+        fn.className = 'fm-name';
+        fn.textContent = f.file_name;
+        const sz = document.createElement('span');
+        sz.className = 'fm-size';
+        sz.textContent = fmt(f.size);
+        const dl = document.createElement('button');      // 悬停浮出的下载按钮
+        dl.className = 'fm-dl';
+        dl.textContent = '⬇';
+        dl.title = '下载';
+        dl.onclick = e => { e.stopPropagation(); downloadFile(f.file_name); };
+        li.title = `${f.file_name}\n${fmt(f.size)} · ${f.uploaded_at || ''} · 点击预览`;
+        li.append(ghost, fi, fn, sz, dl);
+        li.onclick = () => previewFile(f.file_name);
+        kids.appendChild(li);
+      });
+      node.appendChild(kids);
+    }
+    box.appendChild(node);
+  });
+}
+
 async function loadFiles() {
   const box = $('fm-tree');
   box.innerHTML = '';
-  const fmt = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
   const { ok, status, data } = await api('/upload/');
   if (status === 401) {
-    box.innerHTML = '<li style="color:#c0392b;cursor:default">登录已过期，正在跳转登录页…</li>';
+    box.appendChild(fmMsg('登录已过期，正在跳转登录页…', '#f14c4c'));
     setTimeout(() => location.href = '../index.html', 1200);
     return;
   }
   if (status === 0 || status >= 500) {
     // 加载瞬间后端可能正在重启：自动重试直到拿到结果，不再一次性摆烂
-    box.innerHTML = `<li style="color:#999;cursor:default">${status === 0 ? '连不上后端(8000)' : '后端出错(HTTP ' + status + ')'}，5秒后自动重试…</li>`;
+    box.appendChild(fmMsg(`${status === 0 ? '连不上后端(8000)' : '后端出错(HTTP ' + status + ')'}，5秒后自动重试…`, '#e2c08d'));
     setTimeout(loadFiles, 5000);
     return;
   }
   if (!ok || !data || data.code !== 0) {
-    // 兑底：任何异常都不影响页面布局
-    box.innerHTML = `<li style="color:#999;cursor:default">获取失败：${(data && (data.message || data.detail)) || 'HTTP ' + status}</li>`;
+    box.appendChild(fmMsg(`获取失败：${(data && (data.message || data.detail)) || 'HTTP ' + status}`, '#e2c08d'));
     return;
   }
-  const files = data.data || [];
-  const root = document.createElement('li');
-  root.className = 'folder';
-  root.textContent = `我上传的文件 (${files.length})`;
-  const ul = document.createElement('ul');
-  ul.className = 'fm-tree'; ul.style.paddingLeft = '16px';
-  if (!files.length) {
-    const empty = document.createElement('li');
-    empty.style.color = '#999'; empty.style.cursor = 'default';
-    empty.textContent = '还没有上传过文件，去中间对话框点 ＋ 试试吧 ~';
-    ul.appendChild(empty);
-  }
-  files.forEach(f => {
-    const li = document.createElement('li');
-    li.className = 'file';
-    li.textContent = `${f.file_name} (${fmt(f.size)})`;
-    li.title = `${f.file_name}\n${fmt(f.size)} · ${f.uploaded_at || ''}`;
-    ul.appendChild(li);
-  });
-  root.appendChild(ul);
-  box.appendChild(root);
+  renderFm(data.data || []);
 }
+
+// 上传成功后调用：自动展开该文件所属分组再刷新，新文件立刻可见
+function revealFile(fileName) {
+  fmOpenGroups.add(fmGroupOf(fileName).key);
+  loadFiles();
+}
+
+// 根行交互：整体折叠/展开；工具条 上传/刷新/全部折叠
+$('fm-root-chevron').onclick = () => {
+  fmRootOpen = !fmRootOpen;
+  $('fm-root-chevron').classList.toggle('closed', !fmRootOpen);
+  document.querySelector('.file-manager .panel-body').style.display = fmRootOpen ? '' : 'none';
+};
+$('fm-upload').onclick = () => $('file-input').click();
+$('fm-refresh').onclick = loadFiles;
+$('fm-collapse').onclick = () => { fmOpenGroups.clear(); loadFiles(); };
+
+// ===== 文件下载与预览（fetch 带请求头取回二进制：img/iframe 标签带不了 Authorization） =====
+const PREVIEW_IMG = ['png','jpg','jpeg','gif','webp','bmp'];
+const PREVIEW_TEXT = ['txt','md','csv','json','log'];
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+async function fetchBlob(fileName) {
+  const res = await fetch('/upload/download/' + encodeURIComponent(fileName), {
+    headers: { 'Authorization': 'Bearer ' + token },
+  });
+  if (!res.ok) {
+    let msg = 'HTTP ' + res.status;
+    try { msg = (await res.json()).message || msg; } catch {}
+    throw new Error(msg);
+  }
+  return res.blob();
+}
+
+async function downloadFile(fileName) {
+  try {
+    const blob = await fetchBlob(fileName);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('已开始下载：' + fileName);
+  } catch (err) {
+    toast('下载失败：' + err.message);
+  }
+}
+
+const previewMask = $('preview-mask');
+
+function closePreview() { previewMask.classList.remove('show'); }
+
+async function previewFile(fileName) {
+  const ext = extOf(fileName);
+  const canPreview = PREVIEW_IMG.includes(ext) || PREVIEW_TEXT.includes(ext) || ext === 'pdf';
+  if (!canPreview) {
+    downloadFile(fileName);
+    toast('该类型暂不支持预览，已直接下载');
+    return;
+  }
+  const body = $('preview-body');
+  $('preview-title').textContent = fileName;
+  $('preview-download').onclick = () => downloadFile(fileName);
+  $('preview-close').onclick = closePreview;
+  previewMask.classList.add('show');
+  body.innerHTML = '<span class="pv-hint">加载中…</span>';
+  try {
+    const blob = await fetchBlob(fileName);
+    if (PREVIEW_IMG.includes(ext)) {
+      const img = document.createElement('img');       // 图片：直接看图
+      img.src = URL.createObjectURL(blob);
+      body.innerHTML = ''; body.appendChild(img);
+    } else if (ext === 'pdf') {
+      const frame = document.createElement('iframe');  // PDF：浏览器原生渲染
+      frame.src = URL.createObjectURL(blob);
+      body.innerHTML = ''; body.appendChild(frame);
+    } else {
+      const text = await blob.text();                  // 文本类：显示原文
+      const pre = document.createElement('pre');
+      pre.textContent = text;                          // textContent 赋值，天然防注入
+      body.innerHTML = ''; body.appendChild(pre);
+    }
+  } catch (err) {
+    body.innerHTML = '<span class="pv-hint">加载失败：' + err.message + '</span>';
+  }
+}
+// 点遮罩空白处也能关掉预览
+previewMask.onclick = e => { if (e.target === previewMask) closePreview(); };
+
 loadFiles();
 
 // ===== 左栏下：历史对话（localStorage 持久化） =====
@@ -471,7 +693,7 @@ function uploadFile(file) {
           const fid = (res.data && res.data.file_id) || '-';
           bubble.textContent = `${head}\n✓ 上传成功 · file_id: ${fid}`;
           pushToolHistory(`上传 ${file.name} 成功（file_id: ${fid}）`);
-          if (typeof loadFiles === 'function') loadFiles(); // 左栏文件管理器同步刷新
+          if (typeof revealFile === 'function') revealFile(file.name); // 左栏资源管理器同步刷新并展开分组
           return resolve();
         }
         if (xhr.status === 401) {
