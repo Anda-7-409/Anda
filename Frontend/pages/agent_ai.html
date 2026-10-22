@@ -23,6 +23,8 @@ a { color:#1a73e8; text-decoration:none; }
 /* 通用面板 */
 .panel { display:flex; flex-direction:column; overflow:hidden; }
 .panel-header { flex-shrink:0; padding:12px 16px; font-weight:bold; font-size:14px; border-bottom:1px solid #eef0f3; background:#fafbfc; display:flex; align-items:center; justify-content:space-between; }
+.add-btn { cursor:pointer; font-size:17px; font-weight:bold; color:#4f6ef7; line-height:1; user-select:none; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:#eef2ff; }
+.add-btn:hover { color:#fff; background:#4f6ef7; transform:scale(1.15); transition:all .15s; }
 .panel-body { flex:1; overflow-y:auto; padding:8px; }
 
 /* 左栏上下分栏 */
@@ -62,8 +64,10 @@ a { color:#1a73e8; text-decoration:none; }
 .chat-input { flex-shrink:0; padding:12px 20px; border-top:1px solid #eef0f3; background:#fff; }
 .chat-input textarea { width:100%; resize:none; border:1px solid #e4e7ed; border-radius:8px; padding:10px; font-size:14px; font-family:inherit; outline:none; height:60px;transition:border-color .2s ease, box-shadow .2s ease;  }
 .chat-input textarea:focus { border-color:#1a73e8;box-shadow:0 0 0 3px rgba(26,115,232,.15); }
-.chat-input-row { display:flex; justify-content:flex-end; margin-top:8px; }
-.send-btn { padding:8px 24px; background:linear-gradient(180deg,#69b1ff 0%,#5048e5 45%,#722ed1 100%); color:#fff; border:none; border-radius:20px; cursor:pointer; font-size:14px;font-weight:600;box-shadow:0 2px 0 #1557b0,0 4px 12px rgba(26,115,232,.35);transition:all .2s ease; }
+.chat-input-row { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
+.upload-btn { width:34px; height:34px; border:none; border-radius:50%; background:#f0f4ff;color:#1a73e8; font-size:18px; cursor:pointer; line-height:1; user-select:none; transition:all .15s; }
+.upload-btn:hover { background:#1a73e8; color:#fff; transform:scale(1.1); }
+.send-btn { padding:8px 24px; height:34px;background:linear-gradient(180deg,#69b1ff 0%,#5048e5 45%,#722ed1 100%); color:#fff; border:none; border-radius:20px; cursor:pointer; font-size:14px;font-weight:600;box-shadow:0 2px 0 #1557b0,0 4px 12px rgba(26,115,232,.35);transition:all .2s ease; }
 .send-btn:disabled { background:#9dc3f5; cursor:not-allowed; }
 .send-btn:hover:not(:disabled) { transform:translateY(-1px);box-shadow:0 2px 0 #1557b0,0 6px 18px rgba(26,115,232,.5); }
 .send-btn:active:not(:disabled){transform:translateY(1px);}
@@ -76,7 +80,18 @@ a { color:#1a73e8; text-decoration:none; }
 .sch-item:hover { background:#f0f4ff;transform:translateX(2px);box-shadow:0 2px 8px rgba(26,115,232,.15); }
 .sch-item .t { font-weight:600; font-size:13px; }
 .sch-item .meta { font-size:12px; color:#666; margin-top:3px; }
+/* 备忘录输入框 */
+.memo-box { display:none; padding:10px 12px 0; gap:8px; }
+.memo-box.show { display:flex; }
+.memo-box input { flex:1; border:1px solid #e4e7ed; border-radius:6px; padding:7px 10px; font-size:13px; outline:none; }
+.memo-box input:focus { border-color:#f59e0b; }
+.memo-box button { border:none; background:#f59e0b; color:#fff; border-radius:6px; padding:0 14px; cursor:pointer; font-size:13px; }
 
+/* 备忘录条目（橙色系，和蓝色课程区分开） */
+.memo-item { border-left-color:#f59e0b; background:#fffaf0; }
+.memo-item:hover { background:#fff3dd; }
+.memo-del { float:right; cursor:pointer; color:#c9a227; margin-left:6px; }
+.memo-del:hover { color:#e5484d; }
 /* 技能/MCP 标签 */
 .section-title { font-size:12px; color:#999; margin:10px 4px 6px; }
 .tag-row { display:flex; flex-wrap:wrap; gap:6px; padding:0 4px; }
@@ -135,7 +150,7 @@ a { color:#1a73e8; text-decoration:none; }
         <!-- 对话区输入文本框 -->
       <textarea id="chat-input" placeholder="输入自然语言以与我们的安答对话~ （Ctrl+Enter 发送）"></textarea>
         <!-- 对话区输入发送按钮 -->
-      <div class="chat-input-row"><button class="send-btn" id="send-btn">发送</button></div>
+      <div class="chat-input-row"> <button class="upload-btn" id="upload-btn" title="上传文件 / 照片">＋</button><input type="file" id="file-input" multiple hidden><button class="send-btn" id="send-btn">发送</button></div>
     </div>
   </main>
 
@@ -145,8 +160,12 @@ a { color:#1a73e8; text-decoration:none; }
     <!-- 日程卡片标题 -->
     <section class="panel schedule">
         <!-- 日程卡片标题 -->
-      <div class="panel-header"><span>今日日程</span></div>
-        <!-- 日程卡片内容 -->
+      <div class="panel-header"><span>今日日程</span><span class="add-btn" id="add-memo-btn" title="添加日程">+</span></div>
+      <div class="memo-box" id="memo-box">
+        <input id="memo-input" placeholder="输入备忘录，回车确认">
+        <button id="memo-confirm">添加</button>
+      </div>  
+      <!-- 日程卡片内容 -->
       <div class="panel-body" id="schedule-list"></div>
     </section>
     <!-- 技能/MCP卡片 -->
@@ -371,6 +390,14 @@ async function send() {
   } finally { saveHistory(); btn.disabled = false; input.focus(); }
 }
 $('send-btn').onclick = send;
+// ===== 输入区左下角：上传文件（真身藏在替身后面） =====
+$('upload-btn').onclick = () => $('file-input').click();
+$('file-input').addEventListener('change', e => {
+  const files = [...e.target.files];
+  if (!files.length) return;
+  appendMessage('user', '📎 已选择文件：' + files.map(f => f.name).join('、'));
+  e.target.value = '';
+});
 $('chat-input').addEventListener('keydown', e => { if (e.ctrlKey && e.key==='Enter') send(); });
 
 // ===== 右栏上：今日日程（调 /schedule/today，失败用 mock） =====
@@ -386,7 +413,35 @@ $('chat-input').addEventListener('keydown', e => { if (e.ctrlKey && e.key==='Ent
     <div class="meta">第${c.start_slot}-${c.end_slot}节 · ${c.classroom||''} ${c.teacher||''}</div></div>`).join('')
     : '<div style="color:#999;text-align:center;padding:20px">今日无课程</div>';
 })();
+// ===== 今日日程加号：自定义备忘录（存 localStorage，刷新不丢） =====
+const memos = JSON.parse(localStorage.getItem('memos') || '[]');
+const memoBox = $('memo-box');
+function saveMemos() { localStorage.setItem('memos', JSON.stringify(memos)); }
 
+function renderMemo(text) {
+  const div = document.createElement('div');
+  div.className = 'sch-item memo-item';
+  const t = document.createElement('div');
+  t.className = 't'; t.textContent = text;
+  const del = document.createElement('span');
+  del.className = 'memo-del'; del.textContent = '×';
+  del.onclick = () => { div.remove(); memos.splice(memos.indexOf(text), 1); saveMemos(); };
+  t.appendChild(del);
+  div.appendChild(t);
+  $('schedule-list').appendChild(div);
+}
+
+function addMemo() {
+  const input = $('memo-input'); const text = input.value.trim();
+  if (!text) return;
+  memos.push(text); saveMemos(); renderMemo(text);
+  input.value = ''; memoBox.classList.remove('show');
+}
+
+$('add-memo-btn').onclick = () => { memoBox.classList.toggle('show'); $('memo-input').focus(); };
+$('memo-input').addEventListener('keydown', e => { if (e.key === 'Enter') addMemo(); });
+$('memo-confirm').onclick = addMemo;
+memos.forEach(renderMemo);
 // ===== 右栏下：技能 & MCP（对照 plan.md 的 skill/ 与 MCP/） =====
 const skills = [
   {name:'search', desc:'查询课表、提醒等用户数据'},
