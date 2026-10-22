@@ -63,6 +63,8 @@ a { color:#1a73e8; text-decoration:none; }
 .msg.ai .bubble { background:#fff; color:#333; border:1px solid #eef0f4; border-bottom-left-radius:2px; box-shadow:0 1px 2px rgba(16,24,40,.04),0 4px 10px rgba(16,24,40,.06);transition:box-shadow .2s ease;}
 .msg.ai .bubble:hover{box-shadow:0 2px 4px rgba(16,24,40,.06),08px 18px rgba(16,24,40,.10);}
 .msg.tool .bubble { background:#f0f4ff; color:#1a73e8; font-size:12px; border:1px dashed #c3d6f9; }
+.msg.tool .bubble.ok { background:#f0faf2; color:#2e7d32; border:1px solid #b9e0c4; }
+.msg.tool .bubble.err { background:#fff5f5; color:#c0392b; border:1px solid #f5c6c6; }
 .chat-input { flex-shrink:0; padding:12px 20px; border-top:1px solid #eef0f3; background:#fff; }
 .chat-input textarea { width:100%; resize:none; border:1px solid #e4e7ed; border-radius:8px; padding:10px; font-size:14px; font-family:inherit; outline:none; height:60px;transition:border-color .2s ease, box-shadow .2s ease;  }
 .chat-input textarea:focus { border-color:#1a73e8;box-shadow:0 0 0 3px rgba(26,115,232,.15); }
@@ -203,69 +205,61 @@ const api = async (url, opts={}) => {
   try {
     // 发送 API 请求
     const res = await fetch(url, { headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+token }, ...opts });
-    // 解析 JSON 响应
-    const data = await res.json();
-    // 返回 API 响应
-    return { ok: res.ok, data };
+    // 解析 JSON：500 等错误页不是 JSON，也不丢真实状态码（status 0 只代表真的连不上）
+    let data = {};
+    try { data = await res.json(); } catch {}
+    // 返回 API 响应（status 供调用方区分 401/网络失败等场景）
+    return { ok: res.ok, status: res.status, data };
     // 如果 API 请求失败，返回错误响应
-  } catch { return { ok:false, data:{} }; }
+  } catch { return { ok:false, status:0, data:{} }; }
 };
 const $ = id => document.getElementById(id);
 
-// ===== 左栏上：文件管理器（对应 Data/upload 结构，mock） =====
-const fileTree = [
-    // 文件管理器树根节点
-  { type:'folder', name:'upload', children:[
-    // 子文件夹节点
-    { type:'folder', name:'1001 (小明)', children:[ {type:'file', name:'课表截图.png'}, {type:'file', name:'成绩单.pdf'} ] },
-    // 子文件夹节点
-    { type:'folder', name:'1002 (小红)', children:[ {type:'file', name:'复习大纲.docx'} ] },
-  ]}
-];
-function renderTree(nodes, parent) {
-    // 递归渲染文件管理器树
-  nodes.forEach(n => {
-    // 渲染当前节点
-    // 创建列表项
-    // 设置列表项类名
-    // 设置列表项文本内容
-    // 将列表项添加到父元素
-       const li = document.createElement('li');
-       // 设置列表项类名
-       // 设置列表项文本内容
-       // 将列表项添加到父元素
-    li.className = n.type; li.textContent = n.name;
-    // 如果当前节点有子节点，递归渲染子节点
-    // 创建子节点列表
-    // 设置子节点列表类名
-    // 设置子节点列表内边距
-    // 渲染子节点
-    // 将子节点列表添加到父元素
-       parent.appendChild(li);
-       // 递归渲染子节点
-       // 创建子节点列表
-       // 设置子节点列表类名
-       // 设置子节点列表内边距
-       // 渲染子节点
-       // 将子节点列表添加到父元素
-    if (n.children) {
-        // 创建子节点列表
-        // 设置子节点列表类名
-        // 设置子节点列表内边距
-        // 渲染子节点
-        // 将子节点列表添加到父元素
-      const ul = document.createElement('ul');
-      // 设置子节点列表类名
-      // 设置子节点列表内边距
-      ul.className = 'fm-tree'; ul.style.paddingLeft = '16px';
-      // 递归渲染子节点
-      renderTree(n.children, ul); parent.appendChild(ul);
-      // 渲染子节点
-    }
+// ===== 左栏上：文件管理器（真实数据：GET /upload 拉取当前登录用户自己上传的文件） =====
+async function loadFiles() {
+  const box = $('fm-tree');
+  box.innerHTML = '';
+  const fmt = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+  const { ok, status, data } = await api('/upload/');
+  if (status === 401) {
+    box.innerHTML = '<li style="color:#c0392b;cursor:default">登录已过期，正在跳转登录页…</li>';
+    setTimeout(() => location.href = '../index.html', 1200);
+    return;
+  }
+  if (status === 0 || status >= 500) {
+    // 加载瞬间后端可能正在重启：自动重试直到拿到结果，不再一次性摆烂
+    box.innerHTML = `<li style="color:#999;cursor:default">${status === 0 ? '连不上后端(8000)' : '后端出错(HTTP ' + status + ')'}，5秒后自动重试…</li>`;
+    setTimeout(loadFiles, 5000);
+    return;
+  }
+  if (!ok || !data || data.code !== 0) {
+    // 兑底：任何异常都不影响页面布局
+    box.innerHTML = `<li style="color:#999;cursor:default">获取失败：${(data && (data.message || data.detail)) || 'HTTP ' + status}</li>`;
+    return;
+  }
+  const files = data.data || [];
+  const root = document.createElement('li');
+  root.className = 'folder';
+  root.textContent = `我上传的文件 (${files.length})`;
+  const ul = document.createElement('ul');
+  ul.className = 'fm-tree'; ul.style.paddingLeft = '16px';
+  if (!files.length) {
+    const empty = document.createElement('li');
+    empty.style.color = '#999'; empty.style.cursor = 'default';
+    empty.textContent = '还没有上传过文件，去中间对话框点 ＋ 试试吧 ~';
+    ul.appendChild(empty);
+  }
+  files.forEach(f => {
+    const li = document.createElement('li');
+    li.className = 'file';
+    li.textContent = `${f.file_name} (${fmt(f.size)})`;
+    li.title = `${f.file_name}\n${fmt(f.size)} · ${f.uploaded_at || ''}`;
+    ul.appendChild(li);
   });
+  root.appendChild(ul);
+  box.appendChild(root);
 }
-// 渲染文件管理器树
-renderTree(fileTree, $('fm-tree'));
+loadFiles();
 
 // ===== 左栏下：历史对话（localStorage 持久化） =====
 // 从 localStorage 中获取历史对话
@@ -410,15 +404,94 @@ async function send() {
   } finally { saveHistory(); btn.disabled = false; input.focus(); }
 }
 $('send-btn').onclick = send;
-// ===== 输入区左下角：上传文件（真身藏在替身后面） =====
+// ===== 输入区左下角：上传文件 —— 逻辑链：选择→校验→上传→进度→结果→失败可重试 =====
+const MAX_SIZE = 10 * 1024 * 1024;
+const MAX_FILES = 5;
+const OK_EXT = ['png','jpg','jpeg','gif','webp','pdf','doc','docx','xls','xlsx','ppt','pptx','txt','md','csv','zip'];
+const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(1) + ' KB' : (n/1048576).toFixed(1) + ' MB';
+
+// 上传结果写进当前对话历史（role:'tool'，刷新/切对话仍可见）
+function pushToolHistory(content) {
+  if (!currentChatId) newChat();
+  const h = history.find(x => x.id === currentChatId);
+  if (h) { h.messages.push({ role:'tool', content, tool:'upload' }); saveHistory(); }
+}
+
+// 新建一个可动态更新进度的 tool 气泡
+function makeBubble() {
+  const div = document.createElement('div');
+  div.className = 'msg tool';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  div.appendChild(bubble);
+  const box = $('chat-messages');
+  box.appendChild(div); box.scrollTop = box.scrollHeight;
+  return bubble;
+}
+
+function uploadFile(file) {
+  return new Promise(resolve => {
+    const bubble = makeBubble();
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const head = `📎 ${file.name} (${fmtSize(file.size)})`;
+    const fail = msg => { bubble.className = 'bubble err'; bubble.textContent = `${head}\n✕ ${msg}`; resolve(); };
+    if (!OK_EXT.includes(ext)) return fail(`不支持 .${ext || '未知'} 格式的文件`);
+    if (file.size > MAX_SIZE) return fail('超过 10MB 上限，压缩一下再传吧');
+    if (!file.size) return fail('文件内容为空');
+    const send = () => {
+      bubble.className = 'bubble';
+      bubble.onclick = null;
+      bubble.textContent = `${head}\n上传中 0%`;
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/upload/');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.upload.onprogress = ev => {
+        if (ev.lengthComputable) bubble.textContent = `${head}\n上传中 ${Math.round(ev.loaded / ev.total * 100)}%`;
+      };
+      xhr.onload = () => {
+        let res = {};
+        try { res = JSON.parse(xhr.responseText) || {}; } catch {}
+        if (xhr.status === 200 && res.code === 0) {
+          bubble.className = 'bubble ok';
+          const fid = (res.data && res.data.file_id) || '-';
+          bubble.textContent = `${head}\n✓ 上传成功 · file_id: ${fid}`;
+          pushToolHistory(`上传 ${file.name} 成功（file_id: ${fid}）`);
+          if (typeof loadFiles === 'function') loadFiles(); // 左栏文件管理器同步刷新
+          return resolve();
+        }
+        if (xhr.status === 401) {
+          fail((res.detail || res.message || '登录已过期') + '，即将返回登录页');
+          localStorage.removeItem('token');
+          return setTimeout(() => location.href = '../index.html', 1000);
+        }
+        bubble.className = 'bubble err';
+        bubble.textContent = `${head}\n✕ 上传失败：${res.message || res.detail || 'HTTP ' + xhr.status}\n（点击气泡重试）`;
+        bubble.onclick = send;
+        resolve();
+      };
+      xhr.onerror = () => {
+        bubble.className = 'bubble err';
+        bubble.textContent = `${head}\n✕ 上传失败：后端(8000)未启动或网络中断\n（点击气泡重试）`;
+        bubble.onclick = send;
+        resolve();
+      };
+      const form = new FormData();
+      form.append('file', file);
+      xhr.send(form);
+    };
+    send();
+  });
+}
+
 $('upload-btn').onclick = () => $('file-input').click();
-// ===== 模型选择：由后端自动路由，前端不再指定模型 =====
-$('file-input').addEventListener('change', e => {
+$('file-input').addEventListener('change', async e => {
   const files = [...e.target.files];
-  if (!files.length) return;
-  appendMessage('user', '📎 已选择文件：' + files.map(f => f.name).join('、'));
   e.target.value = '';
+  if (!files.length) return;
+  if (files.length > MAX_FILES) appendMessage('tool', `一次最多 ${MAX_FILES} 个文件，先传前 ${MAX_FILES} 个哦`, 'upload');
+  for (const f of files.slice(0, MAX_FILES)) await uploadFile(f);
 });
+// ===== 模型选择：由后端自动路由，前端不再指定模型 =====
 $('chat-input').addEventListener('keydown', e => { if (e.ctrlKey && e.key==='Enter') send(); });
 
 // ===== 右栏上：今日日程（调 /schedule/today，失败用 mock） =====
