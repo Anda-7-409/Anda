@@ -42,7 +42,9 @@ a { color:#1a73e8; text-decoration:none; }
 .history-new { width:100%; padding:9px; background:linear-gradient(135deg,#4f8cff 0%,#1a73e8 50%,#6366f1 100%); color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; margin-bottom:10px;box-shadow:0 2px 0 #1557b0,0 4px 10px rgba(26,115,232,.30);transition:all .2s ease; }
 .history-new:hover { filter:brightness(1.1);transform:translateY(-1px); }
 .history-new:active { transform:translateY(1px); }
-.history-item { padding:10px 12px; border-radius:6px; cursor:pointer; margin-bottom:4px; }
+.history-item {  padding:10px 34px 10px 12px; border-radius:6px; cursor:pointer; margin-bottom:4px; position:relative; }
+.del-btn { position:absolute; right:8px; top:50%; transform:translateY(-50%);width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center;border-radius:50%; background:#eef2ff; color:#4f6ef7; font-size:17px; font-weight:bold; line-height:1; cursor:pointer; user-select:none; transition:all .15s; }
+.del-btn:hover { color:#fff; background:#e5484d; transform:translateY(-50%) scale(1.15); }
 .history-item:hover { background:#eef5ff; }
 .history-item.active { background:#e0edff; }
 .history-title { font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -292,6 +294,20 @@ function renderHistory() {
     // 设置列表项文本内容
     // 将列表项添加到父元素
     div.innerHTML = `<div class="history-title">${h.title}</div><div class="history-time">${h.time}</div>`;
+    const del = document.createElement('span');
+del.className = 'del-btn';
+del.textContent = '−';
+del.title = '删除该对话';
+del.onclick = e => {
+  e.stopPropagation();
+  history = history.filter(x => x.id !== h.id);
+  saveHistory();
+  if (currentChatId === h.id) {
+    currentChatId = null;
+    if (history.length) selectChat(history[0].id); else newChat();
+  } else renderHistory();
+};
+div.appendChild(del);
     // 点击列表项时，切换到该对话
     // 渲空对话消息
     // 遍历该对话的所有消息
