@@ -1,6 +1,7 @@
 # app.py(主程序)  用于初始化数据库连接、处理用户请求、调用其他模块等 FastAPI/Flask 工厂函数
 # 该文件是后端应用的入口，负责创建应用实例、配置数据库连接、注册路由等。
 from contextlib import asynccontextmanager
+from .database import init_db, close_db
 
 from fastapi import FastAPI
 
@@ -11,8 +12,12 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         # 初始化数据库连接 启动钩子 
         # TODO: init_db()  建 app.db 表（等 database.py）
+        init_db()
+        # 关闭数据库连接 关闭钩子
+        # TODO: close_db() 释放连接
         yield
         # TODO: close_db() 释放连接
+        close_db()
 
     app = FastAPI(title="Anda API", version="0.0.1", lifespan=lifespan)
 
