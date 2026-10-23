@@ -63,19 +63,32 @@ a { color:#1a73e8; text-decoration:none; }
 .fm-row .fm-del:hover { background:#ffecec; }
 .fm-tree .fm-msg { padding:3px 6px 3px 27px; font-size:12px; color:#999; cursor:default; }
 /* 文件预览遮罩层 */
-.preview-mask { display:none; position:fixed; inset:0; background:rgba(16,24,40,.45); z-index:50; align-items:center; justify-content:center; }
+.preview-mask { display:none; position:fixed; inset:0; background:rgba(16,24,40,.45); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); z-index:50; align-items:center; justify-content:center; }
 .preview-mask.show { display:flex; }
-.preview-card { width:min(860px,92vw); height:min(620px,86vh); background:#fff; border-radius:12px; box-shadow:0 24px 64px rgba(16,24,40,.35); display:flex; flex-direction:column; overflow:hidden; }
-.preview-bar { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 14px; border-bottom:1px solid #eef0f3; font-size:13px; font-weight:600; }
+.preview-card { width:min(860px,92vw); height:min(620px,86vh); background:#fff; border-radius:16px; box-shadow:0 24px 64px rgba(16,24,40,.35); display:flex; flex-direction:column; overflow:hidden; animation:pv-pop .22s cubic-bezier(.34,1.56,.64,1); }
+@keyframes pv-pop { from { opacity:0; transform:scale(.92) translateY(12px); } to { opacity:1; transform:scale(1) translateY(0); } }
+.preview-bar { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; border-bottom:1px solid #eef0f3; font-size:13px; font-weight:600; background:linear-gradient(180deg,#fbfcfe,#fff); }
+.pv-title { display:flex; align-items:center; gap:8px; overflow:hidden; min-width:0; }
+.pv-title .pv-icon { font-size:18px; flex-shrink:0; }
+.pv-title .pv-ext { flex-shrink:0; font-size:10px; font-weight:700; text-transform:uppercase; color:#1a73e8; background:#e8f0fe; border-radius:4px; padding:2px 6px; letter-spacing:.5px; }
 .preview-bar .pv-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .preview-bar .pv-actions { display:flex; gap:8px; flex-shrink:0; }
-.preview-bar button { border:1px solid #e4e7ed; background:#fff; color:#1a73e8; border-radius:6px; padding:5px 12px; cursor:pointer; font-size:12px; }
-.preview-bar button:hover { background:#eef5ff; }
+.preview-bar button#preview-download { border:none; background:linear-gradient(135deg,#4f8cff,#1a73e8); color:#fff; border-radius:8px; padding:6px 14px; cursor:pointer; font-size:12px; font-weight:600; box-shadow:0 2px 6px rgba(26,115,232,.3); transition:all .15s; }
+.preview-bar button#preview-download:hover { filter:brightness(1.1); transform:translateY(-1px); }
+.preview-bar button#preview-download:active { transform:translateY(0); }
+.preview-bar button#preview-close { border:1px solid #e4e7ed; background:#fff; color:#5b6b83; border-radius:8px; width:30px; height:28px; cursor:pointer; font-size:14px; line-height:1; padding:0; transition:all .15s; }
+.preview-bar button#preview-close:hover { background:#ffecec; border-color:#f5c6c6; color:#e5484d; }
 .preview-body { flex:1; overflow:auto; background:#f5f7fa; display:flex; align-items:center; justify-content:center; }
-.preview-body img { max-width:100%; max-height:100%; object-fit:contain; }
+.preview-body.pv-img { background:repeating-conic-gradient(#eef0f3 0% 25%, #fff 0% 50%) 50% / 20px 20px; }
+.preview-body img { max-width:100%; max-height:100%; object-fit:contain; padding:16px; box-sizing:border-box; transition:transform .25s ease; cursor:zoom-in; }
+.preview-body img.pv-zoomed { transform:scale(1.8); cursor:zoom-out; }
 .preview-body iframe { width:100%; height:100%; border:none; background:#fff; }
-.preview-body pre { width:100%; height:100%; overflow:auto; margin:0; padding:16px; font-size:12.5px; line-height:1.6; white-space:pre-wrap; word-break:break-word; background:#fff; color:#333; }
-.preview-body .pv-hint { color:#999; font-size:13px; }
+.preview-body pre { width:100%; height:100%; overflow:auto; margin:0; padding:18px 20px; font-size:12.5px; line-height:1.7; white-space:pre-wrap; word-break:break-word; background:#fff; color:#333; font-family:Consolas,'Courier New',monospace; tab-size:4; }
+.pv-loading { width:34px; height:34px; border:3px solid #dce8ff; border-top-color:#1a73e8; border-radius:50%; animation:pv-spin .8s linear infinite; }
+@keyframes pv-spin { to { transform:rotate(360deg); } }
+.pv-error { text-align:center; color:#c0392b; font-size:13px; }
+.pv-error .pv-err-icon { display:block; font-size:36px; margin-bottom:10px; }
+@media (prefers-reduced-motion: reduce) { .preview-card { animation:none; } }
 /* 轻提示 */
 .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); background:#333c4d; color:#fff; padding:9px 18px; border-radius:8px; font-size:13px; z-index:60; box-shadow:0 6px 20px rgba(16,24,40,.25); }
 
@@ -109,6 +122,13 @@ a { color:#1a73e8; text-decoration:none; }
 .chat-input { flex-shrink:0; padding:12px 20px; border-top:1px solid #eef0f3; background:#fff; transition:background .15s, box-shadow .15s; }
 /* 拖文件悬停在输入区上的高亮提示 */
 .chat-input.drag-over { background:#eef5ff; box-shadow:inset 0 0 0 2px #1a73e8; }
+/* 引用文件卡片栏：＠引用/拖入的文件显示为小卡片，点 ✕ 一键移除 */
+.ref-bar { display:none; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.ref-bar.show { display:flex; }
+.ref-chip { display:inline-flex; align-items:center; gap:6px; max-width:240px; padding:3px 6px 3px 10px; background:#eef5ff; border:1px solid #dce8ff; color:#1a73e8; border-radius:14px; font-size:12px; user-select:none; }
+.ref-chip .chip-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+.ref-chip .chip-x { flex-shrink:0; width:16px; height:16px; border:none; border-radius:50%; background:#dce8ff; color:#1a73e8; font-size:11px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; }
+.ref-chip .chip-x:hover { background:#e5484d; color:#fff; }
 .chat-input textarea { width:100%; resize:none; border:1px solid #e4e7ed; border-radius:8px; padding:10px; font-size:14px; font-family:inherit; outline:none; height:60px;transition:border-color .2s ease, box-shadow .2s ease;  }
 .chat-input textarea:focus { border-color:#1a73e8;box-shadow:0 0 0 3px rgba(26,115,232,.15); }
 .chat-input-row { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
@@ -214,7 +234,9 @@ a { color:#1a73e8; text-decoration:none; }
     <!-- 对话区消息 -->
     <div class="chat-messages" id="chat-messages"></div>
     <!-- 对话区输入 -->
-    <div class="chat-input">
+       <div class="chat-input">
+        <!-- 引用文件卡片栏：引用到对话的文件在这里显示，✕ 一键移除 -->
+        <div class="ref-bar" id="ref-bar"></div>
         <!-- 对话区输入文本框 -->
       <textarea id="chat-input" placeholder="输入自然语言以与我们的安答对话~ （Ctrl+Enter 发送）"></textarea>
             <!-- 斜杠命令菜单（/ 呼出） -->
@@ -258,7 +280,11 @@ a { color:#1a73e8; text-decoration:none; }
 <div class="preview-mask" id="preview-mask">
   <div class="preview-card">
     <div class="preview-bar">
-      <span class="pv-name" id="preview-title"></span>
+            <span class="pv-title">
+        <span class="pv-icon" id="preview-icon">📄</span>
+        <span class="pv-name" id="preview-title"></span>
+        <span class="pv-ext" id="preview-ext"></span>
+      </span>
       <span class="pv-actions">
         <button id="preview-download">⬇ 下载</button>
         <button id="preview-close">✕ 关闭</button>
@@ -510,13 +536,18 @@ async function previewFile(fileName) {
   $('preview-title').textContent = fileName;
   $('preview-download').onclick = () => downloadFile(fileName);
   $('preview-close').onclick = closePreview;
+   $('preview-icon').textContent = iconOf(fileName);
+  $('preview-ext').textContent = ext || 'file';
   previewMask.classList.add('show');
-  body.innerHTML = '<span class="pv-hint">加载中…</span>';
+  body.className = 'preview-body';
+  body.innerHTML = '<div class="pv-loading"></div>';
   try {
     const blob = await fetchBlob(fileName);
     if (PREVIEW_IMG.includes(ext)) {
-      const img = document.createElement('img');       // 图片：直接看图
+           body.classList.add('pv-img');
+      const img = document.createElement('img');       // 图片：直接看图，点击放大/还原
       img.src = URL.createObjectURL(blob);
+      img.onclick = () => img.classList.toggle('pv-zoomed');
       body.innerHTML = ''; body.appendChild(img);
     } else if (ext === 'pdf') {
       const frame = document.createElement('iframe');  // PDF：浏览器原生渲染
@@ -528,12 +559,14 @@ async function previewFile(fileName) {
       pre.textContent = text;                          // textContent 赋值，天然防注入
       body.innerHTML = ''; body.appendChild(pre);
     }
-  } catch (err) {
-    body.innerHTML = '<span class="pv-hint">加载失败：' + err.message + '</span>';
+   } catch (err) {
+    body.innerHTML = '<div class="pv-error"><span class="pv-err-icon">⚠️</span>加载失败：' + err.message + '</div>';
   }
 }
 // 点遮罩空白处也能关掉预览
 previewMask.onclick = e => { if (e.target === previewMask) closePreview(); };
+// 按 Esc 也能关掉预览
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && previewMask.classList.contains('show')) closePreview(); });
 
 loadFiles();
 
@@ -667,20 +700,22 @@ async function send() {
   h.messages.push({role:'user', content:text});
   if (h.title==='新对话') h.title = text.slice(0,15);
   saveHistory(); renderHistory();
-  try {
-    // 提取消息里的 @文件名 引用（＠按钮/拖入自动插入的标记），交给后端去读文件内容
-    const refs = [...new Set((text.match(/@[^@\s]+\.[A-Za-z0-9]+/g) || []).map(s => s.slice(1)))];
-    const {ok, data} = await api('/agent/chat', { method:'POST', body:JSON.stringify({utterance:text, refs}) });
+   try {
+    // 合并引用来源：输入框上方的文件卡片 + 正文里手打的 @文件名，一并交给后端读文件内容
+    const textRefs = (text.match(/@[^@\s]+\.[A-Za-z0-9]+/g) || []).map(s => s.slice(1));
+    const allRefs = [...new Set([...refs, ...textRefs])];
+    const {ok, data} = await api('/agent/chat', { method:'POST', body:JSON.stringify({utterance:text, refs:allRefs}) });
     if (ok && data?.data) {
       const d = data.data;
       (d.tool_calls||[]).forEach(t => appendMessage('tool', JSON.stringify(t.result||{}, null, 2), t.tool_name));
       appendMessage('ai', d.answer || data.message || '（无回复）');
       h.messages.push({role:'ai', content:d.answer||''});
+      refs = []; renderRefs();   // 发送成功后清空卡片；失败保留，方便直接重发
     } else {
       appendMessage('ai', '服务暂不可用（' + (data.message||'后端未启动') + '）');
     }
   } catch {
-    appendMessage('ai', '网络错误，请稍后重试');
+    appendMessage('ai', '网络错误，请稍后重试吧~ ：v:');
   } finally { saveHistory(); btn.disabled = false; input.focus(); }
 }
 $('send-btn').onclick = send;
@@ -716,7 +751,7 @@ function uploadFile(file) {
     const head = `📎 ${file.name} (${fmtSize(file.size)})`;
     const fail = msg => { bubble.className = 'bubble err'; bubble.textContent = `${head}\n✕ ${msg}`; resolve(false); };
     if (!OK_EXT.includes(ext)) return fail(`不支持 .${ext || '未知'} 格式的文件`);
-    if (file.size > MAX_SIZE) return fail('超过 10MB 上限，压缩一下再传吧');
+    if (file.size > MAX_SIZE) return fail('超过 10MB 上限，压缩一下再传吧~');
     if (!file.size) return fail('文件内容为空');
     const send = () => {
       bubble.className = 'bubble';
@@ -771,14 +806,35 @@ $('file-input').addEventListener('change', async e => {
   if (files.length > MAX_FILES) appendMessage('tool', `一次最多 ${MAX_FILES} 个文件，先传前 ${MAX_FILES} 个哦`, 'upload');
   for (const f of files.slice(0, MAX_FILES)) await uploadFile(f);
 });
-// ===== 引用已上传文件：＠按钮或拖入后插入 @文件名，发送时随 utterance 一并交给后端 =====
+// ===== 引用已上传文件：＠按钮或拖入后在输入框上方生成文件卡片，点 ✕ 一键移除，发送时随 utterance 一并交给后端 =====
+let refs = [];                                       // 当前引用的文件列表（卡片数据源）
+const refBar = $('ref-bar');
+function renderRefs() {
+  refBar.innerHTML = '';
+  refBar.classList.toggle('show', refs.length > 0);
+  refs.forEach(name => {
+    const chip = document.createElement('span');
+    chip.className = 'ref-chip';
+    const ic = document.createElement('span');
+    ic.textContent = iconOf(name);
+    const nm = document.createElement('span');
+    nm.className = 'chip-name';
+    nm.textContent = name;
+    nm.title = name;
+    const x = document.createElement('button');
+    x.className = 'chip-x';
+    x.textContent = '✕';
+    x.title = '一键移除引用';
+    x.onclick = () => { refs = refs.filter(n => n !== name); renderRefs(); };  // 一键删除：无二次确认
+    chip.append(ic, nm, x);
+    refBar.appendChild(chip);
+  });
+}
 function insertRef(fileName) {
-  const input = $('chat-input');
-  const tag = '@' + fileName;
-  if (input.value.includes(tag)) { input.focus(); return; }  // 避免重复引用同一文件
-  input.value = (input.value ? input.value.replace(/\s*$/, ' ') : '') + tag + ' ';
-  input.focus();
-  input.setSelectionRange(input.value.length, input.value.length);
+  if (refs.includes(fileName)) { toast('已引用过：' + fileName); return; }  // 避免重复引用同一文件
+  refs.push(fileName);
+  renderRefs();
+  $('chat-input').focus();
   toast('已引用：' + fileName);
 }
 
