@@ -65,3 +65,15 @@ def get_file_path(user_id: int, filename: str) -> dict:
     if not target.is_file():
         return {"ok": False, "message": "文件不存在或已被删除哦 ~"}
     return {"ok": True, "data": {"path": target, "file_name": safe_name}}
+
+
+def delete_file(user_id: int, filename: str) -> dict:
+    # 删除文件：先走 get_file_path 拿到路径（已做防穿越+只限本人目录），确认存在后删磁盘文件
+    got = get_file_path(user_id, filename)
+    if not got["ok"]:
+        return got
+    try:
+        got["data"]["path"].unlink()   # 只删文件本身，不动目录
+    except Exception as exc:
+        return {"ok": False, "message": f"删除失败了哦~ {exc}"}
+    return {"ok": True, "data": {"file_name": got["data"]["file_name"]}}

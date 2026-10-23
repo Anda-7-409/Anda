@@ -30,13 +30,6 @@ AI plan recommand:
 ### 2. Skill 层命名未统一（中）
 你保留了`agent_search.py` /`agent_system.py` /`agent_gpa.py` /`agent_review.py` ，但新加了`base.py` 。既然已经决定用`skill_` 前缀（`base.py` 的存在暗示了这一点），建议一并改掉，否则两套命名并存：
 
-1
-2
-3
-4
-5
-6
-
 `skill/
 ├── base.py
 ├── skill_search.py
@@ -48,19 +41,6 @@ AI plan recommand:
 
 ### 3. middleware.py / exception.py 文件会膨胀（中）
 把所有中间件塞进一个`middleware.py` 、所有异常塞进一个`exception.py` ，项目稍大后这两个文件会很长。建议改为 包 ：
-
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
 
 `Backend/
 ├── middleware/
@@ -87,15 +67,6 @@ AI plan recommand:
 ### 5. 测试目录太单薄（中）
 `test/test.py` 一个文件扛不住 Agent 项目。至少拆成：
 
-1
-2
-3
-4
-5
-6
-7
-8
-
 `test/
 ├── __init__.py
 ├── conftest.py          # pytest 夹具（测试库、临时 DB、mock 模型）
@@ -113,14 +84,6 @@ Agent 项目最核心的测试是 orchestrator 的意图识别 + 工具链编排
 - `scripts/schedule.py` 叫"任务调度脚本"——名字和`Backend/usr/schedule.py` （课表） 严重冲突 ，极易误 import；
 - 真正的"主动提醒"逻辑（查课表 → 算通勤 → 发提醒）散落在哪并不明确。
 建议：
-
-1
-2
-3
-4
-5
-6
-7
 
 `scripts/
 ├── migrate.py
@@ -141,3 +104,6 @@ skill/
 浏览器把请求交给 Vite，Vite 把`/auth` 开头的请求转发给后端；后端的 FastAPI 按路径命中 auth.py 里的函数，函数算出结果后把响应原路返回，经 Vite 带回浏览器。
 
 标识符是契约，改名 = 双向协议变更 。动手前`Ctrl+Shift+F` 搜全项目，或者干脆立个约定： 跑通验收之前不改名 ，等链路全绿了再做一次性的"重构改名 + 全局替换"，风险小得多。
+
+## 受到网络中的模型自动路由启发制作自己的路由 -- openrouter 
+

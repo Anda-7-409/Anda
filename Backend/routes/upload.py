@@ -37,3 +37,13 @@ def download_file(filename: str, user: User = Depends(auth_service.get_current_u
         return JSONResponse(status_code=404, content={"code": 1, "message": result["message"], "data": None})
     d = result["data"]
     return FileResponse(d["path"], filename=d["file_name"])
+
+
+@router.delete("/{filename}")
+def delete_uploaded_file(filename: str, user: User = Depends(auth_service.get_current_user)):
+    # 删除文件：只允许删自己目录下的（service 层再验一次归属）；不存在返回 404
+    result = upload_service.delete_file(user.id, filename)
+    if not result["ok"]:
+        status = 404 if "不存在" in result["message"] else 400
+        return JSONResponse(status_code=status, content={"code": 1, "message": result["message"], "data": None})
+    return {"code": 0, "message": "ok", "data": result["data"]}

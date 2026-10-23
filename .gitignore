@@ -1,7 +1,6 @@
 # .gitignore
 .env
-Data/*.db
-Data/upload/
+Data/
 __pycache__/
 *.pyc
 node_modules/
@@ -9,3 +8,4 @@ dist/
 .vscode/
 node_modules/
 package-lock.json
+.trae/
