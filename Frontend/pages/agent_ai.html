@@ -55,6 +55,12 @@ a { color:#1a73e8; text-decoration:none; }
 .fm-row .fm-dl { display:none; flex-shrink:0; border:none; background:transparent; color:#1a73e8; cursor:pointer; font-size:12px; padding:2px 4px; border-radius:4px; }
 .fm-row:hover .fm-dl { display:inline; }
 .fm-row .fm-dl:hover { background:#dce8ff; }
+.fm-row .fm-ref { display:none; flex-shrink:0; border:none; background:transparent; color:#722ed1; cursor:pointer; font-size:12px; padding:2px 4px; border-radius:4px; }
+.fm-row:hover .fm-ref { display:inline; }
+.fm-row .fm-ref:hover { background:#f3edff; }
+.fm-row .fm-del { display:none; flex-shrink:0; border:none; background:transparent; color:#e5484d; cursor:pointer; font-size:12px; padding:2px 4px; border-radius:4px; }
+.fm-row:hover .fm-del { display:inline; }
+.fm-row .fm-del:hover { background:#ffecec; }
 .fm-tree .fm-msg { padding:3px 6px 3px 27px; font-size:12px; color:#999; cursor:default; }
 /* 文件预览遮罩层 */
 .preview-mask { display:none; position:fixed; inset:0; background:rgba(16,24,40,.45); z-index:50; align-items:center; justify-content:center; }
@@ -100,7 +106,9 @@ a { color:#1a73e8; text-decoration:none; }
 .msg.tool .bubble { background:#f0f4ff; color:#1a73e8; font-size:12px; border:1px dashed #c3d6f9; }
 .msg.tool .bubble.ok { background:#f0faf2; color:#2e7d32; border:1px solid #b9e0c4; }
 .msg.tool .bubble.err { background:#fff5f5; color:#c0392b; border:1px solid #f5c6c6; }
-.chat-input { flex-shrink:0; padding:12px 20px; border-top:1px solid #eef0f3; background:#fff; }
+.chat-input { flex-shrink:0; padding:12px 20px; border-top:1px solid #eef0f3; background:#fff; transition:background .15s, box-shadow .15s; }
+/* 拖文件悬停在输入区上的高亮提示 */
+.chat-input.drag-over { background:#eef5ff; box-shadow:inset 0 0 0 2px #1a73e8; }
 .chat-input textarea { width:100%; resize:none; border:1px solid #e4e7ed; border-radius:8px; padding:10px; font-size:14px; font-family:inherit; outline:none; height:60px;transition:border-color .2s ease, box-shadow .2s ease;  }
 .chat-input textarea:focus { border-color:#1a73e8;box-shadow:0 0 0 3px rgba(26,115,232,.15); }
 .chat-input-row { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
@@ -368,8 +376,18 @@ function renderFm(files) {
         dl.textContent = '⬇';
         dl.title = '下载';
         dl.onclick = e => { e.stopPropagation(); downloadFile(f.file_name); };
-        li.title = `${f.file_name}\n${fmt(f.size)} · ${f.uploaded_at || ''} · 点击预览`;
-        li.append(ghost, fi, fn, sz, dl);
+        const rf = document.createElement('button');      // 悬停浮出的引用按钮：插到对话框
+        rf.className = 'fm-ref';
+        rf.textContent = '＠';
+        rf.title = '引用到对话框';
+        rf.onclick = e => { e.stopPropagation(); insertRef(f.file_name); };
+        const del = document.createElement('button');     // 悬停浮出的删除按钮
+        del.className = 'fm-del';
+        del.textContent = '✕';
+        del.title = '删除该文件';
+        del.onclick = e => { e.stopPropagation(); removeFile(f.file_name); };
+        li.title = `${f.file_name}\n${fmt(f.size)} · ${f.uploaded_at || ''} · 点击预览 · ＠引用`;
+        li.append(ghost, fi, fn, sz, rf, del, dl);
         li.onclick = () => previewFile(f.file_name);
         kids.appendChild(li);
       });
@@ -456,6 +474,27 @@ async function downloadFile(fileName) {
 }
 
 const previewMask = $('preview-mask');
+
+// 删除文件：二次确认后调 DELETE 接口，成功刷新左栏树
+async function removeFile(fileName) {
+  if (!confirm(`确定删除「${fileName}」吗？删除后无法恢复哦`)) return;
+  try {
+    const res = await fetch('/upload/' + encodeURIComponent(fileName), {
+      method: 'DELETE',
+      headers: { 'Authorization': 'Bearer ' + token },
+    });
+    let data = {};
+    try { data = await res.json(); } catch {}
+    if (res.ok && data.code === 0) {
+      toast('已删除：' + fileName);
+      loadFiles();
+    } else {
+      toast('删除失败：' + (data.message || data.detail || 'HTTP ' + res.status));
+    }
+  } catch {
+    toast('删除失败：后端(8000)未启动或网络中断');
+  }
+}
 
 function closePreview() { previewMask.classList.remove('show'); }
 
@@ -601,7 +640,9 @@ function appendMessage(role, content, toolName) {
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
     // 设置消息文本内容
-  bubble.textContent = toolName ? `调用工具: ${toolName}\n${content}` : content;
+  bubble.textContent = toolName
+    ? (toolName === 'upload' ? `文件上传\n${content}` : `调用工具: ${toolName}\n${content}`)
+    : content;
     // 将消息添加到父元素
   div.appendChild(bubble); box.appendChild(div);
     // 滚动到最底部
@@ -627,7 +668,9 @@ async function send() {
   if (h.title==='新对话') h.title = text.slice(0,15);
   saveHistory(); renderHistory();
   try {
-    const {ok, data} = await api('/agent/chat', { method:'POST', body:JSON.stringify({utterance:text}) });
+    // 提取消息里的 @文件名 引用（＠按钮/拖入自动插入的标记），交给后端去读文件内容
+    const refs = [...new Set((text.match(/@[^@\s]+\.[A-Za-z0-9]+/g) || []).map(s => s.slice(1)))];
+    const {ok, data} = await api('/agent/chat', { method:'POST', body:JSON.stringify({utterance:text, refs}) });
     if (ok && data?.data) {
       const d = data.data;
       (d.tool_calls||[]).forEach(t => appendMessage('tool', JSON.stringify(t.result||{}, null, 2), t.tool_name));
@@ -671,7 +714,7 @@ function uploadFile(file) {
     const bubble = makeBubble();
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     const head = `📎 ${file.name} (${fmtSize(file.size)})`;
-    const fail = msg => { bubble.className = 'bubble err'; bubble.textContent = `${head}\n✕ ${msg}`; resolve(); };
+    const fail = msg => { bubble.className = 'bubble err'; bubble.textContent = `${head}\n✕ ${msg}`; resolve(false); };
     if (!OK_EXT.includes(ext)) return fail(`不支持 .${ext || '未知'} 格式的文件`);
     if (file.size > MAX_SIZE) return fail('超过 10MB 上限，压缩一下再传吧');
     if (!file.size) return fail('文件内容为空');
@@ -694,7 +737,7 @@ function uploadFile(file) {
           bubble.textContent = `${head}\n✓ 上传成功 · file_id: ${fid}`;
           pushToolHistory(`上传 ${file.name} 成功（file_id: ${fid}）`);
           if (typeof revealFile === 'function') revealFile(file.name); // 左栏资源管理器同步刷新并展开分组
-          return resolve();
+          return resolve(true);
         }
         if (xhr.status === 401) {
           fail((res.detail || res.message || '登录已过期') + '，即将返回登录页');
@@ -704,13 +747,13 @@ function uploadFile(file) {
         bubble.className = 'bubble err';
         bubble.textContent = `${head}\n✕ 上传失败：${res.message || res.detail || 'HTTP ' + xhr.status}\n（点击气泡重试）`;
         bubble.onclick = send;
-        resolve();
+        resolve(false);
       };
       xhr.onerror = () => {
         bubble.className = 'bubble err';
         bubble.textContent = `${head}\n✕ 上传失败：后端(8000)未启动或网络中断\n（点击气泡重试）`;
         bubble.onclick = send;
-        resolve();
+        resolve(false);
       };
       const form = new FormData();
       form.append('file', file);
@@ -728,6 +771,48 @@ $('file-input').addEventListener('change', async e => {
   if (files.length > MAX_FILES) appendMessage('tool', `一次最多 ${MAX_FILES} 个文件，先传前 ${MAX_FILES} 个哦`, 'upload');
   for (const f of files.slice(0, MAX_FILES)) await uploadFile(f);
 });
+// ===== 引用已上传文件：＠按钮或拖入后插入 @文件名，发送时随 utterance 一并交给后端 =====
+function insertRef(fileName) {
+  const input = $('chat-input');
+  const tag = '@' + fileName;
+  if (input.value.includes(tag)) { input.focus(); return; }  // 避免重复引用同一文件
+  input.value = (input.value ? input.value.replace(/\s*$/, ' ') : '') + tag + ' ';
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+  toast('已引用：' + fileName);
+}
+
+// ===== 拖文件到对话框：校验→上传→成功后自动插引用（复用 uploadFile 逻辑链） =====
+const chatInputArea = document.querySelector('.chat-input');
+let dragDepth = 0;  // dragenter/dragleave 会在子元素间穿棱，用计数避免高亮闪爆
+
+chatInputArea.addEventListener('dragenter', e => {
+  if (![...(e.dataTransfer?.types || [])].includes('Files')) return;
+  e.preventDefault(); dragDepth++;
+  chatInputArea.classList.add('drag-over');
+});
+chatInputArea.addEventListener('dragover', e => {
+  if (![...(e.dataTransfer?.types || [])].includes('Files')) return;
+  e.preventDefault();           // 不 preventDefault 浏览器默认行为是打开文件而非上传
+  e.dataTransfer.dropEffect = 'copy';
+});
+chatInputArea.addEventListener('dragleave', () => {
+  if (--dragDepth <= 0) { dragDepth = 0; chatInputArea.classList.remove('drag-over'); }
+});
+chatInputArea.addEventListener('drop', async e => {
+  e.preventDefault();
+  dragDepth = 0;
+  chatInputArea.classList.remove('drag-over');
+  const files = [...(e.dataTransfer?.files || [])];
+  if (!files.length) return;
+  if (files.length > MAX_FILES) appendMessage('tool', `一次最多 ${MAX_FILES} 个文件，先传前 ${MAX_FILES} 个哦`, 'upload');
+  for (const f of files.slice(0, MAX_FILES)) {
+    const okName = f.name;
+    const passed = await uploadFile(f);   // 与 ＋ 按钮同一条逻辑链（含进度/重试/兑底）
+    if (passed) insertRef(okName);        // 上传成功才插引用，失败不插
+  }
+});
+
 // ===== 模型选择：由后端自动路由，前端不再指定模型 =====
 $('chat-input').addEventListener('keydown', e => { if (e.ctrlKey && e.key==='Enter') send(); });
 
