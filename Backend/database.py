@@ -24,9 +24,13 @@ def get_db():
 def init_db():
     # 初始化数据库连接
     # TODO: 建 app.db 表（等 database.py）
+    # 导入所有模型，确保它们被注册到 Base.metadata
+    from Backend.models.memo import Memo
+    # 初始化数据库连接
+    # TODO: 建 app.db 表（等 database.py）
     #启动钩子调用
     Data_Dir.mkdir(parents=True, exist_ok=True)
-    from Backend.models import user, schedule
+    from Backend.models import user, schedule, memo
     Base.metadata.create_all(bind=engine)
     print(f"[database] ~已就绪~ ：{APP_DB_PATH.as_posix()}")
 
