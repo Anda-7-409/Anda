@@ -2,14 +2,27 @@
 from AI import memory, orchestrator
 from sqlalchemy.orm import Session
 
+from Backend.models.memo import Memo
 from Backend.models.user import User
-from Backend.service import schedule_service, upload_service
+from Backend.service import memo_service, schedule_service, upload_service
 
-# 注册 Agent 第一个真实工具：课表查询（skill/ 模块落地后在此批量注册）
+# 注册 Agent 工具（skill/ 模块落地后在此批量注册）
 # orchestrator._plan_tools 按 keywords 拆解任务，再以 fn(utterance=, user_id=) 调用
+# 关键词互补：“课程”归添加，查询靠 课表/有课/什么课 等，避免“添加课程”同时命中只读查询
 orchestrator.TOOLS["schedule_query"] = {
-    "keywords": ("课表", "上课", "课程", "有课", "没课", "什么课", "哪些课"),
+    "keywords": ("课表", "上课", "有课", "没课", "什么课", "哪些课"),
     "fn": schedule_service.query_tool,
+}
+# 自然语言加课：模型抽取→校验→写库；成功后由模型在答案里回显字段供用户核对
+orchestrator.TOOLS["schedule_add"] = {
+    "keywords": ("添加课程", "加课", "加一节", "加一门", "加个课", "加节课", "这节课加",
+                 "新增课程", "新建课程", "录入", "加进课表", "加到课表", "加入课表", "排课", "录课"),
+    "fn": schedule_service.add_tool,
+    }
+# 添加 memo_list 工具，让 Agent 能读出今日日程的备忘录（关键词避开"什么/有"类泛词，防与课表查询同时命中混答）
+orchestrator.TOOLS["memo_list"] = {
+    "keywords": ("备忘录", "备忘", "笔记", "记了什么", "记了啥"),
+    "fn": memo_service.list_tool,
 }
 
 # 能直接读出文字注入对话的扩展名；其余（图片/Office等）只告诉模型文件名，待视觉模型接入后升级

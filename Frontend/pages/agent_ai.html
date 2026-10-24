@@ -886,36 +886,63 @@ $('chat-input').addEventListener('keydown', e => { if (e.ctrlKey && e.key==='Ent
     <div class="sch-item"><div class="t">${c.name}</div>
     <div class="meta">第${c.start_slot}-${c.end_slot}节 · ${c.classroom||''} ${c.teacher||''}</div></div>`).join('')
     : '<div style="color:#999;text-align:center;padding:20px">今日无课程</div>';
+  loadMemos();   // 课表渲染完再拉备忘录：两者都往 schedule-list 写，串行避免异步互相覆盖
 })();
-// ===== 今日日程加号：自定义备忘录（存 localStorage，刷新不丢） =====
-const memos = JSON.parse(localStorage.getItem('memos') || '[]');
+// ===== 今日日程加号：自定义备忘录（落库 app.db/memo 表；接口失败降级 localStorage 不白屏） =====
 const memoBox = $('memo-box');
-function saveMemos() { localStorage.setItem('memos', JSON.stringify(memos)); }
+let memoList = [];      // 备忘数据：后端模式 [{id,content,created_at}] / 兜底模式 [{id:0,content}]
+let memoLocal = true;   // true=localStorage 兜底模式，false=后端落库模式
+function saveMemos() { localStorage.setItem('memos', JSON.stringify(memoList)); }
 
-function renderMemo(text) {
+function renderMemo(m) {
   const div = document.createElement('div');
   div.className = 'sch-item memo-item';
   const t = document.createElement('div');
-  t.className = 't'; t.textContent = text;
+  t.className = 't'; t.textContent = m.content;
   const del = document.createElement('span');
   del.className = 'memo-del'; del.textContent = '×';
-  del.onclick = () => { div.remove(); memos.splice(memos.indexOf(text), 1); saveMemos(); };
+  del.onclick = async () => {
+    if (memoLocal) { memoList = memoList.filter(x => x !== m); saveMemos(); div.remove(); return; }
+    const {ok, data} = await api('/memo/' + m.id, { method:'DELETE' });
+    if (ok && data?.code === 0) { memoList = memoList.filter(x => x.id !== m.id); div.remove(); }
+    else toast('删除失败：' + (data.message || '后端未启动或登录过期'));
+  };
   t.appendChild(del);
   div.appendChild(t);
   $('schedule-list').appendChild(div);
 }
 
-function addMemo() {
+async function loadMemos() {
+  const {ok, data} = await api('/memo/');
+  if (ok && data?.code === 0) {
+    memoLocal = false;
+    memoList = data.data || [];
+  } else {
+    // 后端没起/401/token 过期：退回上次的本地数据，页面照常显示
+    memoLocal = true;
+    memoList = (JSON.parse(localStorage.getItem('memos') || '[]'))
+      .map(x => typeof x === 'string' ? {id:0, content:x} : x);
+  }
+  memoList.forEach(renderMemo);
+}
+
+async function addMemo() {
   const input = $('memo-input'); const text = input.value.trim();
   if (!text) return;
-  memos.push(text); saveMemos(); renderMemo(text);
+  if (memoLocal) {
+    const m = {id:0, content:text};
+    memoList.push(m); saveMemos(); renderMemo(m);
+  } else {
+    const {ok, data} = await api('/memo/', { method:'POST', body: JSON.stringify({ content: text }) });
+    if (ok && data?.code === 0) { memoList.push(data.data); renderMemo(data.data); }
+    else { toast('添加失败：' + (data.message || data.detail || '后端未启动')); return; }
+  }
   input.value = ''; memoBox.classList.remove('show');
 }
 
 $('add-memo-btn').onclick = () => { memoBox.classList.toggle('show'); $('memo-input').focus(); };
 $('memo-input').addEventListener('keydown', e => { if (e.key === 'Enter') addMemo(); });
 $('memo-confirm').onclick = addMemo;
-memos.forEach(renderMemo);
 // ===== 右栏下：技能 & MCP（对照 plan.md 的 skill/ 与 MCP/） =====
 const skills = [
   {name:'search', desc:'查询课表、提醒等用户数据'},

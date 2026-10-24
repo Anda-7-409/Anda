@@ -41,11 +41,12 @@ def create_app() -> FastAPI:
 
 
 def register_routes(app: FastAPI):
-    from .routes import auth, agent, schedule, upload
+    from .routes import auth, agent, schedule, upload, memo
     app.include_router(auth.router, prefix="/auth")
     app.include_router(agent.router, prefix="/agent")
     app.include_router(schedule.router, prefix="/schedule")
     app.include_router(upload.router, prefix="/upload")
+    app.include_router(memo.router, prefix="/memo")
     # TODO: schedule / reminder / review / consult / task 的 router 建好后逐个追加
 
 

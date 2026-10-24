@@ -12,6 +12,7 @@ export default defineConfig({
       '/task':'http://localhost:8000',
       '/agent':'http://localhost:8000',
       '/upload':'http://localhost:8000',
+      '/memo':'http://localhost:8000',
     },
   },
 });
