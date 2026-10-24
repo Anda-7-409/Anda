@@ -1,4 +1,5 @@
 #  (任务协调器) Agent流水线：意图识别 → 任务拆解 → 工具调用 → 结果汇总（plan.md 技术创新核心）
+import json
 import secrets
 from typing import List, Optional
 
@@ -37,7 +38,14 @@ def run(user_id: int, utterance: str, context: Optional[List[dict]] = None) -> d
         actions.append(f"调用工具 {name}")
 
     # ③ 结果汇总 → 生成自然语言答案（三级降级：主模型 → 备用模型 → 演示回复）
-    messages = prompt_mod.build_messages(utterance, context)
+    # 工具结果拼进本轮问题，让模型基于真实数据回答（原TODO：升级为结构化 tool 消息注入）
+    ask = utterance
+    if tool_calls:
+        block = "\n".join(
+            f"- {c['tool_name']}: {json.dumps(c['result'], ensure_ascii=False)}" for c in tool_calls
+        )
+        ask = f"{utterance}\n\n【工具执行结果】\n{block}\n请基于以上工具结果作答，不要编造数据。"
+    messages = prompt_mod.build_messages(ask, context)
     answer, provider = model_router.chat(messages)
     if not answer:
         answer = DEMO_REPLY

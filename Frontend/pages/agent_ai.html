@@ -876,10 +876,12 @@ $('chat-input').addEventListener('keydown', e => { if (e.ctrlKey && e.key==='Ent
 (async () => {
   const box = $('schedule-list');
   const {ok, data} = await api('/schedule/today');
-  const courses = (ok && data?.data?.length) ? data.data : [
-    {name:'高等数学', classroom:'教南109', start_slot:1, end_slot:2, teacher:'花老师'},
-    {name:'大学英语', classroom:'教南307', start_slot:3, end_slot:4, teacher:'余老师'},
-  ];
+  const courses = (ok && data?.code === 0)
+    ? (data.data || [])   // 后端成功：以真实课表为准，没课就显示"今日无课程"
+    : [                   // 失败（404/未登录/后端没起）：mock 兜底，保证不白屏
+      {name:'高等数学', classroom:'教南109', start_slot:1, end_slot:2, teacher:'花老师'},
+      {name:'大学英语', classroom:'教南307', start_slot:3, end_slot:4, teacher:'余老师'},
+    ];
   box.innerHTML = courses.length ? courses.map(c=>`
     <div class="sch-item"><div class="t">${c.name}</div>
     <div class="meta">第${c.start_slot}-${c.end_slot}节 · ${c.classroom||''} ${c.teacher||''}</div></div>`).join('')

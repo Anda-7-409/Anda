@@ -3,7 +3,14 @@ from AI import memory, orchestrator
 from sqlalchemy.orm import Session
 
 from Backend.models.user import User
-from Backend.service import upload_service
+from Backend.service import schedule_service, upload_service
+
+# 注册 Agent 第一个真实工具：课表查询（skill/ 模块落地后在此批量注册）
+# orchestrator._plan_tools 按 keywords 拆解任务，再以 fn(utterance=, user_id=) 调用
+orchestrator.TOOLS["schedule_query"] = {
+    "keywords": ("课表", "上课", "课程", "有课", "没课", "什么课", "哪些课"),
+    "fn": schedule_service.query_tool,
+}
 
 # 能直接读出文字注入对话的扩展名；其余（图片/Office等）只告诉模型文件名，待视觉模型接入后升级
 TEXT_EXT = {"txt", "md", "csv", "json", "log"}

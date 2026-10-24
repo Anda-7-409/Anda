@@ -1,9 +1,11 @@
-register.html / forgot-password.html -> vite proxy -> 8000 -> app.py -> auth.py
+register.html -> vite proxy -> 8000 -> app.py -> auth.py
+  -> auth_service.py -> user.py -> database.py -> app.db ->email_service.py -> QQ邮箱SMTP
+forgot-password.html -> vite proxy -> 8000 -> app.py -> auth.py
   -> auth_service.py -> email_service.py -> QQ邮箱SMTP        
 reset-password.html -> vite proxy -> 8000 -> app.py -> auth.py -> auth_service.py
   -> user.py -> database.py -> app.db <-| 返回
 
-index.html -> vite proxy -> 8000 -> app.py -> auth.py -> auth_service.py
+index.html(login) -> vite proxy -> 8000 -> app.py -> auth.py -> auth_service.py
   -> user.py -> database.py -> app.db <-| 返回（session_token 存前端 localStorage）
 
 agent_ai.html --POST /agent/chat--> vite proxy -> 8000 -> app.py
