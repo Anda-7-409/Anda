@@ -6,7 +6,7 @@ from typing import List, Optional
 from AI import model_router
 from AI.prompt import prompt as prompt_mod
 
-# 工具注册表：{工具名: {"keywords": 触发关键词, "fn": 可调用函数}}
+# 工具注册表：{工具名: {"keywords": 触发关键词, "exclude": 命中即排除词(可选), "fn": 可调用函数}}
 # 后续 skill/（课表查询、GPA计算、复习计划…）与 MCP/（高德地图、天气…）落地后逐个注册进来
 TOOLS: dict = {}
 
@@ -18,8 +18,16 @@ DEMO_REPLY = (
 )
 
 def _plan_tools(utterance: str) -> List[str]:
-    # 任务拆解：按关键词匹配可调用工具（第一版规则匹配，第二版可升级为LLM拆解）
-    return [name for name, meta in TOOLS.items() if any(k in utterance for k in meta.get("keywords", []))]
+    # 任务拆解：命中 keywords 且未命中 exclude 才触发（第一版规则匹配，第二版可升级为LLM拆解）
+    # exclude 让关键词可以放宽：例“我有什么提醒”含“提醒”会命中设提醒，但“有什么”把它挡下，只走查提醒
+    hits = []
+    for name, meta in TOOLS.items():
+        if not any(k in utterance for k in meta.get("keywords", [])):
+            continue
+        if any(e in utterance for e in meta.get("exclude", ())):
+            continue
+        hits.append(name)
+    return hits
 
 def run(user_id: int, utterance: str, context: Optional[List[dict]] = None) -> dict:
     # ① 意图识别 + 任务拆解
