@@ -166,6 +166,9 @@ a { color:#1a73e8; text-decoration:none; }
 .sch-item:hover { background:#f0f4ff;transform:translateX(2px);box-shadow:0 2px 8px rgba(26,115,232,.15); }
 .sch-item .t { font-weight:600; font-size:13px; }
 .sch-item .meta { font-size:12px; color:#666; margin-top:3px; }
+.sch-del { float:right; cursor:pointer; color:#9aa4b2; margin-left:6px; font-weight:bold; opacity:0; transition:opacity .15s; }
+.sch-item:hover .sch-del { opacity:1; }
+.sch-del:hover { color:#e5484d; }
 /* 备忘录输入框 */
 .memo-box { display:none; padding:10px 12px 0; gap:8px; }
 .memo-box.show { display:flex; }
@@ -465,12 +468,12 @@ $('fm-collapse').onclick = () => { fmOpenGroups.clear(); loadFiles(); };
 const PREVIEW_IMG = ['png','jpg','jpeg','gif','webp','bmp'];
 const PREVIEW_TEXT = ['txt','md','csv','json','log'];
 
-function toast(msg) {
+function toast(msg, duration = 2500) {
   const t = document.createElement('div');
   t.className = 'toast';
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2500);
+  setTimeout(() => t.remove(), duration);
 }
 
 async function fetchBlob(fileName) {
@@ -716,7 +719,7 @@ async function send() {
     }
   } catch {
     appendMessage('ai', '网络错误，请稍后重试吧~ ：v:');
-  } finally { saveHistory(); btn.disabled = false; input.focus(); }
+  } finally { saveHistory(); btn.disabled = false; input.focus(); loadSchedule(); loadReminders(); }   // 对话里可能刚改了课表/备忘/提醒，右栏立即同步
 }
 $('send-btn').onclick = send;
 // ===== 输入区左下角：上传文件 —— 逻辑链：选择→校验→上传→进度→结果→失败可重试 =====
@@ -872,8 +875,8 @@ chatInputArea.addEventListener('drop', async e => {
 // ===== 模型选择：由后端自动路由，前端不再指定模型 =====
 $('chat-input').addEventListener('keydown', e => { if (e.ctrlKey && e.key==='Enter') send(); });
 
-// ===== 右栏上：今日日程（调 /schedule/today，失败用 mock） =====
-(async () => {
+// ===== 右栏上：今日日程（调 /schedule/today，失败用 mock）；抽成幂等函数供实时刷新反复调用 =====
+async function loadSchedule() {
   const box = $('schedule-list');
   const {ok, data} = await api('/schedule/today');
   const courses = (ok && data?.code === 0)
@@ -883,11 +886,23 @@ $('chat-input').addEventListener('keydown', e => { if (e.ctrlKey && e.key==='Ent
       {name:'大学英语', classroom:'教南307', start_slot:3, end_slot:4, teacher:'余老师'},
     ];
   box.innerHTML = courses.length ? courses.map(c=>`
-    <div class="sch-item"><div class="t">${c.name}</div>
+    <div class="sch-item"><div class="t">${c.name}${c.id ? `<span class="sch-del" data-id="${c.id}" data-name="${String(c.name).replace(/"/g,'&quot;')}">×</span>` : ''}</div>
     <div class="meta">第${c.start_slot}-${c.end_slot}节 · ${c.classroom||''} ${c.teacher||''}</div></div>`).join('')
     : '<div style="color:#999;text-align:center;padding:20px">今日无课程</div>';
-  loadMemos();   // 课表渲染完再拉备忘录：两者都往 schedule-list 写，串行避免异步互相覆盖
-})();
+  // 删除按钮：悬停浮现（同文件管理器约定）；mock 兑底数据没有 id，不出按钮
+  box.querySelectorAll('.sch-del').forEach(btn => {
+    btn.onclick = e => { e.stopPropagation(); removeCourse(+btn.dataset.id, btn.dataset.name); };
+  });
+  loadMemos();   // 整体重画会把备忘录一起清掉：课表画完必须重新拉备忘录，两者都往 schedule-list 写，串行避免异步互相覆盖
+}
+async function removeCourse(id, name) {
+  // 二次确认（项目硬约束）：课程是每周循环的，删的是整行，不是只删今天这一次
+  if (!confirm(`确定删除「${name}」吗？课程是每周循环的，删除后所有星期都不再显示哦`)) return;
+  const {ok, data} = await api('/schedule/courses/' + id, { method:'DELETE' });
+  if (ok && data?.code === 0) { toast('已删除：' + name); loadSchedule(); }
+  else toast('删除失败：' + (data?.message || data?.detail || '后端未启动或登录过期'));
+}
+loadSchedule();
 // ===== 今日日程加号：自定义备忘录（落库 app.db/memo 表；接口失败降级 localStorage 不白屏） =====
 const memoBox = $('memo-box');
 let memoList = [];      // 备忘数据：后端模式 [{id,content,created_at}] / 兜底模式 [{id:0,content}]
@@ -923,6 +938,7 @@ async function loadMemos() {
     memoList = (JSON.parse(localStorage.getItem('memos') || '[]'))
       .map(x => typeof x === 'string' ? {id:0, content:x} : x);
   }
+  document.querySelectorAll('#schedule-list .memo-item').forEach(el => el.remove());   // 只清备忘条目再重画：同一容器里还混着课表卡片，不能整体清空
   memoList.forEach(renderMemo);
 }
 
@@ -1013,35 +1029,142 @@ chatInput.addEventListener('keydown', e => {
   else if (e.key==='ArrowUp') { e.preventDefault(); hlIndex=(hlIndex-1+flatItems.length)%flatItems.length; updateHl(); }
   else if (e.key==='Enter') { e.preventDefault(); pickCmd(flatCmds[hlIndex]); }
 });
-// ===== 提醒面板（存 localStorage，刷新不丢） =====
-const reminders = JSON.parse(localStorage.getItem('reminders') || '[]');
+// ===== 提醒面板（落库 app.db/reminder 表；接口失败降级 localStorage 不白屏） =====
 const reminderBox = $('reminder-box');
-function saveReminders() { localStorage.setItem('reminders', JSON.stringify(reminders)); }
+let reminderList = [];   // 后端模式 [{id,reminder_type,reminder_time,is_done}] / 兜底模式 [{id:0,...}]
+let reminderLocal = true;
+function saveReminders() { localStorage.setItem('reminders', JSON.stringify(reminderList)); }
 function renderReminder(r) {
   const div = document.createElement('div');
   div.className = 'sch-item reminder-item';
   const t = document.createElement('div');
-  t.className = 't'; t.textContent = r.text;
+  t.className = 't'; t.textContent = r.reminder_type;
   const del = document.createElement('span');
   del.className = 'memo-del'; del.textContent = '×';
-  del.onclick = () => { div.remove(); reminders.splice(reminders.indexOf(r), 1); saveReminders(); };
+  del.onclick = async () => {
+    if (reminderLocal) { reminderList = reminderList.filter(x => x !== r); saveReminders(); div.remove(); return; }
+    const {ok, data} = await api('/reminder/' + r.id, { method:'DELETE' });
+    if (ok && data?.code === 0) { reminderList = reminderList.filter(x => x.id !== r.id); div.remove(); }
+    else toast('删除失败：' + (data.message || '后端未启动或登录过期'));
+  };
   t.appendChild(del);
   div.appendChild(t);
-  if (r.time) { const meta = document.createElement('div'); meta.className='time'; meta.textContent='⏰ ' + r.time; div.appendChild(meta); }
+  if (r.reminder_time) { const meta = document.createElement('div'); meta.className='time'; meta.textContent='⏰ ' + r.reminder_time; div.appendChild(meta); }
   $('reminder-list').appendChild(div);
 }
-function addReminder() {
+async function loadReminders() {
+  const {ok, data} = await api('/reminder/get');
+  if (ok && data?.code === 0) {
+    reminderLocal = false;
+    reminderList = data.data?.reminders || [];
+  } else {
+    // 后端没起/401/token 过期：退回上次的本地数据，页面照常显示
+    reminderLocal = true;
+    reminderList = (JSON.parse(localStorage.getItem('reminders') || '[]'))
+      .map(x => typeof x === 'string'
+        ? {id:0, reminder_type:x, reminder_time:''}
+        : {id:0, reminder_type:x.reminder_type || x.text || '', reminder_time:x.reminder_time || x.time || ''});
+  }
+  $('reminder-list').innerHTML = '';   // 清空重画：本函数会被对话后/轮询反复调用，必须幂等
+  reminderList.forEach(renderReminder);
+}
+async function addReminder() {
   const input = $('reminder-input'); const text = input.value.trim();
   if (!text) return;
-  const r = { text, time: $('reminder-time').value };
-  reminders.push(r); saveReminders(); renderReminder(r);
+  const time = $('reminder-time').value;
+  if (reminderLocal) {
+    const r = {id:0, reminder_type:text, reminder_time:time, is_done:0};
+    reminderList.push(r); saveReminders(); renderReminder(r);
+  } else {
+    const {ok, data} = await api('/reminder/set', { method:'POST', body: JSON.stringify({ reminder_type: text, reminder_time: time }) });
+    if (ok && data?.code === 0) { reminderList.push(data.data); renderReminder(data.data); }
+    else { toast('添加失败：' + (data.message || data.detail || '后端未启动')); return; }
+  }
   input.value = ''; $('reminder-time').value = '';
   reminderBox.classList.remove('show');
 }
 $('add-reminder-btn').onclick = () => { reminderBox.classList.toggle('show'); $('reminder-input').focus(); };
 $('reminder-input').addEventListener('keydown', e => { if (e.key === 'Enter') addReminder(); });
 $('reminder-confirm').onclick = addReminder;
-reminders.forEach(renderReminder);
+loadReminders();
+
+// ===== 主动提醒：30s 轮询到点提醒；页面重新可见/聚焦时立刻补查（抵消浏览器后台节流） =====
+const firedReminders = new Set();   // 本轮会话内已弹过的 id，避免重复打扰
+
+// 提醒音效：Web Audio 现场合成"叮-咚"，无需音频文件；浏览器自动播放策略要求先有用户手势，首次点击/按键时解锁
+let audioCtx = null;
+const requestNotify = () => { try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {} };
+const unlockAudio = () => { try { audioCtx && audioCtx.resume(); } catch {} requestNotify(); };   // 顺带申请系统通知权限（浏览器要求用户手势才弹授权框）
+document.addEventListener('pointerdown', unlockAudio);
+document.addEventListener('keydown', unlockAudio);
+function playDing() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const now = audioCtx.currentTime;
+    [880, 1174.7].forEach((freq, i) => {   // 两声：叮（A5）→ 哮（D6）
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      const t0 = now + i * 0.28;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.3, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t0); osc.stop(t0 + 0.3);
+    });
+  } catch {}
+}
+
+// 系统级通知：浏览器最小化/在后台时，Windows 右下角也能弹提醒（localhost 属安全上下文，可直接用 Notification）
+let notifyHintShown = false;   // 被拒绝的提示每次会话只弹一次，不啯嗦
+function notifySystem(r) {
+  try {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'denied') {
+      if (!notifyHintShown) {
+        notifyHintShown = true;
+        toast('系统通知未授权：点地址栏右侧的图标允许"通知"，才能在浏览器最小化时弹 Windows 提醒', 6000);
+      }
+      return;
+    }
+    if (Notification.permission !== 'granted') return;   // 'default'：首次手势还没发生，下一轮再试
+    const n = new Notification('⏰ 安答提醒', {
+      body: r.reminder_type + (r.reminder_time ? '（' + r.reminder_time + '）' : ''),
+      tag: 'reminder-' + r.id,   // 同一条提醒重复触发时替换旧通知，不堆叠
+    });
+    n.onclick = () => { window.focus(); n.close(); };   // 点通知直接跳回页面
+  } catch {}
+}
+
+async function pollDue() {
+  const {ok, data} = await api('/reminder/due');
+  if (!ok || data?.code !== 0) return;   // 静默失败：轮询挂了不影响页面，下一轮再试
+  loadSchedule();    // 顺带同步今日课表与备忘录（loadSchedule 画完会链式重拉 loadMemos）
+  loadReminders();   // 顺带同步右栏提醒列表：AI 在对话里加的、别处改的，最多 30s 内反映出来
+  (data.data || []).forEach(r => {
+    if (firedReminders.has(r.id)) return;
+    const isLesson = String(r.id).startsWith('c-');   // 后端合成的课前提醒（c-日期-课id，仅在课前10分钟窗口返回）
+    if (isLesson) {
+      // 双保险：课前提醒过期不弹——错过就错过（网页版定位如此，系统日历版负责"错不过"）
+      const hm = r.reminder_time || '';
+      if (!/^\d{1,2}:\d{2}$/.test(hm)) return;
+      const [hh, mm] = hm.split(':').map(Number);
+      const d = new Date();
+      const at = hh * 60 + mm, nowMin = d.getHours() * 60 + d.getMinutes();
+      if (nowMin < at - 10 || nowMin > at) return;
+    }
+    firedReminders.add(r.id);
+    playDing();   // 先出声：toast 只有几秒，没声音很容易错过
+    notifySystem(r);   // 系统级通知：窗口不在前台时靠它到点弹
+    toast((isLesson ? '📚 课前提醒（还有10分钟上课）：' : '⏰ 到点提醒：') + r.reminder_type
+      + (r.reminder_time ? '（' + r.reminder_time + '）' : ''), 8000);
+  });
+}
+pollDue();
+setInterval(pollDue, 30000);   // 30s 一次：提醒最多晚 30s 到
+document.addEventListener('visibilitychange', () => { if (!document.hidden) pollDue(); });   // 切回标签页立即补查
+window.addEventListener('focus', pollDue);   // 窗口重新获得焦点立即补查
 
 // 初始化
 renderHistory();

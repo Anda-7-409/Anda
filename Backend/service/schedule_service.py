@@ -93,12 +93,17 @@ EXTRACT_PROMPT = """你是课表字段抽取器。把用户话术解析成一个
 - "weekday"：星期几（整数，必填）：1=周一 2=周二 3=周三 4=周四 5=周五 6=周六 7=周日
 - "start_slot"：开始节次（整数 1-12，必填）
 - "end_slot"：结束节次（整数 1-12，不小于 start_slot；用户没说就等于 start_slot）
+- 节次↔钟点换算（整点上课、每节45分钟）：8:00=第1节 9:00=第2节 10:00=第3节 11:00=第4节 12:00=第5节 13:00=第6节 14:00=第7节 15:00=第8节 16:00=第9节 17:00=第10节 18:00=第11节 19:00=第12节
+- 用户给钟点（如"下午3:00""15:00""下午2:52"）→ 按上表换算成节次：下午/晚上几点先加12变成24小时制，再取最接近的整点节次（下午3:00=15:00→第8节；下午2:52=14:52≈15:00→第8节；"下午3点"同理）
 - "classroom"：上课地点（字符串，没有则空字符串）
 - "teacher"：教师（字符串，没有则空字符串）
 缺少 name/weekday/start_slot 时，只输出：{"error": "缺了什么就直说缺什么"}
-示例：
+示例1：
 用户话术：今天是周三(weekday=3)，明天是周四(weekday=4)。周四1-2节教南109来节高数，花老师教
-输出：{"name": "高数", "weekday": 4, "start_slot": 1, "end_slot": 2, "classroom": "教南109", "teacher": "花老师"}"""
+输出：{"name": "高数", "weekday": 4, "start_slot": 1, "end_slot": 2, "classroom": "教南109", "teacher": "花老师"}
+示例2：
+用户话术：今天是周六(weekday=6)，明天是周日(weekday=7)。今天下午3:00有一堂数学课
+输出：{"name": "数学", "weekday": 6, "start_slot": 8, "end_slot": 8}"""
 
 
 def _parse_json(text: str) -> dict:
@@ -161,4 +166,13 @@ def add_tool(utterance: str, user_id: int) -> dict:
         result = add_course(db, user_id, req)   # 复用与 REST 完全同一条写库业务
     if not result["ok"]:
         return {"ok": False, "error": result["message"]}
-    return {"ok": True, "course": result["data"], "extracted_by": provider}
+    # 回显钟点：节次是存储形态，钟点才是用户说的语义，回写给模型让它在答案里明示换算结果供核对
+    start_min = 8 * 60 + (req.start_slot - 1) * 60
+    end_min = 8 * 60 + (req.end_slot - 1) * 60 + 45
+    return {
+        "ok": True,
+        "course": result["data"],
+        "start_clock": f"{start_min // 60:02d}:{start_min % 60:02d}",
+        "end_clock": f"{end_min // 60:02d}:{end_min % 60:02d}",
+        "extracted_by": provider,
+    }
