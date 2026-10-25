@@ -29,8 +29,8 @@ def _plan_tools(utterance: str) -> List[str]:
         hits.append(name)
     return hits
 
-def run(user_id: int, utterance: str, context: Optional[List[dict]] = None) -> dict:
-    # ① 意图识别 + 任务拆解
+def run(user_id: int, utterance: str, context: Optional[List[dict]] = None, ref_block: str = "") -> dict:
+    # ① 意图识别 + 任务拆解（只看用户原话；ref_block 单独传，不参与匹配，防止引用文本里的词误触发工具）
     tool_names = _plan_tools(utterance)
 
     # ② 工具调用（工具结果注入提示词由下一版拼接，TODO）
@@ -48,6 +48,8 @@ def run(user_id: int, utterance: str, context: Optional[List[dict]] = None) -> d
     # ③ 结果汇总 → 生成自然语言答案（三级降级：主模型 → 备用模型 → 演示回复）
     # 工具结果拼进本轮问题，让模型基于真实数据回答（原TODO：升级为结构化 tool 消息注入）
     ask = utterance
+    if ref_block:
+        ask = f"{ask}\n\n{ref_block}"   # 引用文件内容只给模型看，不给关键词匹配看
     if tool_calls:
         block = "\n".join(
             f"- {c['tool_name']}: {json.dumps(c['result'], ensure_ascii=False)}" for c in tool_calls

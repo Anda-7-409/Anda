@@ -5,6 +5,9 @@ from sqlalchemy.orm import Session
 from Backend.models.memo import Memo
 from Backend.models.user import User
 from Backend.service import memo_service, reminder_service, schedule_service, upload_service
+from tool import web_search   # 全网搜索工具链（项目根 \tool\web_search.py，命名空间包无需 __init__）
+from tool import doc_parse    # 文档解析工具链（项目根 \tool\doc_parse.py，MinerU 双路径）
+from tool import image_understand  # 图片理解工具链（项目根 \tool\image_understand.py，视觉模型）
 
 # 注册 Agent 工具（skill/ 模块落地后在此批量注册）
 # orchestrator._plan_tools 按 keywords 拆解任务、exclude 排除冲突，再以 fn(utterance=, user_id=) 调用
@@ -46,6 +49,36 @@ orchestrator.TOOLS["reminder_query"] = {
     "exclude": ("添加", "设置", "设个", "定个", "加个", "叫我", "喊我", "催我", "闹钟", "新建", "录入"),
     "fn": reminder_service.query_tool,
 }
+# 全网搜索：工具落在项目根 tool/web_search.py（Bing 抓取零 Key，后端可替换）
+# 文档解析：MinerU 把 PDF/Word/PPT/图片转 Markdown 供 AI 阅读（用户已上传文件或文档链接）
+# exclude 挡搜索类词：含“搜一下/查一下”的请求是联网搜索不是解析，别抢 web_search 的活
+orchestrator.TOOLS["doc_parse"] = {
+    "keywords": ("解析", "读一下", "读这个", "读这篇", "总结这个", "总结一下这个", "写了什么", "写的什么",
+                 "写的内容", "写了啥", "里面写了", "讲了什么", "讲的什么", "讲的是", "说的什么", "说的啥",
+                 "内容是什么", "啥内容", "什么内容", "提取内容", "全文", "文件里", "文件内容", "这个文件",
+                 "这份文件", "读文件", "帮我读",
+                 "PDF", "pdf", "Word", "word", "PPT", "ppt", "论文", "文档", "课件"),
+    "exclude": ("搜索", "搜一下", "帮我搜", "查一下", "查查", "官网", "网址", "新闻", "热点",
+                "课表", "提醒", "备忘", "上传", "删除", "图片", "截图", "照片"),
+    "fn": doc_parse.doc_parse_tool,
+}
+
+# 图片理解：视觉模型看图说话（“图片里有什么”这类问题 OCR 只能抠字，描述内容要靠多模态）
+# exclude 挡上传/删除/搜索/生成：那些动作不是“看图”，“画一张图”是文生图（CogView 槽位，未来接入）
+orchestrator.TOOLS["image_understand"] = {
+    "keywords": ("图片里有什么", "图里", "图中", "看看这张图", "看一下这个图", "识别图片", "这是啥图",
+                 "这是什么图", "截图", "图片", "照片", "画的是"),
+    "exclude": ("搜索", "搜一下", "帮我搜", "上传", "删除", "课表", "提醒", "备忘", "生成", "画一张"),
+    "fn": image_understand.image_understand_tool,
+}
+
+# exclude 挡站内数据词：查课表/提醒走站内工具，别被联网搜索抢答
+orchestrator.TOOLS["web_search"] = {
+    "keywords": ("搜索", "搜一下", "搜下", "帮我搜", "全网", "网上查", "上网查", "查一下", "查查",
+                 "新闻", "热点", "百科", "官网", "网址", "最新消息"),
+    "exclude": ("课表", "提醒", "备忘", "笔记", "我的", "几节课", "有课", "没课"),
+    "fn": web_search.search_tool,
+}
 
 # 能直接读出文字注入对话的扩展名；其余（图片/Office等）只告诉模型文件名，待视觉模型接入后升级
 TEXT_EXT = {"txt", "md", "csv", "json", "log"}
@@ -69,19 +102,17 @@ def _build_ref_block(user: User, refs) -> str:
             except Exception:
                 parts.append(f"（引用文件 {name} 读取失败）")
         else:
-            parts.append(f"（用户引用了文件 {name}，类型 .{ext}；当前仅能读取文本类文件，可在回答中提醒用户）")
+            parts.append(f"（用户引用了文件 {name}，类型 .{ext}，非文本文件内容未注入；若用户在问图片相关内容，请基于图片理解工具的真实结果回答）")
     return "\n\n".join(parts)
 
 
 def chat(db: Session, user: User, utterance: str, context=None, refs=None) -> dict:
     if not utterance or not utterance.strip():
         return {"ok": False, "message": "内容不能为空哦~ 再输入一次吧 -?v?-"}
-    text = utterance.strip()
     ref_block = _build_ref_block(user, refs)
-    if ref_block:
-        text = f"{text}\n\n{ref_block}"   # 引用内容拼进本轮用户消息，模型直接“看到”文件
     ctx = list(context) if context else memory.recall(user.id)
-    result = orchestrator.run(user.id, text, ctx)
+    # 引用文件内容单独传参：只注入最终提示词，不参与工具意图匹配，防止引用文本里的词误触发工具
+    result = orchestrator.run(user.id, utterance.strip(), ctx, ref_block=ref_block)
     memory.remember(user.id, utterance.strip(), result["answer"])  # 记忆存原文，不把文件内容堆进历史
     # TODO：任务记录写入 task 表（task模块落地后），供 /task 列表与 task_detail.html 跳转
     return {"ok": True, "data": result}
