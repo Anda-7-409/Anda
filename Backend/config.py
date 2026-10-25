@@ -52,3 +52,16 @@ GLM_MODEL_VISION = os.environ.get("GLM_MODEL_PICTURE_UNDERSTAND", "")
 GLM_MODEL_IMAGE = os.environ.get("GLM_MODEL_PICTURE_PRODUCT", "")
 # 备用模型槽
 GLM_MODEL_BACKUP = os.environ.get("GLM_ADDITIONAL_MODEL", "")
+
+# —— AI 搜索多源路由槽位（配了 Key 才进候选池，全缺则零 Key 网页抓取兜底）——
+# 百度千帆 AI 搜索（AppBuilder「百度搜索」工具，赠送额度50次/天、3 QPS；REST 直连）
+QIANFAN_AI_SEARCH_KEY = os.environ.get("QIANFAN_AI_SEARCH_KEY", "")
+# AnySearch（AI 搜索基础设施，api.anysearch.com；兼容生态通用变量名 ANYSEARCH_API_KEY）
+ANY_SEARCH_KEY = os.environ.get("ANY_SEARCH_KEY") or os.environ.get("ANYSEARCH_API_KEY", "")
+# 搜索源失败冷却时长（秒）：冷却期内自动换下一个源，到期自动重试回归
+SEARCH_COOLDOWN_SECONDS = int(os.environ.get("SEARCH_COOLDOWN_SECONDS", "60"))
+
+# —— MinerU 文档解析（PDF/Word/PPT/图片 → Markdown；配了 Key 走精准解析，不配走免登录轻量解析）——
+MINERU_API_KEY = os.environ.get("MINERU_API_KEY", "")
+MINERU_MODEL = os.environ.get("MINERU_MODEL", "vlm")   # 精准解析模型：pipeline / vlm / MinerU-HTML
+DOC_PARSE_MAX_WAIT_SECONDS = int(os.environ.get("DOC_PARSE_MAX_WAIT_SECONDS", "100"))

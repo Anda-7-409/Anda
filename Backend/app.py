@@ -35,7 +35,10 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health():
         from AI import model_router
-        return {"code": 0, "message": "ok", "data": {"service": "anda-api", "models": model_router.status()}}
+        from tool import web_search
+        return {"code": 0, "message": "ok",
+                "data": {"service": "anda-api", "models": model_router.status(),
+                         "search": web_search.status()}}
 
     return app
 
