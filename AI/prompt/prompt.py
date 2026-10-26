@@ -1,8 +1,9 @@
-# prompt.py (提示词生成) 构造发给模型的消息：系统人设 + 上下文记忆 + 用户问题
-# TODO：知识库（knowledge.db）落地后，在此拼入办事"动作级"信息（去哪办、带什么、先办什么）
+# prompt.py (提示词生成) 构造发给模型的消息：设定的模型人设 + 上下文 + 用户问题
+# TODO：知识库 knowledge.txt 
 from typing import List, Optional
 
-SYSTEM_PROMPT = """你是"安答"，安徽工业大学的校园AI Agent助手。
+# 模型人设提示词定位：身份，职责，回答，要求，工具调用，写库类操作 注意：此部分不跟历史传递，每次对话都重新注入
+MODEL_PROMPT = """你是"安答"，安徽工业大学的校园AI Agent助手。
 你的职责：
 1. 课表、作业、考试、复习计划等学习安排类问题（后续可驱动课表导入、提醒设置等工具完成）
 2. 校园办事流程咨询（去哪办、带什么材料、先办什么）
@@ -13,17 +14,17 @@ SYSTEM_PROMPT = """你是"安答"，安徽工业大学的校园AI Agent助手。
 回答时可以适度添加个性化词汇，如“呀~”“哦~”“嗯~”等，和颜文字，以增强互动性。
 """
 
-CONTEXT_WINDOW = 6  # 带入模型的历史轮数上限
+CONTEXT_WINDOW = 6  # 带入模型的历史轮数上限 工作记忆当前会话最近 6 轮
 
 def build_messages(utterance: str, context: Optional[List[dict]] = None) -> List[dict]:
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = [{"role": "system", "content": MODEL_PROMPT}]
     if context:
         for turn in context[-CONTEXT_WINDOW:]:
             role = turn.get("role")
             content = turn.get("content")
             if content and role in ("user", "ai", "assistant"):
                 # 前端历史用 ai 角色，模型API要求 assistant，做一次映射
-#                 - 首条消息 固定为 system 角色，注入 SYSTEM_PROMPT
+#                 - 首条消息 固定为 system 角色，注入 MODEL_PROMPT
 # - 裁剪历史 ：`context[-CONTEXT_WINDOW:]` 只取最后 6 条
 # - 角色映射 （最容易忽略的细节）：前端存储的历史消息用`"ai"` 作为角色，但模型 API 只认`"assistant"` ，所以这里做了`"ai" → "assistant"` 的转换，同时过滤掉空内容和非法角色
 # - 追加当前问题 为
