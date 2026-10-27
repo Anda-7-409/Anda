@@ -1,4 +1,3 @@
-# nav.py (导航路由) 位置上报 + 路线规划；只收参与封装，业务在 nav_service
 from typing import Optional
 
 from fastapi import APIRouter, Depends
@@ -27,7 +26,6 @@ def _fail(message: str):
 
 @router.post("/location")
 def report_location(req: LocationIn, user: User = Depends(auth_service.get_current_user)):
-    # 前端点"导航"时上报浏览器定位；30 分钟内规划路线可直接复用
     nav_service.update_location(user.id, req.lng, req.lat)
     return _ok({"saved": True})
 
