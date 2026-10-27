@@ -30,6 +30,7 @@ def register_routes(app: FastAPI):
     app.include_router(upload.router, prefix="/upload")
     app.include_router(memo.router, prefix="/memo")
     app.include_router(reminder.router, prefix="/reminder")
+    app.include_router(nav.router, prefix="/nav")
 
 
 app = create_app()
