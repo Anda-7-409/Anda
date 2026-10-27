@@ -133,6 +133,44 @@ def geocode(address: str, city: str = "") -> dict:
     except Exception as exc:
         return {"ok": False, "error": f"地理编码不可用：{str(exc)[:80]}"}
 
+def search_poi(keywords: str, city: str = "") -> dict:
+    # 楼栋/地标 → 经纬度候选列表：POI 文本搜索（校内楼栋名走这个，地理编码会错配到外市同名楼）
+    bad = _check_key()
+    if bad:
+        return {"ok": False, "error": bad}
+    keywords = (keywords or "").strip()
+    if not keywords:
+        return {"ok": False, "error": "地点为空"}
+    extra = {"city": city} if city else {}
+
+    def _dig(data):
+        out = []
+        for p in (data.get("pois") or []):
+            loc = str(p.get("location") or "")
+            if re.match(r"^\d{1,3}\.\d+,\d{1,3}\.\d+$", loc):
+                out.append({"location": loc, "name": p.get("name") or keywords,
+                            "address": str(p.get("address") or "")[:60]})
+            if len(out) >= 5:
+                break
+        return out
+
+    try:
+        pois = _dig(_call_tool("maps_text_search", {"keywords": keywords, **extra}))
+        if pois:
+            return {"ok": True, "pois": pois}
+    except Exception:
+        pass   # MCP 主路挂了静默降级 REST
+    try:
+        resp = requests.get("https://restapi.amap.com/v3/place/text",
+                            params={"keywords": keywords, "key": AMAP_MAPS_API_KEY, **extra},
+                            timeout=TIMEOUT)
+        pois = _dig(resp.json())
+        if pois:
+            return {"ok": True, "pois": pois}
+        return {"ok": False, "error": ""}
+    except Exception as exc:
+        return {"ok": False, "error": f"POI搜索不可用：{str(exc)[:80]}"}
+
 def route(origin: str, destination: str, mode: str = "walk") -> dict:
     # 坐标 → 坐标路线规划；统一归一化 {distance(米), duration(秒), steps[], polyline}
     bad = _check_key()

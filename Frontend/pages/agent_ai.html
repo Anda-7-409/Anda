@@ -129,6 +129,15 @@ a { color:#1a73e8; text-decoration:none; }
 .ref-chip .chip-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
 .ref-chip .chip-x { flex-shrink:0; width:16px; height:16px; border:none; border-radius:50%; background:#dce8ff; color:#1a73e8; font-size:11px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; }
 .ref-chip .chip-x:hover { background:#e5484d; color:#fff; }
+/* 导航工具卡片：目的地/耗时/路线要点/一键打开高德（替代裸 JSON 气泡） */
+.msg.tool .bubble.nav-card { text-align:left; max-width:82%; padding:12px 16px; background:#f0fff4; border:1px solid #b7ebc6; color:#1f6b3a; box-shadow:0 2px 10px rgba(31,107,58,.10); }
+.nav-card .nav-head { font-weight:bold; font-size:13.5px; color:#14532d; margin-bottom:4px; }
+.nav-card .nav-head .nav-origin { font-weight:normal; font-size:11.5px; color:#4a9d68; }
+.nav-card .nav-meta { font-size:12.5px; color:#2f855a; margin-bottom:6px; }
+.nav-card .nav-steps { margin:0 0 10px 18px; padding:0; font-size:12.5px; color:#276749; }
+.nav-card .nav-steps li { margin:2px 0; }
+.nav-card .nav-go { display:inline-block; padding:6px 16px; border-radius:8px; background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; font-size:12.5px; font-weight:600; text-decoration:none; box-shadow:0 2px 6px rgba(22,163,74,.30); transition:all .15s; }
+.nav-card .nav-go:hover { filter:brightness(1.08); transform:translateY(-1px); }
 .chat-input textarea { width:100%; resize:none; border:1px solid #e4e7ed; border-radius:8px; padding:10px; font-size:14px; font-family:inherit; outline:none; height:60px;transition:border-color .2s ease, box-shadow .2s ease;  }
 .chat-input textarea:focus { border-color:#1a73e8;box-shadow:0 0 0 3px rgba(26,115,232,.15); }
 .chat-input-row { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
@@ -246,6 +255,7 @@ a { color:#1a73e8; text-decoration:none; }
       <div class="slash-menu" id="slash-menu"></div>
         <!-- 对话区输入发送按钮 -->
       <div class="chat-input-row">
+  <button class="upload-btn" id="loc-btn" title="上报当前位置（问“怎么去XX”前先点我）">📍</button>
   <button class="upload-btn" id="upload-btn" title="上传文件 / 照片">＋</button>
   <input type="file" id="file-input" multiple hidden>
   <button class="send-btn" id="send-btn">发送</button>
@@ -350,7 +360,9 @@ const extOf = name => (name.split('.').pop() || '').toLowerCase();
 const iconOf = name => FM_ICONS[extOf(name)] || '📄';
 
 // 渲染树：我的文件 → 类型文件夹（可折叠）→ 文件（点击预览，悬停出下载）
+let fmFiles = [];   // 当前用户的已上传文件名列表（send 时校验正文 @引用 是否真实存在）
 function renderFm(files) {
+  fmFiles = files;
   const box = $('fm-tree');
   box.innerHTML = '';
   const fmt = n => n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(1) + ' KB' : (n/1048576).toFixed(1) + ' MB';
@@ -633,6 +645,7 @@ div.appendChild(del);
 function selectChat(id) {
     // 切换到指定对话
   currentChatId = id;
+  refs = []; renderRefs();   // 引用不跨对话残留：切走就清空，防止上个对话的文件带进这条消息
     // 渲空对话消息
   const h = history.find(x=>x.id===id);
     // 渲染指定对话的所有消息
@@ -650,6 +663,7 @@ function selectChat(id) {
 function newChat() {
     // 创建新对话
   currentChatId = 'c_' + Date.now();
+  refs = []; renderRefs();   // 新对话同样不带旧引用（send 内兜底调用时引用合并还没开始，不受影响）
     // 渲空对话消息
   $('chat-messages').innerHTML='';
     // 渲染新对话的所有消息
@@ -672,8 +686,14 @@ function appendMessage(role, content, toolName) {
   const div = document.createElement('div');
     // 设置消息类名
   div.className = 'msg ' + (role==='user'?'user':(role==='tool'?'tool':'ai'));
-    // 设置消息文本内容
   const bubble = document.createElement('div');
+    // nav 工具的成功结果 → 结构化导航卡片（实时消息与历史重放都走这里，点按钮直达高德）
+  if (role === 'tool' && toolName === 'nav') {
+    try {
+      const r = JSON.parse(content);
+      if (r && r.ok) { appendNavCard(r); return; }   // 失败结果仍按普通 JSON 气泡显示
+    } catch {}
+  }
   bubble.className = 'bubble';
     // 设置消息文本内容
   bubble.textContent = toolName
@@ -682,6 +702,37 @@ function appendMessage(role, content, toolName) {
     // 将消息添加到父元素
   div.appendChild(bubble); box.appendChild(div);
     // 滚动到最底部
+  box.scrollTop = box.scrollHeight;
+}
+// 导航卡片：把 nav 工具的真实结果拼成可点的一块（目的地/距离耗时/路线要点/高德直达按钮）
+function appendNavCard(r) {
+  const MODE_CN = { walk: '步行', ride: '骑行', drive: '驾车' };
+  const box = $('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'msg tool';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble nav-card';
+  const head = document.createElement('div');
+  head.className = 'nav-head';
+  head.textContent = '🧭 ' + (r['目的地'] || '目的地');
+  const origin = document.createElement('span');
+  origin.className = 'nav-origin';
+  origin.textContent = '　' + (r['起点'] || '');
+  head.appendChild(origin);
+  const meta = document.createElement('div');
+  meta.className = 'nav-meta';
+  meta.textContent = '🚶 ' + (MODE_CN[r['方式']] || r['方式'] || '') + ' · '
+    + r['距离_公里'] + ' 公里 · 约 ' + r['预计_分钟'] + ' 分钟';
+  const ol = document.createElement('ol');
+  ol.className = 'nav-steps';
+  (r['路线要点'] || []).forEach(s => { const li = document.createElement('li'); li.textContent = s; ol.appendChild(li); });
+  const go = document.createElement('a');
+  go.className = 'nav-go';
+  go.href = r['高德导航链接'] || '#';
+  go.target = '_blank'; go.rel = 'noopener';
+  go.textContent = '打开高德导航 ↗';
+  bubble.append(head, meta, ol, go);
+  div.appendChild(bubble); box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
 async function send() {
@@ -704,9 +755,11 @@ async function send() {
   if (h.title==='新对话') h.title = text.slice(0,15);
   saveHistory(); renderHistory();
    try {
-    // 合并引用来源：输入框上方的文件卡片 + 正文里手打的 @文件名，一并交给后端读文件内容
+    // 合并引用来源：输入框上方的文件卡片 + 正文里手打的 @文件名；正文匹配到的必须
+    // 是真实存在的文件才带上——否则邮箱(@xx@qq.com)、@10.30 之类都会被当成文件引用
     const textRefs = (text.match(/@[^@\s]+\.[A-Za-z0-9]+/g) || []).map(s => s.slice(1));
-    const allRefs = [...new Set([...refs, ...textRefs])];
+    const known = new Set(fmFiles.map(f => f.file_name));
+    const allRefs = [...new Set([...refs, ...textRefs.filter(n => known.has(n))])];
     const {ok, data} = await api('/agent/chat', { method:'POST', body:JSON.stringify({utterance:text, refs:allRefs}) });
     if (ok && data?.data) {
       const d = data.data;
@@ -1170,6 +1223,30 @@ window.addEventListener('focus', pollDue);   // 窗口重新获得焦点立即�
 renderHistory();
 // 初始化时，选择第一个对话
 if (history.length) selectChat(history[0].id); else newChat();
+
+// ===== 上报当前位置（导航工具依赖 /nav/location，后端缓存30分钟） =====
+// 浏览器首次会弹定位授权；拒绝也不影响其他功能，只是对话问"怎么去XX"时会提示先点 📍 按钮
+let locating = false;   // 防抖：定位进行中不重复触发
+async function reportLocation(manual = false) {
+  if (!navigator.geolocation) { if (manual) toast('浏览器不支持定位'); return; }
+  if (locating) return;
+  locating = true;
+  if (manual) toast('正在获取定位…');
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    locating = false;
+    try {
+      const { ok } = await api('/nav/location', { method: 'POST',
+        body: JSON.stringify({ lng: pos.coords.longitude, lat: pos.coords.latitude }) });
+      if (manual) toast(ok ? '定位成功！现在可以问"怎么去逸夫楼"啦~' : '定位上报失败，请重试');
+    } catch { if (manual) toast('定位上报失败，请确认后端已启动'); }
+  }, (err) => {
+    locating = false;
+    // err.code: 1=权限被拒 2=拿不到位置 3=超时
+    if (manual) toast(err.code === 1 ? '定位被拒绝：请在浏览器地址栏允许位置权限' : '定位失败，请重试');
+  }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
+}
+$('loc-btn').addEventListener('click', () => reportLocation(true));   // 手动定位按钮
+reportLocation();   // 页面加载时静默尝试一次（用户授权过就直接上报，无需再点）
 </script>
 </body>
 </html>

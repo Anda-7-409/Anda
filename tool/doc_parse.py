@@ -176,7 +176,7 @@ def _agent_file(name: str, content: bytes) -> str:
     return data.get("task_id") or ""
 
 # ===== 工具入口：从话术里找文档链接或用户已上传的文件 =====
-def doc_parse_tool(utterance: str, user_id: int) -> dict:
+def doc_parse_tool(utterance: str, user_id: int, refs=None) -> dict:
     text = utterance or ""
     m = _URL_RE.search(text)
     if m:
@@ -186,8 +186,15 @@ def doc_parse_tool(utterance: str, user_id: int) -> dict:
     files = sorted((p for p in user_dir.iterdir() if p.is_file()
                     and p.suffix.lower().lstrip(".") in SUPPORTED_EXT),
                    key=lambda p: p.stat().st_mtime, reverse=True) if user_dir.exists() else []
+    by_name = {p.name: p for p in files}
+    ref_hits = [by_name[str(r)] for r in (refs or []) if str(r) in by_name]   # @引用的且确实可解析
     mentioned = [p for p in files if p.name in text or Path(p.name).stem in text]
-    if len(mentioned) == 1:
+    if len(ref_hits) == 1:          # ① 用户显式 @ 引用 → 最强信号，直接用（引用图片等非文档时 ref_hits 为空，走后面逻辑）
+        target = ref_hits[0]
+    elif len(ref_hits) > 1:         # 引用了多个可解析文档且没点名 → 追问
+        return {"ok": False, "error": "你引用了多个文档，但没说清要解析哪个",
+                "candidates": [p.name for p in ref_hits], "hint": "列出候选让用户选"}
+    elif len(mentioned) == 1:       # ② 正文点名了文件名
         target = mentioned[0]
     elif len(mentioned) > 1:
         return {"ok": False, "error": "提到多个文件，不确定解析哪一个",

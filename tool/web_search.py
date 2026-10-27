@@ -207,7 +207,7 @@ def status() -> dict:
 _TRIGGER = ("全网搜索", "帮我搜一下", "帮我搜", "全网搜", "上网搜", "搜一下", "网上查", "上网查", "查一下",
             "搜下", "搜索", "查查")   # 长词在前，避免"帮我搜"先把"搜一下"切碎留下"一下"
 
-def search_tool(utterance: str, user_id: int) -> dict:
+def search_tool(utterance: str, user_id: int, **_) -> dict:
     # Agent 工具入口：orchestrator 以 fn(utterance=, user_id=) 调用
     # 职责：剥掉触发词得到真正的搜索词 → 调 search() → 返回结构化结果供 orchestrator 注入提示词
     q = utterance or ""

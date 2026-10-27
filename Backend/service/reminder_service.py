@@ -149,7 +149,7 @@ def _parse_json(text: str) -> dict:
     except Exception:
         return {}
 
-def set_tool(utterance: str, user_id: int) -> dict:
+def set_tool(utterance: str, user_id: int, **_) -> dict:
     # orchestrator 以 fn(utterance=, user_id=) 调用，拿不到请求级 db → 自建会话
     now = datetime.now()
     messages = [
@@ -176,7 +176,7 @@ def set_tool(utterance: str, user_id: int) -> dict:
         return {"ok": False, "error": result["message"]}
     return {"ok": True, "reminder": result["data"], "extracted_by": provider}
 
-def query_tool(utterance: str, user_id: int) -> dict:
+def query_tool(utterance: str, user_id: int, **_) -> dict:
     # Agent 工具入口：AI 答"我有什么提醒"时的数据源
     with SessionLocal() as db:
         reminders = [_to_dict(r) for r in _list(db, user_id)]

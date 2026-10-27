@@ -65,3 +65,6 @@ SEARCH_COOLDOWN_SECONDS = int(os.environ.get("SEARCH_COOLDOWN_SECONDS", "60"))
 MINERU_API_KEY = os.environ.get("MINERU_API_KEY", "")
 MINERU_MODEL = os.environ.get("MINERU_MODEL", "vlm")   # 精准解析模型：pipeline / vlm / MinerU-HTML
 DOC_PARSE_MAX_WAIT_SECONDS = int(os.environ.get("DOC_PARSE_MAX_WAIT_SECONDS", "100"))
+
+# —— 高德地图 MCP（tool/amap_mcp.py：地理编码 + 路径规划，需"Web服务"类型 Key）——
+AMAP_MAPS_API_KEY = os.environ.get("AMAP_MAPS_API_KEY", "")
