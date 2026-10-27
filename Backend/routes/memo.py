@@ -1,7 +1,4 @@
 
-# memo.py (备忘录路由) 对应今日日程"+"：列表/添加/删除（AI 读取走 Agent 工具 memo_list）
-
-# 身份统一走 Authorization: Bearer <token>（plan.md 认证说明：除 /auth/* 外所有接口带 Authorization）
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -14,7 +11,6 @@ from Backend.service import auth_service, memo_service
 router = APIRouter()
 
 class MemoCreate(BaseModel):
-    # 参数校验在入口自动完成：内容非空、最长 200 字
     content: str = Field(..., min_length=1, max_length=200)
 
 def _ok(data):
@@ -25,7 +21,6 @@ def _fail(message: str, status: int = 400):
 
 @router.get("/")
 def get_memos(user: User = Depends(auth_service.get_current_user), db: Session = Depends(get_db)):
-    # 右栏"今日日程"备忘录数据源（与课程卡片混排在同一列表）
     return _ok(memo_service.list_memos(db, user.id)["data"])
 
 @router.post("/")
