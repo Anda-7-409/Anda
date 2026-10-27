@@ -1,4 +1,4 @@
-# schedule_service.py (课表业务) 今日/全周查询、手动增删；同一套业务同时供路由层与 Agent 工具复用
+
 import json
 from datetime import datetime
 from types import SimpleNamespace
@@ -13,7 +13,6 @@ from Backend.models.schedule import Course
 WEEK_CN = {1: "周一", 2: "周二", 3: "周三", 4: "周四", 5: "周五", 6: "周六", 7: "周日"}
 
 def _to_dict(c: Course) -> dict:
-    # 返回契约：与前端日程卡片字段一致，前端零改动即可渲染
     return {
         "id": c.id,
         "name": c.name,
@@ -25,21 +24,19 @@ def _to_dict(c: Course) -> dict:
     }
 
 def _list(db: Session, user_id: int, weekday: Optional[int] = None) -> List[Course]:
-    # 所有查询强制带 user_id 条件：只能看到自己的课（与 upload 权限隔离同思路）
     q = db.query(Course).filter(Course.user_id == user_id)
     if weekday:
         q = q.filter(Course.weekday == weekday)
     return q.order_by(Course.weekday, Course.start_slot).all()
 
 def today_courses(db: Session, user_id: int) -> dict:
-    today = datetime.now().isoweekday()  # 1=周一 … 7=周日
+    today = datetime.now().isoweekday() % 7 + 1  
     return {"ok": True, "data": [_to_dict(c) for c in _list(db, user_id, today)]}
 
 def week_courses(db: Session, user_id: int) -> dict:
     return {"ok": True, "data": [_to_dict(c) for c in _list(db, user_id)]}
 
 def add_course(db: Session, user_id: int, req) -> dict:
-    # 星期/节次范围由 Pydantic 入口校验（1-7 / 1-12），这里只做业务级检查
     if req.end_slot < req.start_slot:
         return {"ok": False, "message": "结束节次不能早于开始节次哦~ ?-?"}
     course = Course(
@@ -65,12 +62,10 @@ def delete_course(db: Session, user_id: int, course_id: int) -> dict:
     return {"ok": True, "data": {"id": course_id}}
 
 def query_tool(utterance: str, user_id: int, **_) -> dict:
-    # Agent 工具入口：orchestrator 以 fn(utterance=, user_id=) 调用，拿不到请求级 db → 自建会话
-    # 时间意图解析：明天/今天/周X/星期X → 具体 weekday；无时间词 → 返回全周
     weekday = None
     scope = "全周"
     if "明天" in utterance:
-        weekday = datetime.now().isoweekday() % 7 + 1   # 周日(7)自动回到周一(1)
+        weekday = datetime.now().isoweekday() % 7 + 1  
         scope = f"明天({WEEK_CN[weekday]})"
     elif "今天" in utterance or "今日" in utterance:
         weekday = datetime.now().isoweekday()
@@ -86,7 +81,6 @@ def query_tool(utterance: str, user_id: int, **_) -> dict:
     return {"scope": scope, "count": len(courses), "courses": courses}
 
 
-# —— 自然语言添加课程（方案B）：模型抽取 → 校验 → 写库；抽取器可替换升级 ——
 EXTRACT_PROMPT = """你是课表字段抽取器。把用户话术解析成一个 JSON 对象，只输出 JSON 本身，禁止代码块、禁止解释。
 字段规则：
 - "name"：课程名称（字符串，必填）
@@ -107,7 +101,6 @@ EXTRACT_PROMPT = """你是课表字段抽取器。把用户话术解析成一个
 
 
 def _parse_json(text: str) -> dict:
-    # 容错：模型可能裹 ```json 代码块或加前后废话，截取首尾大括号之间再解析
     s = text.strip()
     if s.startswith("```"):
         s = s.strip("`")
@@ -125,8 +118,6 @@ def _parse_json(text: str) -> dict:
 
 
 def add_tool(utterance: str, user_id: int, **_) -> dict:
-    # orchestrator 以 fn(utterance=, user_id=) 调用，拿不到请求级 db → 自建会话（与 query_tool 同理）
-    # 注入“今天/明天星期几”，让“明天一二节”这类相对时间也能解析
     today = datetime.now().isoweekday()
     tomorrow = today % 7 + 1
     messages = [
@@ -142,7 +133,6 @@ def add_tool(utterance: str, user_id: int, **_) -> dict:
         return {"ok": False, "error": "没听懂要加什么课", "hint": "追问用户：课程名、星期几、第几节"}
     if "error" in data:
         return {"ok": False, "error": str(data["error"]), "hint": "信息不全，向用户追问后再调用本工具"}
-    # 校验：与路由层 CourseCreate 同一套规则（节次1-12、星期1-7、结束不早于开始）
     try:
         req = SimpleNamespace(
             name=str(data.get("name") or "").strip(),
@@ -163,10 +153,9 @@ def add_tool(utterance: str, user_id: int, **_) -> dict:
     if req.end_slot < req.start_slot:
         return {"ok": False, "error": "结束节次不能早于开始节次"}
     with SessionLocal() as db:
-        result = add_course(db, user_id, req)   # 复用与 REST 完全同一条写库业务
+        result = add_course(db, user_id, req)  
     if not result["ok"]:
         return {"ok": False, "error": result["message"]}
-    # 回显钟点：节次是存储形态，钟点才是用户说的语义，回写给模型让它在答案里明示换算结果供核对
     start_min = 8 * 60 + (req.start_slot - 1) * 60
     end_min = 8 * 60 + (req.end_slot - 1) * 60 + 45
     return {

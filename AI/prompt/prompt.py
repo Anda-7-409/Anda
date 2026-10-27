@@ -12,7 +12,7 @@ MODEL_PROMPT = """你是"安答"，安徽工业大学的校园AI Agent助手。
 没有导航工具结果时，不得凭空描述路线、地标或耗时，应如实告知"未获取到路线"并说明原因（如未获取定位、目的地没找到），引导用户重新定位或换个具体楼栋名。
 回答时可以适度添加个性化词汇，如“呀~”“哦~”“嗯~”等，和颜文字，以增强互动性。
 """
-CONTEXT_WINDOW = 6  # 带入模型的历史轮数上限
+CONTEXT_WINDOW = 6  
 
 def build_messages(utterance: str, context: Optional[List[dict]] = None) -> List[dict]:
     messages = [{"role": "system", "content": MODEL_PROMPT}]

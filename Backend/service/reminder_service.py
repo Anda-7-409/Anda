@@ -1,5 +1,4 @@
 
-# reminder_service.py (提醒业务) 设置/查询/修改/删除/确认 + 到点提醒推送源；同时供路由层与 Agent 工具复用
 import json
 import re
 from datetime import datetime, timedelta
@@ -12,10 +11,9 @@ from Backend.database import SessionLocal
 from Backend.models.reminder import Reminder
 from Backend.service.schedule_service import WEEK_CN
 
-DUE_WINDOW_MIN = 30   # 到点后 30 分钟内都算"该推送了"：错过整点才打开页面也能收到
+DUE_WINDOW_MIN = 30  
 
 def _to_dict(r: Reminder) -> dict:
-    # 返回契约：与前端提醒卡片字段一致，前端零改动即可渲染
     return {
         "id": r.id,
         "reminder_type": r.reminder_type,
@@ -24,11 +22,9 @@ def _to_dict(r: Reminder) -> dict:
     }
 
 def _list(db: Session, user_id: int) -> List[Reminder]:
-    # 所有查询强制带 user_id 条件：只能看到自己的提醒（与 schedule/memo/upload 同思路）
     return db.query(Reminder).filter(Reminder.user_id == user_id).order_by(Reminder.reminder_time).all()
 
 def _check_time(value: str) -> bool:
-    # 两种合法格式："HH:MM"（今天） / "YYYY-MM-DD HH:MM"（指定日期）
     return bool(re.fullmatch(r"\d{1,2}:\d{2}", value)
                 or re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{1,2}:\d{2}", value))
 
@@ -75,7 +71,6 @@ def delete_reminder(db: Session, user_id: int, reminder_id: int) -> dict:
     return {"ok": True, "data": {"id": reminder_id}}
 
 def mark_done(db: Session, user_id: int, reminder_id: int, done: int) -> dict:
-    # done/undo 共用一条逻辑：done=1 已确认，done=0 撤回确认
     r = db.query(Reminder).filter(Reminder.id == reminder_id, Reminder.user_id == user_id).first()
     if not r:
         return {"ok": False, "message": "提醒不存在或不属于你哦~"}
@@ -84,7 +79,6 @@ def mark_done(db: Session, user_id: int, reminder_id: int, done: int) -> dict:
     return {"ok": True, "data": _to_dict(r)}
 
 def _at(now: datetime, time_str: str) -> Optional[datetime]:
-    # "HH:MM" → 今天此刻；"YYYY-MM-DD HH:MM" → 指定时刻；解析失败返回 None（跳过）
     try:
         if ":" not in time_str:
             return None
@@ -96,7 +90,6 @@ def _at(now: datetime, time_str: str) -> Optional[datetime]:
         return None
 
 def due_list(db: Session, user_id: int) -> dict:
-    # 主动推送数据源：未确认 + 已到点 + 未超 30 分钟窗口的提醒
     now = datetime.now()
     out = []
     for r in _list(db, user_id):
@@ -107,7 +100,6 @@ def due_list(db: Session, user_id: int) -> dict:
             out.append(_to_dict(r))
     return {"ok": True, "data": out}
 
-# —— 自然语言设置提醒（与 schedule_add 同款方案B）：模型抽取 → 校验 → 写库 ——
 REMIND_PROMPT = """你是提醒字段抽取器。把用户话术解析成一个 JSON 对象，只输出 JSON 本身，禁止代码块、禁止解释。
 字段规则：
 
@@ -133,7 +125,7 @@ REMIND_PROMPT = """你是提醒字段抽取器。把用户话术解析成一个 
 输出：{"reminder_type": "学数学", "reminder_time": "2026-10-25 12:24"}"""
 
 def _parse_json(text: str) -> dict:
-    # 容错：模型可能裹 ```json 代码块或加前后废话，截取首尾大括号之间再解析
+
     s = text.strip()
     if s.startswith("```"):
         s = s.strip("`")
@@ -150,7 +142,6 @@ def _parse_json(text: str) -> dict:
         return {}
 
 def set_tool(utterance: str, user_id: int, **_) -> dict:
-    # orchestrator 以 fn(utterance=, user_id=) 调用，拿不到请求级 db → 自建会话
     now = datetime.now()
     messages = [
         {"role": "system", "content": REMIND_PROMPT},
@@ -177,7 +168,6 @@ def set_tool(utterance: str, user_id: int, **_) -> dict:
     return {"ok": True, "reminder": result["data"], "extracted_by": provider}
 
 def query_tool(utterance: str, user_id: int, **_) -> dict:
-    # Agent 工具入口：AI 答"我有什么提醒"时的数据源
     with SessionLocal() as db:
         reminders = [_to_dict(r) for r in _list(db, user_id)]
     pending = [r for r in reminders if not r["is_done"]]
