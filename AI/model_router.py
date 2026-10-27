@@ -56,6 +56,29 @@ def chat(messages: List[dict]) -> Tuple[Optional[str], Optional[str]]:
     return None, None
 
 
+def chat_with_tools(messages: List[dict], tools: List[dict]) -> Tuple[Optional[dict], Optional[str]]:
+    """混合策略：function calling 只走 GLM 池（本地 Ollama 的 FC 输出不稳），
+    由编排器在 GLM 全挂时回落到关键词兜底路径。"""
+    for provider, model in _order([("glm", m) for m in GLM_POOL]):
+        msg = glm.chat_with_tools(messages, tools, model=model)
+        if msg:
+            _mark(model, True)
+            return msg, f"{provider}:{model}"
+        _mark(model, False)
+    return None, None
+
+
+def chat_text(messages: List[dict]) -> Tuple[Optional[str], Optional[str]]:
+    """工具内部生成类调用（如代码生成）：只走 GLM 池带故障转移，不落 Ollama。"""
+    for provider, model in _order([("glm", m) for m in GLM_POOL]):
+        text = glm.chat(messages, model=model)
+        if text:
+            _mark(model, True)
+            return text, f"{provider}:{model}"
+        _mark(model, False)
+    return None, None
+
+
 def probe_down() -> None:
     for provider, model in [("glm", m) for m in GLM_POOL] + [("ollama", m) for m in OLLAMA_POOL]:
         if _state.get(model, {}).get("ok"):

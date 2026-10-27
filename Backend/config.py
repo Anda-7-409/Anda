@@ -23,7 +23,7 @@ _load_env()
 QQ_EMAIL_USER = os.environ.get("QQ_EMAIL_USER","")
 QQ_EMAIL_AUTH_CODE = os.environ.get("QQ_EMAIL_AUTH_CODE","")
 
-FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL","http://localhost:5173")
+FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL","https://anda.dpdns.org")
 
 TOKEN_TTL_SECONDS = 15 * 60  
 SESSION_TTL_SECONDS = 24 * 60 * 60  
@@ -42,7 +42,7 @@ GLM_MODEL_VISION = os.environ.get("GLM_MODEL_PICTURE_UNDERSTAND", "")
 GLM_MODEL_IMAGE = os.environ.get("GLM_MODEL_PICTURE_PRODUCT", "")
 GLM_MODEL_BACKUP = os.environ.get("GLM_ADDITIONAL_MODEL", "")
 
-QIANFAN_AI_SEARCH_KEY = os.environ.get("QIANFAN_AI_SEARCH_KEY", "")）
+QIANFAN_AI_SEARCH_KEY = os.environ.get("QIANFAN_AI_SEARCH_KEY", "")
 ANY_SEARCH_KEY = os.environ.get("ANY_SEARCH_KEY") or os.environ.get("ANYSEARCH_API_KEY", "")
 SEARCH_COOLDOWN_SECONDS = int(os.environ.get("SEARCH_COOLDOWN_SECONDS", "60"))
 
