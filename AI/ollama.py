@@ -1,4 +1,3 @@
-# ollama.py (本地Ollama模型客户端) POST {OLLAMA_URL}/api/chat 非流式；本地服务未启动时自动跳过
 from typing import List, Optional
 
 import requests
@@ -6,7 +5,6 @@ import requests
 from Backend.config import OLLAMA_MODEL, OLLAMA_TIMEOUT_SECONDS, OLLAMA_URL
 
 def chat(messages: List[dict], model: Optional[str] = None) -> Optional[str]:
-    # model 参数供候选池滚动测试逐个指定模型，不传则用 config 默认槽位
     try:
         resp = requests.post(
             f"{OLLAMA_URL.rstrip('/')}/api/chat",
