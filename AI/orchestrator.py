@@ -29,15 +29,17 @@ def _plan_tools(utterance: str) -> List[str]:
         hits.append(name)
     return hits
 
-def run(user_id: int, utterance: str, context: Optional[List[dict]] = None, ref_block: str = "") -> dict:
+def run(user_id: int, utterance: str, context: Optional[List[dict]] = None, ref_block: str = "", refs=None) -> dict:
     # ① 意图识别 + 任务拆解（只看用户原话；ref_block 单独传，不参与匹配，防止引用文本里的词误触发工具）
     tool_names = _plan_tools(utterance)
 
     # ② 工具调用（工具结果注入提示词由下一版拼接，TODO）
+    # 统一契约：fn(utterance, user_id, refs, **_) —— refs 是用户 @ 引用的文件名列表，
+    # 文件类工具（doc_parse/image）靠它精确定位；用不上的工具用 **_ 吸收
     tool_calls, actions = [], []
     for name in tool_names:
         try:
-            result = TOOLS[name]["fn"](utterance=utterance, user_id=user_id)
+            result = TOOLS[name]["fn"](utterance=utterance, user_id=user_id, refs=refs or [])
             status = "success"
         except Exception as exc:
             result = {"error": str(exc)}

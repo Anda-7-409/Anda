@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from Backend.models.memo import Memo
 from Backend.models.user import User
-from Backend.service import memo_service, reminder_service, schedule_service, upload_service
+from Backend.service import memo_service, nav_service, reminder_service, schedule_service, upload_service
 from tool import web_search   # 全网搜索工具链（项目根 \tool\web_search.py，命名空间包无需 __init__）
 from tool import doc_parse    # 文档解析工具链（项目根 \tool\doc_parse.py，MinerU 双路径）
 from tool import image_understand  # 图片理解工具链（项目根 \tool\image_understand.py，视觉模型）
@@ -80,6 +80,14 @@ orchestrator.TOOLS["web_search"] = {
     "fn": web_search.search_tool,
 }
 
+# 高德导航：tool/amap_mcp.py MCP主路+REST兜底；位置来自 /nav/location 上报（30分钟内有效）
+# 无导航工具结果时模型不得编路线（prompt.py 有对应约束）
+orchestrator.TOOLS["nav"] = {
+    "keywords": ("导航", "怎么去", "怎么走", "咋去", "带我去", "路线", "过去怎么", "如何到", "怎么过去"),
+    "exclude": ("提醒", "课表", "备忘", "天气", "搜索", "搜一下", "帮我搜"),
+    "fn": nav_service.nav_tool,
+}
+
 # 能直接读出文字注入对话的扩展名；其余（图片/Office等）只告诉模型文件名，待视觉模型接入后升级
 TEXT_EXT = {"txt", "md", "csv", "json", "log"}
 REF_MAX_CHARS = 4000   # 单个引用文件注入的字符上限，防撑爆上下文
@@ -111,8 +119,9 @@ def chat(db: Session, user: User, utterance: str, context=None, refs=None) -> di
         return {"ok": False, "message": "内容不能为空哦~ 再输入一次吧 -?v?-"}
     ref_block = _build_ref_block(user, refs)
     ctx = list(context) if context else memory.recall(user.id)
-    # 引用文件内容单独传参：只注入最终提示词，不参与工具意图匹配，防止引用文本里的词误触发工具
-    result = orchestrator.run(user.id, utterance.strip(), ctx, ref_block=ref_block)
+    # 引用文件内容单独传参：只注入最终提示词，不参与工具意图匹配，防止引用文本里的词误触发工具；
+    # refs 原样传给 orchestrator → 文件类工具（doc_parse/image）靠它精确锁定用户 @ 的那个文件
+    result = orchestrator.run(user.id, utterance.strip(), ctx, ref_block=ref_block, refs=refs)
     memory.remember(user.id, utterance.strip(), result["answer"])  # 记忆存原文，不把文件内容堆进历史
     # TODO：任务记录写入 task 表（task模块落地后），供 /task 列表与 task_detail.html 跳转
     return {"ok": True, "data": result}

@@ -30,7 +30,7 @@ def _ask_vision(question: str, image_b64: str, mime: str) -> str:
     }]
     return glm.chat(messages, model=GLM_MODEL_VISION)
 
-def image_understand_tool(utterance: str, user_id: int) -> dict:
+def image_understand_tool(utterance: str, user_id: int, refs=None) -> dict:
     if not GLM_API_KEY or not GLM_MODEL_VISION:
         return {"ok": False, "error": "未配置视觉模型（GLM_API_KEY / GLM_MODEL_PICTURE_UNDERSTAND）",
                 "hint": "如实告知用户图片理解功能暂不可用，不要编造图片内容"}
@@ -52,10 +52,19 @@ def image_understand_tool(utterance: str, user_id: int) -> dict:
                        if p.is_file() and p.suffix.lower().lstrip(".") in IMG_EXT),
                       key=lambda p: p.stat().st_mtime, reverse=True) if user_dir.exists() else []
         mentioned = [p for p in imgs if p.name in text or p.stem in text]
-        if len(mentioned) > 1:
+        ref_hits = [p for p in imgs if p.name in (refs or [])]   # @引用的且确实是图片
+        if len(ref_hits) == 1:
+            target = ref_hits[0]          # ① 显式引用 → 最强信号（引用的是文档时 ref_hits 为空，走后面逻辑）
+        elif len(ref_hits) > 1:
+            return {"ok": False, "error": "你引用了多张图片，但没说清要看哪张",
+                    "candidates": [p.name for p in ref_hits], "hint": "列出候选让用户选"}
+        elif len(mentioned) > 1:
             return {"ok": False, "error": "提到多张图片，不确定看哪张",
                     "candidates": [p.name for p in mentioned], "hint": "追问用户要看哪一张"}
-        target = mentioned[0] if mentioned else (imgs[0] if imgs else None)
+        elif mentioned:
+            target = mentioned[0]         # ② 正文点名了图片
+        else:
+            target = imgs[0] if imgs else None   # ③ 没点名 → 只有一张或取最新
         if target is None:
             return {"ok": False, "error": "没找到要看的图片",
                     "hint": "请用户先上传图片，或直接给出图片链接"}

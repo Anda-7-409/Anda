@@ -90,8 +90,12 @@ def chat(messages: List[dict], model: Optional[str] = None) -> Optional[str]:
             # 失败时打印 完整的错误结构 （包含 status_code 和 error 详情），再返回`None` 交给上层降级链路。
             # 注释里的“否则真实原因会被KeyError吞掉”说的就是这个坑。
             # 智谱报错时不抛HTTP异常而是返回error结构，这里显式拦截，否则真实原因会被KeyError吞掉
-            print(f"[glm] 接口异常 o-o !!! (HTTP {resp.status_code}): {data}")
-            # 将错误原因打印到控制台上，方便调试
+            if resp.status_code == 429:
+                # 免费模型高峰期限流，属正常现象：路由会自动切备用模型，体检到期自动恢复
+                print(f"[glm] {model or GLM_MODEL} 限流中 (HTTP 429 高峰期访问量大)，已自动切备用模型")
+            else:
+                print(f"[glm] 接口异常 o-o !!! (HTTP {resp.status_code}): {data}")
+                # 将错误原因打印到控制台上，方便调试
             return None
             # 返回 None 表示调用失败，上层路由会切换到下一个模型或演示模式
         # 成功时返回模型回复

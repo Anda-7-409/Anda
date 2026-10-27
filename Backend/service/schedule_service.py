@@ -64,7 +64,7 @@ def delete_course(db: Session, user_id: int, course_id: int) -> dict:
     db.commit()
     return {"ok": True, "data": {"id": course_id}}
 
-def query_tool(utterance: str, user_id: int) -> dict:
+def query_tool(utterance: str, user_id: int, **_) -> dict:
     # Agent 工具入口：orchestrator 以 fn(utterance=, user_id=) 调用，拿不到请求级 db → 自建会话
     # 时间意图解析：明天/今天/周X/星期X → 具体 weekday；无时间词 → 返回全周
     weekday = None
@@ -124,7 +124,7 @@ def _parse_json(text: str) -> dict:
         return {}
 
 
-def add_tool(utterance: str, user_id: int) -> dict:
+def add_tool(utterance: str, user_id: int, **_) -> dict:
     # orchestrator 以 fn(utterance=, user_id=) 调用，拿不到请求级 db → 自建会话（与 query_tool 同理）
     # 注入“今天/明天星期几”，让“明天一二节”这类相对时间也能解析
     today = datetime.now().isoweekday()
