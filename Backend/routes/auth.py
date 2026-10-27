@@ -1,4 +1,3 @@
-# auth.py (用户认证) 用于用户登录注册、验证用户身份等操作
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header
