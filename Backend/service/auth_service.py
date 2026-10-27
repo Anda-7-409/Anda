@@ -12,35 +12,23 @@ from Backend.models.user import User
 from Backend.service import email_service
 
 def hash_password(password: str) -> str:
-    # 对密码进行哈希处理
-    # TODO: 使用安全的哈希算法（如 bcrypt）
-    # TODO: 存储密码时，不直接存储明文，而是存储哈希值
-    salt = secrets.token_hex(16)  # 生成随机盐值
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 120_000)  # 生成哈希值
-    return f"{salt}:{dk.hex()}"  # 存储时，salt:hash 格式
+    salt = secrets.token_hex(16)  
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 120_000)  
+    return f"{salt}:{dk.hex()}"  
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    # 验证密码是否匹配
-    # TODO: 从哈希值中提取盐值
-    # TODO: 对明文密码进行哈希处理，与存储的哈希值比较
     try:
         salt, digest = hashed_password.split(":", 1)
     except ValueError:
         return False
-    dk = hashlib.pbkdf2_hmac("sha256", plain_password.encode(), salt.encode(), 120_000)  # 生成哈希值
-    return secrets.compare_digest(dk.hex(), digest)  # 对比哈希值
+    dk = hashlib.pbkdf2_hmac("sha256", plain_password.encode(), salt.encode(), 120_000) 
+    return secrets.compare_digest(dk.hex(), digest)  
 
 def _expires(ttl: int) -> datetime:
-    # 计算过期时间
-    # TODO: 从当前时间计算过期时间
-    # TODO: 考虑时区差异
-    expires = datetime.utcnow() + timedelta(seconds=ttl) # 计算过期时间（统一用utcnow，与校验处一致）
+    expires = datetime.utcnow() + timedelta(seconds=ttl) 
     return expires
 
 def register_user(db: Session, username: str, password: str, email: str) -> dict:
-    # 注册用户
-    # TODO: 验证邮箱格式
-    # TODO: 验证密码强度
     existing = db.query(User).filter(User.email == email).first()
     if existing and existing.is_active:
         return {"ok": False, "message": "hi ~ 你的邮箱已经注册了哦~，回忆一下去登录吧 -0v0-"}
@@ -49,7 +37,6 @@ def register_user(db: Session, username: str, password: str, email: str) -> dict
         return {"ok": False, "message": "emmm ~ 你的用户名已经注册了哦~ -?v?-"}
     token = secrets.token_urlsafe(32)
     if existing:
-        # 邮箱已注册但未激活：视为重新注册，刷新账号信息并重发激活邮件
         existing.username = username
         existing.password_hash = hash_password(password)
         existing.verify_token = token
@@ -74,12 +61,8 @@ def register_user(db: Session, username: str, password: str, email: str) -> dict
         return {"ok": True, "message": "wao ~ 注册成功啦~，请检查邮箱激活账号 --v--"}
     return {"ok": True, "message": f"注册成功（开发模式：邮件未配置，请复制链接完成激活）{url}"}
 
-def verify_user(db: Session, token: str) -> bool: # verify_user(db, token,)
-    # 验证用户账号
-    # TODO: 从数据库中查询验证码
-    # TODO: 验证验证码是否匹配
-    # TODO: 更新用户状态为已激活
-    # TODO: 返回用户信息
+def verify_user(db: Session, token: str) -> bool: 
+
     user = db.query(User).filter(User.verify_token == token).first()
     if not user or not user.token_expires or user.token_expires < datetime.utcnow():
         return False
@@ -104,14 +87,10 @@ def login(db: Session, username: str, password: str) -> dict:
     return {"ok": True, "message": "登录成功啦~ --v--", "token": token, "expires_in": SESSION_TTL_SECONDS}
 
 
-def logout_user(db: Session, authorization: Optional[str]) -> None: # 退出用户登录  logout_user(db, authorization,)
-    # 退出用户登录
-    # TODO: 从数据库中查询用户
-    # TODO: 更新用户状态为未激活
-    # TODO: 返回用户信息
+def logout_user(db: Session, authorization: Optional[str]) -> None: 
     if not authorization:
         return 
-    user = db.query(User).filter(User.session_token == authorization[7:]).first() # 从数据库中查询用户
+    user = db.query(User).filter(User.session_token == authorization[7:]).first() 
     if user:
         user.session_token = ""
         user.session_expires = None
@@ -121,21 +100,15 @@ def get_current_user(
     authorization: Optional[str] = Header(default=None),
     db: Session = Depends(get_db),
 ) -> Optional[User]:
-    # 获取当前登录用户
-    # TODO: 从数据库中查询用户
-    # TODO: 返回用户信息
+
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="你还未登录哟~")
-    user = db.query(User).filter(User.session_token == authorization[7:]).first() # 从数据库中查询用户
+    user = db.query(User).filter(User.session_token == authorization[7:]).first() 
     if not user or not user.session_expires or user.session_expires < datetime.utcnow():
         raise HTTPException(status_code=401, detail="登录凭证过期了呀~ 请重新登录吧 ^-v-")
     return user
 
 def update_profile(db: Session, user: User, username: Optional[str] = None, email: Optional[str] = None, password: Optional[str] = None) -> dict:
-    # 更新用户个人信息
-    # TODO: 从数据库中查询用户
-    # TODO: 更新用户信息
-    # TODO: 返回用户信息
     if username and username != user.username:
         if db.query(User).filter(User.username == username).first():
             return {"ok": False, "message": "emmm ~ 你的用户名已经存在了哦~ &v&"}

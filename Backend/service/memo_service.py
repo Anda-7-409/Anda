@@ -43,7 +43,6 @@ def delete_memo(db: Session, user_id: int, memo_id: int) -> dict:
     return {"ok": True, "data": {"id": memo_id}}
 
 def list_tool(utterance: str, user_id: int, **_) -> dict:
-    # Agent 工具入口：orchestrator 以 fn(utterance=, user_id=) 调用，拿不到请求级 db → 自建会话
     with SessionLocal() as db:
         memos = [_to_dict(m) for m in _list(db, user_id)]
     return {"count": len(memos), "memos": memos}
