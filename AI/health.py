@@ -13,11 +13,11 @@ def _loop() -> None:
         try:
             model_router.probe_down()
         except Exception as exc:
-            print(f"[health] 模型探测异常: {exc}")
+            print(f"[health] 模型出现异常啦！: {exc}")
         try:
             web_search.probe_down()
         except Exception as exc:
-            print(f"[health] 搜索源探测异常: {exc}")
+            print(f"[health] 搜索源出现异常啦！: {exc}")
 
 def start() -> None:
     global _started
@@ -25,6 +25,6 @@ def start() -> None:
         return
     _started = True 
     threading.Thread(target=_loop, daemon=True).start()
-    print(f"[health] 模型+搜索源滚动体检已启动（每{Check_time}秒重测不可用项，恢复即上线）")
+    print(f"[health] 模型+搜索源滚动体检已启动嘞~（每{Check_time}秒重测不可用滴源）")
     model_router.probe_down() 
     web_search.probe_down()
