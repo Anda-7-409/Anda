@@ -1,54 +1,137 @@
-#  (任务协调器) Agent流水线：意图识别 → 任务拆解 → 工具调用 → 结果汇总（plan.md 技术创新核心）
+
+import json
 import secrets
 from typing import List, Optional
 
 from AI import model_router
 from AI.prompt import prompt as prompt_mod
 
-# 工具注册表：{工具名: {"keywords": 触发关键词, "fn": 可调用函数}}
-# 后续 skill/（课表查询、GPA计算、复习计划…）与 MCP/（高德地图、天气…）落地后逐个注册进来
 TOOLS: dict = {}
 
-DEMO_REPLY = (
-    "（演示模式）我暂时还没连上大脑呢~ GLM_API_KEY 未配置、本地 Ollama 也未能启动成功呀~\n"
-    "接上任意一个我就能正常回答啦：\n"
-    "1. 云端：.env 里填 GLM_API_KEY（智谱开放平台申请）\n"
-    "2. 本地：安装 Ollama 后执行 ollama pull 模型名称（如 qwen2.5）\n"
-)
+MAX_FC_ROUNDS = 2          
+MAX_CALLS_PER_ROUND = 4    
+
+DEMO_REPLY = "（演示模式：当前没有可用的模型服务）"
+
 
 def _plan_tools(utterance: str) -> List[str]:
-    # 任务拆解：按关键词匹配可调用工具（第一版规则匹配，第二版可升级为LLM拆解）
-    return [name for name, meta in TOOLS.items() if any(k in utterance for k in meta.get("keywords", []))]
+    # 离线识别用户意图，确保服务全程可用
+    names = []
+    for name, meta in TOOLS.items():
+        words = meta.get("keywords", ())
+        exclude = meta.get("exclude", ())
+        if any(k in utterance for k in words) and not any(x in utterance for x in exclude):
+            names.append(name)
+    return names
 
-def run(user_id: int, utterance: str, context: Optional[List[dict]] = None) -> dict:
-    # ① 意图识别 + 任务拆解
-    tool_names = _plan_tools(utterance)
 
-    # ② 工具调用（工具结果注入提示词由下一版拼接，TODO）
-    tool_calls, actions = [], []
-    for name in tool_names:
-        try:
-            result = TOOLS[name]["fn"](utterance=utterance, user_id=user_id)
-            status = "success"
-        except Exception as exc:
-            result = {"error": str(exc)}
-            status = "failed"
-        tool_calls.append({"tool_name": name, "status": status, "result": result})
-        actions.append(f"调用工具 {name}")
+def _tool_schemas() -> List[dict]:
+    """从注册表生成 OpenAI function calling 格式的工具表（最小版：每个工具只有 task 一个参数）。"""
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": name,
+                "description": meta.get("desc", ""),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "task": {
+                            "type": "string",
+                            "description": "交给该工具的任务，用一句完整中文描述，包含关键细节（如时间、文件名）",
+                        }
+                    },
+                    "required": ["task"],
+                },
+            },
+        }
+        for name, meta in TOOLS.items()
+    ]
 
-    # ③ 结果汇总 → 生成自然语言答案（三级降级：主模型 → 备用模型 → 演示回复）
+
+def _exec_tool(name: str, task: str, user_id: int, refs: Optional[list]) -> dict:
+    meta = TOOLS.get(name)
+    if not meta:
+        return {"tool_name": name, "status": "failed", "result": {"error": f"未知工具 {name}"}}
+    try:
+        result = meta["fn"](utterance=task, user_id=user_id, refs=refs or [])
+        status = "success"
+    except Exception as exc:
+        result, status = {"error": str(exc)}, "failed"
+    return {"tool_name": name, "status": status, "result": result}
+
+
+def _fc_pipeline(messages: List[dict], schemas: List[dict], user_id: int,
+                 refs: Optional[list], fallback_task: str):
+    """GLM function calling 主路径。
+    返回 (answer, provider, tool_calls_log)；answer 为 None 表示 GLM 不可用，需走关键词兜底。"""
+    log: List[dict] = []
+    provider = None
+    for _ in range(MAX_FC_ROUNDS):
+        msg, provider = model_router.chat_with_tools(messages, schemas)
+        if msg is None:
+            return None, provider, log
+        calls = msg.get("tool_calls") or []
+        if not calls:
+            return msg.get("content") or None, provider, log
+        messages = messages + [msg]
+        for c in calls[:MAX_CALLS_PER_ROUND]:
+            fn = c.get("function") or {}
+            try:
+                args = json.loads(fn.get("arguments") or "{}")
+                if not isinstance(args, dict):
+                    args = {}
+            except Exception:
+                args = {}
+            rec = _exec_tool(fn.get("name", ""), args.get("task") or fallback_task, user_id, refs)
+            log.append(rec)
+            messages.append({
+                "role": "tool",
+                "tool_call_id": c.get("id") or fn.get("name", ""),
+                "content": json.dumps(rec["result"], ensure_ascii=False),
+            })
+
+    msg, provider = model_router.chat_with_tools(messages, [])
+    if msg:
+        return msg.get("content") or None, provider, log
+    return None, provider, log
+
+
+def run(user_id: int, utterance: str, context=None, ref_block: str = "", refs=None) -> dict:
+    action_id = secrets.token_hex(4)
+
+
     messages = prompt_mod.build_messages(utterance, context)
-    answer, provider = model_router.chat(messages)
-    if not answer:
-        answer = DEMO_REPLY
+    if ref_block:
+        messages[-1]["content"] = f"{messages[-1]['content']}\n\n{ref_block}"
+    answer, provider, tool_calls = _fc_pipeline(messages, _tool_schemas(), user_id, refs, utterance)
 
-    # ④ 组装返回（字段契约：plan.md /agent/chat + 前端 agent_ai.html）
+ 
+    if answer is None:
+        tool_calls = []
+        for name in _plan_tools(utterance):
+            tool_calls.append(_exec_tool(name, utterance, user_id, refs))
+        ask = utterance
+        if ref_block:
+            ask = f"{ask}\n\n{ref_block}"
+        if tool_calls:
+            block = "\n".join(
+                f"- {c['tool_name']}: {json.dumps(c['result'], ensure_ascii=False)}"
+                for c in tool_calls
+            )
+            ask = f"{ask}\n\n【工具执行结果】\n{block}\n请基于以上工具结果作答，不要编造数据。"
+        answer, provider = model_router.chat(prompt_mod.build_messages(ask, context))
+        if answer is None:
+            answer = DEMO_REPLY
+
     return {
-        "id": secrets.token_hex(6),  # 任务ID，task表落地后改为落库自增ID
         "answer": answer,
-        "tool_calls": tool_calls,
-        "actions_taken": actions,
-        "needs_confirm": False,       # TODO：危险操作确认机制（接 /agent/confirm）
-        "confirm_payload": None,
-        "provider": provider or "demo",
+        "tool_calls": [
+            {"tool_name": c["tool_name"], "status": c["status"], "result": c["result"]}
+            for c in tool_calls
+        ],
+        "actions_taken": [f"调用工具 {c['tool_name']}（{c['status']}）" for c in tool_calls],
+        "needs_confirm": False,
+        "action_id": action_id,
+        "provider": provider,
     }
