@@ -330,6 +330,29 @@ a { color:#1a73e8; text-decoration:none; }
 </div>
 
 <script>
+(function () {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'm-backdrop';
+  document.body.appendChild(backdrop);
+  window.closeDrawers = function () {
+    document.querySelectorAll('.col-left, .col-right').forEach(function (el) { el.classList.remove('open'); });
+    backdrop.classList.remove('show');
+  };
+  function toggleDrawer(sel) {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    const willOpen = !el.classList.contains('open');
+    window.closeDrawers();
+    if (willOpen) { el.classList.add('open'); backdrop.classList.add('show'); }
+  }
+  const bl = document.getElementById('btn-left');
+  const br = document.getElementById('btn-right');
+  if (bl) bl.addEventListener('click', function () { toggleDrawer('.col-left'); });
+  if (br) br.addEventListener('click', function () { toggleDrawer('.col-right'); });
+  backdrop.addEventListener('click', window.closeDrawers);
+})();
+</script>
+<script>
 // 未登录跳回首页
 // 从登录状态获取 token
 const token = localStorage.getItem('token');
@@ -609,7 +632,7 @@ loadFiles();
 
 // ===== 左栏下：历史对话（localStorage 持久化） =====
 // 从 localStorage 中获取历史对话
-let history = JSON.parse(localStorage.getItem('agent_history') || '[]');
+let history = (() => { try { return JSON.parse(localStorage.getItem('agent_history') || '[]') || []; } catch { localStorage.removeItem('agent_history'); return []; } })();
 // 渲染历史对话列表
 let currentChatId = null;
 // 保存历史对话到 localStorage
@@ -1010,8 +1033,9 @@ async function loadMemos() {
   } else {
     // 后端没起/401/token 过期：退回上次的本地数据，页面照常显示
     memoLocal = true;
-    memoList = (JSON.parse(localStorage.getItem('memos') || '[]'))
-      .map(x => typeof x === 'string' ? {id:0, content:x} : x);
+        let savedMemos = [];
+    try { savedMemos = JSON.parse(localStorage.getItem('memos') || '[]') || []; } catch {}
+    memoList = savedMemos.map(x => typeof x === 'string' ? {id:0, content:x} : x);
   }
   document.querySelectorAll('#schedule-list .memo-item').forEach(el => el.remove());   // 只清备忘条目再重画：同一容器里还混着课表卡片，不能整体清空
   memoList.forEach(renderMemo);
@@ -1135,10 +1159,11 @@ async function loadReminders() {
   } else {
     // 后端没起/401/token 过期：退回上次的本地数据，页面照常显示
     reminderLocal = true;
-    reminderList = (JSON.parse(localStorage.getItem('reminders') || '[]'))
-      .map(x => typeof x === 'string'
-        ? {id:0, reminder_type:x, reminder_time:''}
-        : {id:0, reminder_type:x.reminder_type || x.text || '', reminder_time:x.reminder_time || x.time || ''});
+       let savedRems = [];
+    try { savedRems = JSON.parse(localStorage.getItem('reminders') || '[]') || []; } catch {}
+    reminderList = savedRems.map(x => typeof x === 'string'
+      ? {id:0, reminder_type:x, reminder_time:''}
+      : {id:0, reminder_type:x.reminder_type || x.text || '', reminder_time:x.reminder_time || x.time || ''});
   }
   $('reminder-list').innerHTML = '';   // 清空重画：本函数会被对话后/轮询反复调用，必须幂等
   reminderList.forEach(renderReminder);
