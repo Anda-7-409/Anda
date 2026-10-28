@@ -1,6 +1,6 @@
 register.html -> vite proxy -> 8000 -> app.py -> auth.py
   -> auth_service.py -> user.py -> database.py -> app.db ->email_service.py -> QQ邮箱SMTP
-forgot-password.html -> vite proxy -> 8000 -> app.py -> auth.py
+forgot_password.html -> vite proxy -> 8000 -> app.py -> auth.py
   -> auth_service.py -> email_service.py -> QQ邮箱SMTP        
 reset-password.html -> vite proxy -> 8000 -> app.py -> auth.py -> auth_service.py
   -> user.py -> database.py -> app.db <-| 返回

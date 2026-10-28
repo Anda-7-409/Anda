@@ -1,8 +1,9 @@
+# auth路由，从index接入，传到auth_service
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header
 from fastapi.responses import JSONResponse, RedirectResponse
-from pydantic import BaseModel
+from pydantic import BaseModel 
 from sqlalchemy.orm import Session
 
 from Backend.database import get_db
@@ -10,29 +11,29 @@ from Backend.models.user import User
 from Backend.service import auth_service
 
 router = APIRouter()
-
-class RegisterRequest(BaseModel):
+# 方便AI或IDE进行代码补全 -w-
+# str 是必填的 str = "" 可选 Optional[str] = None 不传则None
+class Register_must(BaseModel):
     username: str
     password: str
     email: str
 
-
-
-class LoginRequest(BaseModel):
+# 缺少必填项,经过fastapi时触发422错误
+class Login_must(BaseModel):
     username: str
     password: str
 
 
-class ForgotPasswordRequest(BaseModel):
+class Forgot_password_must(BaseModel):
     email: str
 
 
-class ResetPasswordRequest(BaseModel):
+class Reset_password_must(BaseModel):
     token: str
     new_password: str
 
 
-class UpdateRequest(BaseModel):
+class Update_must(BaseModel):
     username: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
@@ -47,7 +48,7 @@ def _fail(message, status=400):
 
 
 @router.post("/register")
-def register(req: RegisterRequest, db: Session = Depends(get_db)):
+def register(req: Register_must, db: Session = Depends(get_db)):
     result = auth_service.register_user(db, req.username, req.password, req.email)
     if not result["ok"]:
         return _fail(result["message"])
@@ -62,7 +63,7 @@ def verify(token: str, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+def login(req: Login_must, db: Session = Depends(get_db)):
     result = auth_service.login(db, req.username, req.password)
     if not result["ok"]:
         return _fail(result["message"])
@@ -77,12 +78,13 @@ def logout(authorization: Optional[str] = Header(default=None), db: Session = De
 
 @router.get("/me")
 def me(user: User = Depends(auth_service.get_current_user)):
+    # 查头比token，判断是否过期
     return _ok(data={"user_id": user.id, "username": user.username, "email": user.email})
 
 
 @router.put("/update")
 def update(
-    req: UpdateRequest,
+    req: Update_must,
     user: User = Depends(auth_service.get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -92,8 +94,8 @@ def update(
     return _ok(result["message"])
 
 
-@router.post("/forgot-password")
-def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+@router.post("/forgot_password")
+def forgot_password(req: Forgot_password_must, db: Session = Depends(get_db)):
     result = auth_service.forgot_password(db, req.email)
     if not result["ok"]:
         return _fail(result["message"])
@@ -101,7 +103,7 @@ def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/reset-password")
-def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
+def reset_password(req: Reset_password_must, db: Session = Depends(get_db)):
     result = auth_service.reset_password(db, req.token, req.new_password)
     if not result["ok"]:
         return _fail(result["message"])
