@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>安答：校园AI Agent助手</title>
-    <link rel="stylesheet" href="./assets/style.css">
+        <link rel="stylesheet" href="./assets/style.css">
+    <!-- 手机端缩小看板娘：远程 waifu.css 是动态插入 head 的（晚于本标签），用 body 前缀抬高特异性确保覆盖；电脑端不受影响 -->
+    <style>
+        @media (max-width: 768px) {
+            body #waifu { transform: scale(0.6); transform-origin: bottom left; }
+        }
+    </style>
+</head>
 </head>
 <body>
     <div class="container">

@@ -183,6 +183,24 @@ a { color:#1a73e8; text-decoration:none; }
 .tag-row { display:flex; flex-wrap:wrap; gap:6px; padding:0 4px; }
 .tag { padding:4px 10px; background:#eef5ff; color:#1a73e8; border-radius:12px; font-size:12px; transition:all .15s ease;border:1px solid transparent;}
 .tag:hover { background:#dce8ff; transform:translateY(-2px); box-shadow:0 3px 8px rgba(26,115,232,.20); }
+/* ===== 手机端适配：左右栏改为抽屉，中栏独占全屏；电脑端不受影响 ===== */
+.m-btn { display:none; }
+.m-backdrop { display:none; }
+@media (max-width:768px) {
+  .m-btn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:none; background:#eef5ff; color:#1a73e8; border-radius:8px; font-size:16px; cursor:pointer; flex-shrink:0; }
+  .m-btn:active { background:#dce8ff; }
+  .col-left, .col-right { position:fixed; top:0; bottom:0; z-index:80; width:min(85vw,320px); box-shadow:0 0 40px rgba(16,24,40,.25); transition:transform .25s ease; }
+  .col-left { left:0; transform:translateX(-100%); }
+  .col-right { right:0; transform:translateX(100%); }
+  .col-left.open, .col-right.open { transform:translateX(0); }
+  .m-backdrop { display:block; position:fixed; inset:0; background:rgba(16,24,40,.45); z-index:70; opacity:0; pointer-events:none; transition:opacity .25s; }
+  .m-backdrop.show { opacity:1; pointer-events:auto; }
+  .chat-header { gap:10px; }
+  .chat-header .title { flex:1; text-align:center; font-size:15px; }
+  .msg .bubble { max-width:88%; }
+  .chat-messages { padding:12px; }
+  .chat-input { padding:10px 12px; }
+}
 </style>
 </head>
 <body>
@@ -225,11 +243,15 @@ a { color:#1a73e8; text-decoration:none; }
   <!-- 对话区 -->
   <main class="col col-center">
     <!-- 对话区标题 -->
-    <div class="chat-header">
+        <div class="chat-header">
+        <!-- 手机端：呼出左栏抽屉（文件+历史） -->
+      <button class="m-btn" id="btn-left" title="文件与历史">☰</button>
         <!-- 对话区标题 -->
       <span class="title">安答 AI Agent</span>
         <!-- 对话区状态 -->
       <span class="status">● 在线</span>
+        <!-- 手机端：呼出右栏抽屉（日程+提醒） -->
+      <button class="m-btn" id="btn-right" title="日程与提醒">📅</button>
     </div>
     <!-- 对话区消息 -->
     <div class="chat-messages" id="chat-messages"></div>
@@ -1013,6 +1035,24 @@ $('add-reminder-btn').onclick = () => { reminderBox.classList.toggle('show'); $(
 $('reminder-input').addEventListener('keydown', e => { if (e.key === 'Enter') addReminder(); });
 $('reminder-confirm').onclick = addReminder;
 reminders.forEach(renderReminder);
+// ===== 手机端抽屉：左右栏从两侧滑出，点遮罩/Esc/再点按钮关闭 =====
+const mBackdrop = document.createElement('div');
+mBackdrop.className = 'm-backdrop';
+document.body.appendChild(mBackdrop);
+const closeDrawers = () => {
+  document.querySelector('.col-left').classList.remove('open');
+  document.querySelector('.col-right').classList.remove('open');
+  mBackdrop.classList.remove('show');
+};
+const toggleDrawer = sel => {
+  const el = document.querySelector(sel);
+  const willOpen = !el.classList.contains('open');
+  closeDrawers();                                        // 两侧互斥：开一个关另一个
+  if (willOpen) { el.classList.add('open'); mBackdrop.classList.add('show'); }
+};
+$('btn-left').onclick = () => toggleDrawer('.col-left');
+$('btn-right').onclick = () => toggleDrawer('.col-right');
+mBackdrop.onclick = closeDrawers;
 
 // 初始化
 renderHistory();
