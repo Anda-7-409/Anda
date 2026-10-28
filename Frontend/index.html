@@ -6,6 +6,7 @@
     <title>安答：校园AI Agent助手</title>
         <link rel="stylesheet" href="./assets/style.css">
     <!-- 手机端缩小看板娘：远程 waifu.css 是动态插入 head 的（晚于本标签），用 body 前缀抬高特异性确保覆盖；电脑端不受影响 -->
+           <!-- 手机端看板娘适配：缩小尺寸；隐藏"坦克大战"按钮（触屏无法键盘操作，纯占位）；远程 waifu.css 动态插入 head（晚于本标签），用 body 前缀 + !important 确保覆盖；电脑端不受影响 -->
         <style>
         @media (max-width: 768px) {
             body #waifu,
@@ -13,6 +14,7 @@
                 transform: scale(0.6) !important;
                 transform-origin: bottom left;
             }
+            body #waifu-tool-asteroids { display: none !important; }
         }
     </style>
     <link rel="icon" href="./assets/anda.ico" type="image/x-icon">
