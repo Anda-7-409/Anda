@@ -8,14 +8,14 @@ from AI.prompt import prompt as prompt_mod
 
 TOOLS: dict = {}
 
-MAX_FC_ROUNDS = 2          # “模型要工具 → 执行 → 回传”最多几轮
-MAX_CALLS_PER_ROUND = 4    # 单轮最多执行几个工具
+MAX_FC_ROUNDS = 2          
+MAX_CALLS_PER_ROUND = 4    
 
-DEMO_REPLY = "（演示模式：当前没有可用的模型服务，无法给出真实回答）"
+DEMO_REPLY = "（演示模式：当前没有可用的模型服务）"
 
 
 def _plan_tools(utterance: str) -> List[str]:
-    """关键词兜底匹配：GLM 不可用时的意图识别。"""
+    # 离线识别用户意图，确保服务全程可用
     names = []
     for name, meta in TOOLS.items():
         words = meta.get("keywords", ())
@@ -90,7 +90,7 @@ def _fc_pipeline(messages: List[dict], schemas: List[dict], user_id: int,
                 "tool_call_id": c.get("id") or fn.get("name", ""),
                 "content": json.dumps(rec["result"], ensure_ascii=False),
             })
-    # 轮数用尽模型还在要工具：最后一次不带工具表，强制收口
+
     msg, provider = model_router.chat_with_tools(messages, [])
     if msg:
         return msg.get("content") or None, provider, log
@@ -100,13 +100,13 @@ def _fc_pipeline(messages: List[dict], schemas: List[dict], user_id: int,
 def run(user_id: int, utterance: str, context=None, ref_block: str = "", refs=None) -> dict:
     action_id = secrets.token_hex(4)
 
-    # ── 主路径：GLM function calling，意图识别交给模型 ──
+
     messages = prompt_mod.build_messages(utterance, context)
     if ref_block:
         messages[-1]["content"] = f"{messages[-1]['content']}\n\n{ref_block}"
     answer, provider, tool_calls = _fc_pipeline(messages, _tool_schemas(), user_id, refs, utterance)
 
-    # ── 兜底路径：GLM 不可用时，关键词匹配 + 普通 chat（Ollama 在这条路上仍可用） ──
+ 
     if answer is None:
         tool_calls = []
         for name in _plan_tools(utterance):
@@ -127,7 +127,8 @@ def run(user_id: int, utterance: str, context=None, ref_block: str = "", refs=No
     return {
         "answer": answer,
         "tool_calls": [
-            {"tool_name": c["tool_name"], "status": c["status"]} for c in tool_calls
+            {"tool_name": c["tool_name"], "status": c["status"], "result": c["result"]}
+            for c in tool_calls
         ],
         "actions_taken": [f"调用工具 {c['tool_name']}（{c['status']}）" for c in tool_calls],
         "needs_confirm": False,
