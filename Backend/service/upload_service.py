@@ -1,16 +1,16 @@
-# upload_service.py (上传模块业务) 格式/大小校验、防路径穿越、重名编号，统一落盘 Data/uploads/{user_id}/
+
 import secrets
 import time
 from pathlib import Path
 
 from Backend.config import UPLOAD_DIR
 
-MAX_SIZE = 10 * 1024 * 1024  # 单文件上限 10MB（与前端 MAX_SIZE 保持一致）
+MAX_SIZE = 10 * 1024 * 1024  
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif", "webp", "pdf", "doc", "docx",
                "xls", "xlsx", "ppt", "pptx", "txt", "md", "csv", "zip"}
 
 def save_file(user_id: int, filename: str, content_type: str, content: bytes) -> dict:
-    safe_name = Path(filename or "").name.strip()  # 只取文件名，防路径穿越
+    safe_name = Path(filename or "").name.strip()  
     if not safe_name:
         return {"ok": False, "message": "文件名不能为空哦~ ?-?"}
     ext = Path(safe_name).suffix.lower().lstrip(".")
@@ -24,7 +24,7 @@ def save_file(user_id: int, filename: str, content_type: str, content: bytes) ->
     user_dir = UPLOAD_DIR / str(user_id)
     user_dir.mkdir(parents=True, exist_ok=True)
     target = user_dir / safe_name
-    if target.exists():  # 重名自动编号：课表.png → 课表(1).png
+    if target.exists():  
         i = 1
         while target.exists():
             target = user_dir / f"{Path(safe_name).stem}({i}).{ext}"
@@ -36,12 +36,10 @@ def save_file(user_id: int, filename: str, content_type: str, content: bytes) ->
         "file_name": target.name,
         "size": len(content),
         "content_type": content_type or "application/octet-stream",
-        # TODO: file_id → 路径 映射入库（upload 表），供后续 /download 与课表图片导入使用
     }}
 
 
 def list_files(user_id: int) -> dict:
-    # 列出当前用户已上传的文件（权限隔离：只读自己的目录），最新上传的排最前
     user_dir = UPLOAD_DIR / str(user_id)
     if not user_dir.exists():
         return {"ok": True, "data": []}
@@ -57,8 +55,7 @@ def list_files(user_id: int) -> dict:
 
 
 def get_file_path(user_id: int, filename: str) -> dict:
-    # 下载/预览共用：解析出真实路径，只允许读自己目录下的文件
-    safe_name = Path(filename or "").name.strip()  # 只取文件名，防路径穿越
+    safe_name = Path(filename or "").name.strip()  
     if not safe_name:
         return {"ok": False, "message": "文件名不能为空哦~ ?-?"}
     target = UPLOAD_DIR / str(user_id) / safe_name
@@ -68,12 +65,11 @@ def get_file_path(user_id: int, filename: str) -> dict:
 
 
 def delete_file(user_id: int, filename: str) -> dict:
-    # 删除文件：先走 get_file_path 拿到路径（已做防穿越+只限本人目录），确认存在后删磁盘文件
     got = get_file_path(user_id, filename)
     if not got["ok"]:
         return got
     try:
-        got["data"]["path"].unlink()   # 只删文件本身，不动目录
+        got["data"]["path"].unlink()   
     except Exception as exc:
         return {"ok": False, "message": f"删除失败了哦~ {exc}"}
     return {"ok": True, "data": {"file_name": got["data"]["file_name"]}}
