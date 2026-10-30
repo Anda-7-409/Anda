@@ -64,7 +64,7 @@
             -pages- (页面模块) //用于处理用户操作，包括登录注册、课表管理、提醒设置、复习计划、咨询记录、任务记录等（登录功能已并入 index.html：JS fetch 调用 /auth/login，token 存 localStorage，后续请求带 Authorization 头）@
                 register.html (注册页面) //用于用户注册，包括用户名、密码、邮箱等信息（注册成功后提示查收激活邮件，需点击邮件链接激活后才能登录） @
                 forgot_password.html (忘记密码页面) //用于输入注册邮箱并请求发送密码重置链接（调用 POST /auth/forgot_password） @
-                reset-password.html (重置密码页面) //从邮件重置链接打开（?token=xxx），输入新密码完成重置（调用 POST /auth/reset-password）@
+                reset_password.html (重置密码页面) //从邮件重置链接打开（?token=xxx），输入新密码完成重置（调用 POST /auth/reset_password）@
                 agent_ai.html (用户课表页面) //通过三栏布局用户上传的文件关于对话历史、日程提醒、AI对话、工具调用等集成到一个页面 @
                 task_detail.html (用户任务详情页面) //用于显示用户任务的详细信息，如任务类型、任务内容、任务状态等
 
@@ -124,8 +124,8 @@ requirements.txt  //项目依赖模块 用于指定项目依赖的Python库，�
             /logout (退出登录接口) # 请求体 None  --返回{code,message}  //用于用户退出登录，返回成功信息
             /me (获取用户信息接口) # 请求体 None  --返回{code,message,data:{user_id,username,email}}  //用于获取用户信息，返回用户ID、用户名、邮箱
             /update (更新用户信息接口) # 请求体 {username?,email?,password?}  --返回{code,message}  //登录后修改个人信息（字段均可选）
-            /forgot_password (忘记密码接口) # 请求体 {email}  --返回{code,message}  //通过QQ邮箱SMTP发送密码重置链接（链接指向 /pages/reset-password.html?token=xxx）
-            /reset-password (重置密码接口) # 请求体 {token, new_password}  --返回{code,message}  //凭邮件链接中的一次性token重置密码
+            /forgot_password (忘记密码接口) # 请求体 {email}  --返回{code,message}  //通过QQ邮箱SMTP发送密码重置链接（链接指向 /pages/reset_password.html?token=xxx）
+            /reset_password (重置密码接口) # 请求体 {token, new_password}  --返回{code,message}  //凭邮件链接中的一次性token重置密码
 <!-- 邮箱流程说明：① 注册/重置均通过QQ邮箱SMTP发送链接（smtp.qq.com:465 SSL，发件账号+授权码从 .env 读取，授权码≠QQ登录密码）② 激活与重置 token 存于 user 表（verify_token/reset_token/token_expires），15分钟有效、一次性使用 -->
 <!-- 认证方式：除`/auth/*` 外，所有接口要求 Header`Authorization: Bearer <token>`；2026-10-22 与实现对齐：请求体/路径不再传 token_id -->
         -schedule (课表模块)   --Post Get DELETE   ## 2. 课表模块`/schedule` （对应`routes/schedule.py` @ 已实现；身份走 Authorization 头；字段采节次制 weekday(1-7)+start_slot/end_slot(1-12) ）

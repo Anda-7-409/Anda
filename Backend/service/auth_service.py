@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -11,9 +12,10 @@ from Backend.database import get_db
 from Backend.models.user import User
 from Backend.service import email_service
 
+# 哈希加密 防止暴力破解 
 def hash_password(password: str) -> str:
     salt = secrets.token_hex(16)  
-    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 120_000)  
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 120_000) #  
     return f"{salt}:{dk.hex()}"  
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -134,7 +136,7 @@ def forgot_password(db: Session, email: str) -> dict:
     user.reset_token = token
     user.token_expires = _expires(TOKEN_TTL_SECONDS)
     db.commit()
-    url = f"{FRONTEND_BASE_URL}/pages/reset-password.html?token={token}"
+    url = f"{FRONTEND_BASE_URL}/pages/reset_password.html?token={token}"
     sent = email_service.send_email(
         email, "[安答-Anda]密码重置",
         f"<p>点击链接重置密码（15分钟有效，仅一次）：</p><p><a href='{url}'>{url}</a></p>",

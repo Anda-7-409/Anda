@@ -102,7 +102,7 @@ def forgot_password(req: Forgot_password_must, db: Session = Depends(get_db)):
     return _ok(result["message"])
 
 
-@router.post("/reset-password")
+@router.post("/reset_password")
 def reset_password(req: Reset_password_must, db: Session = Depends(get_db)):
     result = auth_service.reset_password(db, req.token, req.new_password)
     if not result["ok"]:
