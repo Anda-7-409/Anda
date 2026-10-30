@@ -1,0 +1,18 @@
+{
+    "routes": [
+        {"match": {"ability": "code"},        "target": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", "fallback": ["THUDM/GLM-4-9B-0414", "XingChenAGI/Xing4.0-29B"]},
+        {"match": {"ability": "reasoning"},   "target": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", "fallback": ["XingChenAGI/Xing4.0-29B"]},
+        {"match": {"ability": "math"},        "target": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B"},
+        {"match": {"ability": "translation"}, "target": "tencent/Hunyuan-MT-7B", "fallback": ["XingChenAGI/Xing4.0-29B"]},
+        {"match": {"ability": "tool_use"},    "target": "XingChenAGI/Xing4.0-29B", "fallback": ["THUDM/GLM-4-9B-0414", "glm-4.7-flash"]},
+        {"match": {"ability": "long_context"},"target": "XingChenAGI/Xing4.0-29B"},
+        {"match": {"ability": "vision"},      "target": "glm-4.6V-Flash", "fallback": ["deepseek-ai/DeepSeek-OCR"]},
+        {"match": {"ability": "ocr"},         "target": "PaddlePaddle/PaddleOCR-VL-1.54", "fallback": ["deepseek-ai/DeepSeek-OCR"]},
+        {"match": {"ability": "asr"},         "target": "XingChenAGI/XingChenASR-V3.2-Ultra", "fallback": ["XingChenAGI/XingChenASR-V3.2"]},
+        {"match": {"ability": "text_to_image"},"target": "Kwai-Kolors/Kolors", "fallback": ["CogView-3-Flash"]},
+        {"match": {"ability": "embedding"},   "target": "BAAI/bge-m3"},
+        {"match": {"ability": "offline"},     "target": "mimo9b:latest"},
+        {"match": {"ability": "general"},     "target": "glm-4.7-flash", "fallback": ["XingChenAGI/Xing4.0-29B"]},
+        {"match": {"default": true},          "target": "XingChenAGI/Xing4.0-29B", "fallback": ["glm-4.7-flash", "mimo9b:latest"]}
+    ]
+}
