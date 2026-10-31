@@ -1,211 +1,113 @@
-
+# web_search.py — 联网搜索：qianfan → anysearch → ddg 三级聚合 + 冷却降级
+# 契约（docs/refactoring.md 3.2；消费方：/health 与 orchestrator.TOOLS["web_search"]）：
+#   search_tool(utterance, user_id, refs) -> {"ok","query","results":[{title,url,snippet}]} | {"ok":False,"error"}
+#   search(query, max_results) -> list          # 聚合入口：按源顺序取第一个成功者
+#   probe_down(source)                          # 把某源标记进冷却（冷却期内跳过）
+#   status() -> {"ok": bool, "sources": [str]}  # /health 透传给前端
+import json
+import logging
 import re
 import time
-from html import unescape
-from urllib.parse import quote, unquote
 
 import requests
 
-from Backend.config import ANY_SEARCH_KEY, QIANFAN_AI_SEARCH_KEY, SEARCH_COOLDOWN_SECONDS
+from Backend import config
 
-UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
-TIMEOUT = 8        
-MAX_RESULTS = 5    
+log = logging.getLogger("anda.web_search")
+_TIMEOUT = 15
+_cooldown = {}   # source -> 进入冷却的时间戳
 
-def _clean(fragment: str) -> str:
-    return re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]+>", "", fragment))).strip()
+def probe_down(source: str) -> None:
+    # 某源调用失败时标记冷却；冷却期内 search() 跳过它，避免每轮都撞死源
+    _cooldown[source] = time.time()
 
-def _bing_search(query: str, max_results: int) -> dict:
-    url = f"https://www.bing.com/search?q={quote(query)}&setlang=zh-hans&mkt=zh-CN"
-    resp = requests.get(
-        url,
-        headers={"User-Agent": UA, "Accept-Language": "zh-CN,zh;q=0.9"},
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    results = []
-    for block in re.findall(r'<li class="b_algo".*?</li>', resp.text, re.S):
-        head = re.search(r'<h2[^>]*>.*?<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', block, re.S)
-        if not head:
-            continue
-        link, title = head.group(1), _clean(head.group(2))
-        if not title or not link.startswith("http"):
-            continue
-        tail = re.search(r"<p[^>]*>(.*?)</p>", block, re.S)
-        results.append({"title": title, "url": link,
-                        "snippet": _clean(tail.group(1)) if tail else ""})
-        if len(results) >= max_results:
-            break
-    return {"ok": True, "provider": "bing", "query": query, "results": results}
+def _in_cooldown(source: str) -> bool:
+    t = _cooldown.get(source)
+    if t is None:
+        return False
+    if time.time() - t >= config.SEARCH_COOLDOWN_SECONDS:
+        _cooldown.pop(source, None)   # 冷却结束，重新参与轮询
+        return False
+    return True
 
-def _ddg_search(query: str, max_results: int) -> dict:
-    resp = requests.post("https://html.duckduckgo.com/html/", data={"q": query},
-                         headers={"User-Agent": UA}, timeout=TIMEOUT)
-    resp.raise_for_status()
-    results = []
-    links = re.findall(r'class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>', resp.text, re.S)
-    snips = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', resp.text, re.S)
-    for i, (href, title) in enumerate(links):
-        m = re.search(r"uddg=([^&]+)", href)  
-        url = unquote(m.group(1)) if m else href
-        t = _clean(title)
-        if not t or not url.startswith("http"):
-            continue
-        results.append({"title": t, "url": url,
-                        "snippet": _clean(snips[i]) if i < len(snips) else ""})
-        if len(results) >= max_results:
-            break
-    return {"ok": True, "provider": "duckduckgo", "query": query, "results": results}
+def _qianfan(query: str, max_results: int) -> list:
+    # 百度千帆 AI 搜索：bce-v3 Key，Bearer 鉴权，返回 references 列表
+    if not config.QIANFAN_AI_SEARCH_KEY:
+        raise RuntimeError("未配置 QIANFAN_AI_SEARCH_KEY")
+    r = requests.post(
+        "https://qianfan.baidubce.com/v2/ai_search",
+        headers={"Authorization": f"Bearer {config.QIANFAN_AI_SEARCH_KEY}",
+                 "Content-Type": "application/json"},
+        json={"messages": [{"content": query, "role": "user"}],
+              "search_source": "baidu_search_v2", "resource_type": "web"},
+        timeout=_TIMEOUT)
+    r.raise_for_status()
+    refs = r.json().get("references") or []
+    return [{"title": x.get("title", ""), "url": x.get("url") or x.get("web_anchor", ""),
+             "snippet": (x.get("content") or "")[:300]} for x in refs[:max_results]]
 
+def _anysearch(query: str, max_results: int) -> list:
+    # AnySearch（api.anysearch.com）：MCP Streamable HTTP 端点，JSON-RPC tools/call
+    # 若服务端工具名/参数有出入只影响这一级，search() 会自动降级，不影响主链路
+    if not config.ANY_SEARCH_KEY:
+        raise RuntimeError("未配置 ANY_SEARCH_KEY")
+    r = requests.post(
+        "https://api.anysearch.com/mcp",
+        headers={"Authorization": f"Bearer {config.ANY_SEARCH_KEY}",
+                 "Accept": "application/json, text/event-stream"},
+        json={"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+              "params": {"name": "web_search", "arguments": {"query": query, "limit": max_results}}},
+        timeout=_TIMEOUT)
+    r.raise_for_status()
+    body = r.text
+    if "text/event-stream" in r.headers.get("Content-Type", ""):   # SSE 帧：抽出 data: 行
+        body = "".join(ln[5:].strip() for ln in body.splitlines() if ln.startswith("data:"))
+    data = json.loads(body)
+    content = (data.get("result") or {}).get("content") or []
+    text = " ".join(c.get("text", "") for c in content if isinstance(c, dict)).strip()
+    if not text:
+        raise RuntimeError(f"anysearch 空结果：{data.get('error') or '未知错误'}")
+    items = [{"title": m.group(1).strip(), "url": m.group(2), "snippet": ""}
+             for m in re.finditer(r"\[([^\]\n]+)\]\s*\((https?://[^)\s]+)\)", text)]
+    if not items:   # 没解析出链接时整体作为摘要返回，模型仍可据此作答
+        items = [{"title": query, "url": "", "snippet": text[:300]}]
+    return items[:max_results]
 
-def _qianfan_search(query: str, max_results: int) -> dict:
-    resp = requests.post(
-        "https://qianfan.baidubce.com/v2/ai_search/web_search",
-        headers={"Authorization": f"Bearer {QIANFAN_AI_SEARCH_KEY}", "Content-Type": "application/json"},
-        json={"messages": [{"role": "user", "content": query}]},
-        timeout=TIMEOUT,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    items = data.get("references") or data.get("search_results") or []
-    if isinstance(items, dict):
-        items = items.get("value") or items.get("list") or []
-    results = []
-    for it in items[:max_results * 2]:
-        url = it.get("url") or it.get("link") or ""
-        if not url.startswith("http"):
-            continue
-        results.append({"title": it.get("title") or it.get("name") or url, "url": url,
-                        "snippet": _clean(it.get("summary") or it.get("snippet") or it.get("content") or "")})
-        if len(results) >= max_results:
-            break
-    return {"ok": True, "query": query, "results": results}
+def _ddg(query: str, max_results: int) -> list:
+    # 可选第三级：安装 duckduckgo_search 后自动启用，未安装则该源恒跳过
+    from duckduckgo_search import DDGS
+    with DDGS() as d:
+        return [{"title": x.get("title", ""), "url": x.get("href", ""),
+                 "snippet": x.get("body", "")} for x in d.text(query, max_results=max_results)]
 
+_SOURCES = (("qianfan", _qianfan), ("anysearch", _anysearch), ("ddg", _ddg))
 
-def _anysearch_search(query: str, max_results: int) -> dict:
-    resp = requests.post(
-        "https://api.anysearch.com/v1/search",
-        headers={"Authorization": f"Bearer {ANY_SEARCH_KEY}", "Content-Type": "application/json"},
-        json={"query": query, "max_results": min(max_results, 10),
-              "zone": "cn", "language": "zh-CN"},
-        timeout=TIMEOUT,
-    )
-    if resp.status_code == 402:
-        raise RuntimeError("AnySearch 额度已耗尽")
-    resp.raise_for_status()
-    items = (resp.json().get("data") or {}).get("results") or []
-    results = []
-    for it in items[:max_results]:
-        url = it.get("url") or ""
-        if not url.startswith("http"):
-            continue
-        results.append({"title": it.get("title") or url, "url": url,
-                        "snippet": _clean(it.get("snippet") or it.get("content") or "")})
-    return {"ok": True, "query": query, "results": results}
-
-
-COOLDOWN_SECONDS = SEARCH_COOLDOWN_SECONDS       
-QUOTA_COOLDOWN_SECONDS = 3600                    
-QUOTA_WORDS = ("额度", "余额", "欠费", "配额", "quota", "balance", "insufficient")
-_state: dict = {}  
-
-
-def _mark(name: str, ok: bool, quota: bool = False) -> None:
-    _state[name] = {"ok": ok, "ts": time.time(),
-                    "cooldown": QUOTA_COOLDOWN_SECONDS if (quota and not ok) else COOLDOWN_SECONDS}
-
-
-def _is_available(name: str) -> bool:
-    s = _state.get(name)
-    if s is None or s["ok"]:
-        return True  
-    return time.time() - s["ts"] >= s.get("cooldown", COOLDOWN_SECONDS)
-
-
-def _candidates():
-    pool = []
-    if QIANFAN_AI_SEARCH_KEY:
-        pool.append(("qianfan", _qianfan_search))
-    if ANY_SEARCH_KEY:
-        pool.append(("anysearch", _anysearch_search))
-    pool.append(("bing", _bing_search))
-    pool.append(("duckduckgo", _ddg_search))
-    return pool
-
-
-def _order(candidates):
-    return [c for c in candidates if _is_available(c[0])] + \
-           [c for c in candidates if not _is_available(c[0])]
-
-
-def search(query: str, max_results: int = MAX_RESULTS) -> dict:
+def search(query, max_results=5) -> list:
     query = (query or "").strip()
     if not query:
-        return {"ok": False, "error": "搜索词不能为空"}
-    errors = []
-    empty = 0   
-    for name, fn in _order(_candidates()):
-        try:
-            got = fn(query, max_results)
-        except Exception as exc:
-            text = str(exc)
-            _mark(name, False, quota=any(w in text.lower() for w in QUOTA_WORDS))
-            errors.append(f"{name}: {text[:80]}")
+        return []
+    for name, fn in _SOURCES:
+        if _in_cooldown(name):
             continue
-        _mark(name, True)
-        if got["results"]:
-            got["provider"] = name
-            return got
-        empty += 1
-    if empty:
-        return {"ok": False, "error": f"没搜到「{query}」的结果",
-                "note": "搜索源可达但无结果，如实告知用户，不要编造链接"}
-    return {"ok": False, "error": "；".join(errors) or "没有可用的搜索源",
-            "note": "所有搜索源都不可用，如实告知用户稍后再试"}
-
-
-def probe_down() -> None:
-    for name, fn in _candidates():
-        if _state.get(name, {}).get("ok"):
-            continue  
-        s = _state.get(name)
-        if s and time.time() - s["ts"] < s.get("cooldown", COOLDOWN_SECONDS):
-            continue  
         try:
-            fn("ping", 1)
-            _mark(name, True)
-            print(f"[health] 搜索源 {name} 在线 ✓")
-        except Exception as exc:
-            text = str(exc)
-            _mark(name, False, quota=any(w in text.lower() for w in QUOTA_WORDS))
-
+            items = fn(query, max_results)
+            if items:
+                log.info("搜索源 %s 返回 %d 条结果 ヾ(≧▽≦*)o", name, len(items))
+                return items
+        except Exception as e:
+            log.warning("%s 搜索调用失败 (＞﹏＜)：%s", name, e)
+            probe_down(name)
+    return []
 
 def status() -> dict:
-    out = {}
-    for name, _ in _candidates():
-        s = _state.get(name)
-        out[name] = {
-            "ok": bool(s and s["ok"]),
-            "checked_at": time.strftime("%H:%M:%S", time.localtime(s["ts"])) if s else None,
-        }
-    return out
+    return {"ok": bool(config.QIANFAN_AI_SEARCH_KEY or config.ANY_SEARCH_KEY),
+            "sources": [name for name, _ in _SOURCES if not _in_cooldown(name)]}
 
-_TRIGGER = ("全网搜索", "帮我搜一下", "帮我搜", "全网搜", "上网搜", "搜一下", "网上查", "上网查", "查一下",
-            "搜下", "搜索", "查查")   
-
-def search_tool(utterance: str, user_id: int, **_) -> dict:
-    q = utterance or ""
-    for w in sorted(_TRIGGER, key=len, reverse=True):   
-        q = q.replace(w, " ")
-    q = " ".join(q.split()).strip(" ，。！？!?、")
-    q = re.sub(r"^(一下|啊|呃|那个|嗯|帮我|我要|想)+", "", q).strip()   
+def search_tool(utterance="", user_id=None, refs=None, **_) -> dict:
+    q = (utterance or "").strip()
     if not q:
-        return {"ok": False, "error": "没听懂要搜什么", "hint": "追问用户具体想搜的内容"}
-    got = search(q)
-    if not got["ok"]:
-        return {"ok": False, "error": got["error"], "hint": got.get("note", "")}
-    if not got["results"]:
-        return {"ok": False, "error": f"没搜到「{q}」的结果", "hint": got.get("note", "")}
-    return {"query": q, "count": len(got["results"]), "provider": got["provider"],
-            "results": got["results"], "note": "必须基于以上真实结果作答，引用结论时带上来源标题；没有的结果不许编"}
+        return {"ok": False, "error": "嗷！没有可搜索的内容"}
+    results = search(q, 5)
+    if not results:
+        return {"ok": False, "error": "搜索服务暂时都不可用，请稍后再试"}
+    return {"ok": True, "query": q, "result_count": len(results), "results": results}

@@ -1,30 +1,24 @@
-import threading
-import time
+import threading, time, logging
 
-from AI import model_router
-from tool import web_search
-# -V- 采用了中转站大哥们（openrouter）的思路，哪个模型可以使用哪个模型
-Check_time = 300
+log = logging.getLogger("anda.health")
 _started = False
 
-def _loop() -> None:
-    while True:
-        time.sleep(Check_time)
-        try:
-            model_router.probe_down()
-        except Exception as exc:
-            print(f"[health] 模型出现异常啦！: {exc}")
-        try:
-            web_search.probe_down()
-        except Exception as exc:
-            print(f"[health] 搜索源出现异常啦！: {exc}")
-
-def start() -> None:
+def start():
     global _started
     if _started:
         return
-    _started = True 
+    _started = True
+    log.info("安答模型健康巡检线程已上岗#:# (๑•̀ㅂ•́)و✧")
     threading.Thread(target=_loop, daemon=True).start()
-    print(f"[health] 模型+搜索源滚动体检已启动嘞~（每{Check_time}秒重测不可用滴源）")
-    model_router.probe_down() 
-    web_search.probe_down()
+
+def _loop():
+    while _started:
+        time.sleep(300)
+        log.info("安答模型低频探活开始#:# (๑•̀ㅂ•́)و✧")
+        # 对已配置密钥的 chat 模型发 1-token 探活请求，结果供 /health 展示
+        try:
+            from AI import model_router
+            model_router.probe_down()
+            log.info("安答模型低频探活完成#:# ヾ(≧▽≦*)o")
+        except Exception as e:
+            log.warning("安答模型低频探活失败#:# (＞﹏＜) %s", e)

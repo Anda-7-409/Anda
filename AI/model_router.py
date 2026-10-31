@@ -1,100 +1,232 @@
-import time
-from typing import List , Optional, Tuple
+# TODO: 以后部署添加日志记录
+import json, os, logging, time
+from pathlib import Path
+import httpx
 
-from AI import glm, ollama
-from Backend.config import GLM_MODEL, GLM_MODEL_AGAIN, GLM_MODEL_BACKUP, OLLAMA_MODEL
+log = logging.getLogger("anda.router")
+AI_DIR = Path(__file__).parent
 
-def _dedup(items) -> List[str]:
-    seen: List[str] = []
-    for x in items:
-        if x and x not in seen:
-            seen.append(x)
-    return seen
+_MODELS = {m["model_id"]: m for m in json.loads(
+    (AI_DIR / "models.json").read_text("utf-8"))["models"]}
 
-GLM_POOL = _dedup((GLM_MODEL, GLM_MODEL_AGAIN, GLM_MODEL_BACKUP))
-OLLAMA_POOL = _dedup((OLLAMA_MODEL,))
+def _chain(ability: str):
+    # 调用工具的权重进行调用模型，过滤掉权重为0,没有配置API的模型或者说没有这个能力的权重的模型
+    ids = [m["model_id"] for m in sorted(
+        _MODELS.values(), key=lambda m: -m["ability_weights"].get(ability, 0))]
+    return [mid for mid in ids
+            if (m := _MODELS[mid])["ability_weights"].get(ability, 0) > 0
+            and (not m.get("api_key_env") or os.getenv(m["api_key_env"]))]
 
-COMPLEX_KEYWORDS = (
-    "课表", "作业", "考试", "复习", "提醒", "日程", "计划",
-    "成绩", "GPA", "学分", "导入", "安排", "复习表", "课程",
-)
+def chat(ability: str, messages: list, tools=None):
+    # 返回 (message, provider)，全部失败时抛 NoModelError(路由层转错误码 11)
+    chain = _chain(ability)
+    log.info("模型路由 -> 能力=%s 候选链=%s (๑•̀ㅂ•́)و✧", ability,
+             " > ".join(chain) if chain else "（空）")
+    for i, mid in enumerate(chain, 1):
+        m = _MODELS[mid]
+        headers = {"Authorization": f"Bearer {os.environ[m['api_key_env']]}"
+                   } if m.get("api_key_env") else {}
+        t0 = time.monotonic()
+        try:
+            payload = {"messages": messages}
+            if tools:
+                payload["tools"] = tools
+            r = httpx.post(m["endpoint"], headers=headers,
+                           json={**payload, **m.get("extra_body", {}), "model": m["model_name"]},
+                           timeout=m.get("timeout", 30))
+            r.raise_for_status()
+            msg = r.json()["choices"][0]["message"]
+            # content或tool_calls任一返回即视为成功
+            if (msg.get("content") or "").strip() or msg.get("tool_calls"):
+                log.info("模型命中 -> %s（第 %d/%d 个候选，耗时 %.1fs）ヾ(≧▽≦*)o",
+                         mid, i, len(chain), time.monotonic() - t0)
+                return msg, f"{m.get('provider', 'unknown')}:{mid}"
+            log.warning("模型空响应 -> %s（content 与 tool_calls 均为空），换下一个候选 (。•́︿•̀。)", mid)
+        except Exception as e:
+            log.warning("模型失败 -> %s：%s（耗时 %.1fs）(＞﹏＜)", mid, e, time.monotonic() - t0)
+    log.warning("模型链全灭 -> 能力=%s，%d 个候选均失败 (╯°□°）╯︵ ┻━┻", ability, len(chain))
+    raise NoModelError(ability)
 
-def _groups(utterance: str) -> List[Tuple[str, str]]:
-    glm_list = [("glm", m) for m in GLM_POOL]
-    ollama_list = [("ollama", m) for m in OLLAMA_POOL]
-    if any(word in utterance for word in COMPLEX_KEYWORDS):
-        return glm_list + ollama_list
-    return ollama_list + glm_list
+def embed(texts: list):
+    # 文本向量化：embeddings 端点与 chat 不同，按 embedding 权重滑链；
+    # 返回与 texts 等长的向量列表，全部失败抛 NoModelError
+    for mid in _chain("embedding"):
+        m = _MODELS[mid]
+        if not m["endpoint"].rstrip("/").endswith("embeddings"):
+            continue
+        headers = {"Authorization": f"Bearer {os.environ[m['api_key_env']]}"
+                   } if m.get("api_key_env") else {}
+        t0 = time.monotonic()
+        try:
+            r = httpx.post(m["endpoint"], headers=headers,
+                           json={"model": m["model_name"], "input": texts},
+                           timeout=m.get("timeout", 30))
+            r.raise_for_status()
+            data = sorted(r.json()["data"], key=lambda d: d.get("index", 0))
+            if len(data) != len(texts):
+                log.warning("嵌入向量数不符 -> %s（要 %d 得 %d），换下一个候选 (。•́︿•̀。)", mid, len(texts), len(data))
+                continue
+            log.info("模型命中 -> %s（embedding，%d 条向量，耗时 %.1fs）ヾ(≧▽≦*)o",
+                     mid, len(data), time.monotonic() - t0)
+            return [d["embedding"] for d in data]
+        except Exception as e:
+            log.warning("模型失败 -> %s（embedding）：%s（耗时 %.1fs）(＞﹏＜)", mid, e, time.monotonic() - t0)
+    log.warning("模型链全灭 -> 能力=embedding (╯°□°）╯︵ ┻━┻")
+    raise NoModelError("embedding")
 
-COOLDOWN_SECONDS = 60  
-_state: dict = {}      
+def transcribe(audio: bytes, filename="audio.wav"):
+    # 语音转文字：audio/transcriptions 端点（multipart 上传，OpenAI whisper 兼容格式），
+    # 按 asr 权重滑链，返回转写文本；全部失败抛 NoModelError
+    for mid in _chain("asr"):
+        m = _MODELS[mid]
+        if not m["endpoint"].rstrip("/").endswith("transcriptions"):
+            continue
+        headers = {"Authorization": f"Bearer {os.environ[m['api_key_env']]}"
+                   } if m.get("api_key_env") else {}
+        t0 = time.monotonic()
+        try:
+            r = httpx.post(m["endpoint"], headers=headers,
+                           data={"model": m["model_name"]},
+                           files={"file": (filename, audio)},
+                           timeout=m.get("timeout", 100))
+            r.raise_for_status()
+            text = (r.json().get("text") or "").strip()
+            if text:
+                log.info("模型命中 -> %s（asr，转写 %d 字，耗时 %.1fs）ヾ(≧▽≦*)o",
+                         mid, len(text), time.monotonic() - t0)
+                return text
+            log.warning("模型空响应 -> %s（asr 转写结果为空），换下一个候选 (。•́︿•̀。)", mid)
+        except Exception as e:
+            log.warning("模型失败 -> %s（asr）：%s（耗时 %.1fs）(＞﹏＜)", mid, e, time.monotonic() - t0)
+    log.warning("模型链全灭 -> 能力=asr (╯°□°）╯︵ ┻━┻")
+    raise NoModelError("asr")
 
+_probe_state = {}   # model_id -> {"ok": bool, "checked_at": "HH:MM:SS", "error": str}
 
-def _mark(name: str, ok: bool) -> None:
-    _state[name] = {"ok": ok, "ts": time.time()}
-
-
-def _is_available(name: str) -> bool:
-    s = _state.get(name)
-    if s is None or s["ok"]:
-        return True  
-    return time.time() - s["ts"] >= COOLDOWN_SECONDS  
-
-
-def _order(candidates: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
-    return [c for c in candidates if _is_available(c[1])] + [c for c in candidates if not _is_available(c[1])]
-
-
-def chat(messages: List[dict]) -> Tuple[Optional[str], Optional[str]]:
-    utterance = messages[-1]["content"] if messages else ""
-    for provider, model in _order(_groups(utterance)):
-        text = glm.chat(messages, model=model) if provider == "glm" else ollama.chat(messages, model=model)
-        if text:
-            _mark(model, True)
-            return text, f"{provider}:{model}"
-        _mark(model, False)
-    return None, None
-
-
-def chat_with_tools(messages: List[dict], tools: List[dict]) -> Tuple[Optional[dict], Optional[str]]:
-    """混合策略：function calling 只走 GLM 池（本地 Ollama 的 FC 输出不稳），
-    由编排器在 GLM 全挂时回落到关键词兜底路径。"""
-    for provider, model in _order([("glm", m) for m in GLM_POOL]):
-        msg = glm.chat_with_tools(messages, tools, model=model)
-        if msg:
-            _mark(model, True)
-            return msg, f"{provider}:{model}"
-        _mark(model, False)
-    return None, None
-
-
-def chat_text(messages: List[dict]) -> Tuple[Optional[str], Optional[str]]:
-    """工具内部生成类调用（如代码生成）：只走 GLM 池带故障转移，不落 Ollama。"""
-    for provider, model in _order([("glm", m) for m in GLM_POOL]):
-        text = glm.chat(messages, model=model)
-        if text:
-            _mark(model, True)
-            return text, f"{provider}:{model}"
-        _mark(model, False)
-    return None, None
-
-
-def probe_down() -> None:
-    for provider, model in [("glm", m) for m in GLM_POOL] + [("ollama", m) for m in OLLAMA_POOL]:
-        if _state.get(model, {}).get("ok"):
-            continue 
-        text = (glm.chat if provider == "glm" else ollama.chat)([{"role": "user", "content": "ping"}], model=model)
-        _mark(model, bool(text))
-        if text:
-            print(f"[health] 模型 {model} 在线 ✓")
-
-
-def status() -> dict:
+def status():
+    # /health 用：已探活模型返回最近一次真实探活结果，未探活模型退回配置检查
     out = {}
-    for m in GLM_POOL + OLLAMA_POOL:
-        s = _state.get(m)
-        out[m] = {
-            "ok": bool(s and s["ok"]),
-            "checked_at": time.strftime("%H:%M:%S", time.localtime(s["ts"])) if s else None,
-        }
+    for mid, m in _MODELS.items():
+        configured = bool(not m.get("api_key_env") or os.getenv(m["api_key_env"]))
+        entry = {"ok": configured, "checked_at": None}
+        probe = _probe_state.get(mid)
+        if probe:
+            entry["ok"] = probe["ok"] and configured
+            entry["checked_at"] = probe["checked_at"]
+            if probe.get("error"):
+                entry["error"] = probe["error"]
+        out[mid] = entry
     return out
+
+def probe_down():
+    # 低频轻量探活：对已配置密钥的 chat 模型发 1-token 请求，结果写入 _probe_state 供 /health 展示；
+    # 仅记录不熔断（真实调用的降级仍由 chat() 自身的滑链承担），探活失败不影响业务路由
+    for mid, m in _MODELS.items():
+        if not (m.get("api_key_env") and os.getenv(m["api_key_env"])):
+            continue
+        if m["ability_weights"].get("chat", 0) <= 0:
+            continue
+        ok, err = False, ""
+        try:
+            r = httpx.post(m["endpoint"],
+                           headers={"Authorization": f"Bearer {os.environ[m['api_key_env']]}"},
+                           json={"model": m["model_name"],
+                                 "messages": [{"role": "user", "content": "hi"}],
+                                 "max_tokens": 1},
+                           timeout=8)
+            ok = r.status_code < 400
+            if not ok:
+                err = f"HTTP {r.status_code}"
+        except Exception as e:
+            err = str(e)[:120]
+        _probe_state[mid] = {"ok": ok, "checked_at": time.strftime("%H:%M:%S"), "error": err}
+        if not ok:
+            log.warning("探活失败 -> %s：%s (＞﹏＜)", mid, err or "HTTP错误")
+
+class NoModelError(Exception): pass
+
+def _parse_sse_line(line: str):
+    if not line.startswith("data:"):
+        return None
+    data = line[5:].strip()
+    if data == "[DONE]":
+        return None
+    try:
+        return json.loads(data)
+    except Exception:
+        return None
+
+def chat_stream(ability: str, messages: list, tools=None):
+    # 流式生成器，全部失败则降级使用非流式；带 tools 时支持 function calling：
+    # 模型决定调工具时产出 {"type":"fc_tool_calls","calls":[{id,name,arguments}]}，
+    # 由调用方执行工具后以 role:"tool" 回填消息再发起下一轮
+    for i, mid in enumerate(_chain(ability), 1):
+        m = _MODELS[mid]
+        headers = {"Authorization": f"Bearer {os.environ[m['api_key_env']]}"
+                   } if m.get("api_key_env") else {}
+        payload = {"messages": messages, "stream": True, "model": m["model_name"],
+                   **m.get("extra_body", {})}
+        if tools:
+            payload["tools"] = tools
+        t0 = time.monotonic()
+        log.info("模型路由（流式）-> 尝试 %s（第 %d 个候选）(๑•̀ㅂ•́)و✧", mid, i)
+        try:
+            with httpx.stream("POST", m["endpoint"], headers=headers,
+                              json=payload, timeout=m.get("stream_timeout", m.get("timeout", 30))) as r:
+                r.raise_for_status()
+                got = False
+                pending = {}   # index -> {"id","name","arguments"}（流式 tool_calls 按 index 分片到达，需攒齐）
+                yield {"type": "meta", "provider": f"{m.get('provider', 'unknown')}:{mid}"}
+                for line in r.iter_lines():
+                    obj = _parse_sse_line(line)
+                    if not obj:
+                        continue
+                    if obj.get("error"):
+                        # 流内错误：SSE建立连接后返回HTTP200，错误在data块
+                        if got:
+                            log.warning("流式中断 -> %s：已输出部分内容后模型报错 (＞﹏＜)", mid)
+                            yield {"type": "error", "message": "回复中途被模型中断"}
+                            return
+                        break   # 如果首块前就报错则该模型失败
+                    choice = (obj.get("choices") or [{}])[0]
+                    delta = choice.get("delta") or {}
+                    for tc in delta.get("tool_calls") or []:
+                        got = True
+                        slot = pending.setdefault(tc.get("index", 0),
+                                                  {"id": "", "name": "", "arguments": ""})
+                        if tc.get("id"):
+                            slot["id"] = tc["id"]
+                        fn = tc.get("function") or {}
+                        if fn.get("name"):
+                            slot["name"] = fn["name"]          # name 整体到达，直接覆盖
+                        if fn.get("arguments"):
+                            slot["arguments"] += fn["arguments"]   # arguments 分片追加
+                    if delta.get("reasoning_content"):
+                        got = True
+                        yield {"type": "reasoning", "delta": delta["reasoning_content"]}
+                    if delta.get("content"):
+                        got = True
+                        yield {"type": "content", "delta": delta["content"]}
+                if pending:
+                    log.info("模型命中 -> %s（流式 FC，调用 %s，耗时 %.1fs）ヾ(≧▽≦*)o",
+                             mid, [pending[k]["name"] for k in sorted(pending)], time.monotonic() - t0)
+                    yield {"type": "fc_tool_calls", "calls": [pending[i] for i in sorted(pending)]}
+                    return
+                if got:
+                    log.info("模型命中 -> %s（流式作答，耗时 %.1fs）ヾ(≧▽≦*)o", mid, time.monotonic() - t0)
+                    return
+        except Exception as e:
+            log.warning("模型失败 -> %s（流式）：%s（耗时 %.1fs）(＞﹏＜)", mid, e, time.monotonic() - t0)
+    # 如果全部流式失败则采用非流式
+    try:
+        msg, provider = chat(ability, messages, tools)
+        yield {"type": "meta", "provider": provider}
+        if msg.get("tool_calls"):
+            yield {"type": "fc_tool_calls", "calls": [
+                {"id": tc.get("id", ""), "name": (tc.get("function") or {}).get("name", ""),
+                 "arguments": (tc.get("function") or {}).get("arguments")}
+                for tc in msg["tool_calls"]]}
+        else:
+            yield {"type": "content", "delta": msg.get("content") or ""}
+    except Exception as e:
+        log.warning("stream fallback failed (＞﹏＜): %s", e)

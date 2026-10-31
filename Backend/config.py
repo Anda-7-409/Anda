@@ -25,22 +25,11 @@ QQ_EMAIL_AUTH_CODE = os.environ.get("QQ_EMAIL_AUTH_CODE","")
 
 FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL","https://anda.dpdns.org")
 
-TOKEN_TTL_SECONDS = 15 * 60  
-SESSION_TTL_SECONDS = 24 * 60 * 60  
+TOKEN_TTL_SECONDS = 15 * 60
+SESSION_TTL_SECONDS = 24 * 60 * 60
 
-GLM_API_KEY = os.environ.get("GLM_API_KEY", "")
-GLM_URL = os.environ.get("GLM_URL", "https://open.bigmodel.cn/api/paas/v4/chat/completions")
-GLM_TIMEOUT_SECONDS = int(os.environ.get("GLM_TIMEOUT_SECONDS", "30"))
-
-OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_TIMEOUT_SECONDS = int(os.environ.get("OLLAMA_TIMEOUT_SECONDS", "120"))
-
-GLM_MODEL = os.environ.get("GLM_MODEL") or os.environ.get("GLM_MODEL_TOOL") or "glm-4-flash"
-GLM_MODEL_AGAIN = os.environ.get("GLM_MODEL_AGAIN", "")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL") or os.environ.get("LOCAL_OLLAMA_MODEL") or "qwen2.5"
-GLM_MODEL_VISION = os.environ.get("GLM_MODEL_PICTURE_UNDERSTAND", "")
-GLM_MODEL_IMAGE = os.environ.get("GLM_MODEL_PICTURE_PRODUCT", "")
-GLM_MODEL_BACKUP = os.environ.get("GLM_ADDITIONAL_MODEL", "")
+# 模型清单（endpoint/model_name/ability_weights 等）统一由 AI/models.json 管理，
+# 此处只保留搜索、文档解析、地图等直接消费的环境变量配置。
 
 QIANFAN_AI_SEARCH_KEY = os.environ.get("QIANFAN_AI_SEARCH_KEY", "")
 ANY_SEARCH_KEY = os.environ.get("ANY_SEARCH_KEY") or os.environ.get("ANYSEARCH_API_KEY", "")

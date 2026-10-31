@@ -2,14 +2,14 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Header
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from Backend.database import get_db
 from Backend.models.user import User
-from Backend.service import auth_service, reminder_service, schedule_service
+from Backend.service import auth_service, ics_service, reminder_service, schedule_service
 
 router = APIRouter()
 
@@ -26,6 +26,49 @@ def _ok(data):
 
 def _fail(message: str, status: int = 400):
     return JSONResponse(status_code=status, content={"code": 1, "message": message, "data": None})
+
+def _user_from_bearer_or_query(db: Session, authorization: Optional[str], token: str) -> Optional[User]:
+    # ICS 下载支持两种鉴权：前端 fetch 带 Bearer；浏览器/日历 App 直链用 ?token=（日历 token）
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            return auth_service.get_current_user(authorization=authorization, db=db)
+        except Exception:
+            return None
+    return ics_service.user_by_calendar_token(db, token)
+
+def _ics_response(body: str, filename: str) -> Response:
+    # text/calendar + attachment：浏览器直接下载 .ics，双击可导入日历 App
+    return Response(body, media_type="text/calendar; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+@router.get("/all/ics")
+def all_reminders_ics(authorization: Optional[str] = Header(default=None),
+                      token: str = "", db: Session = Depends(get_db)):
+    # 全部提醒打包成一个 ICS（备份/批量导入）；注意必须注册在 /{reminder_id}/ics 之前，否则 "all" 会先被动态路由吃掉
+    user = _user_from_bearer_or_query(db, authorization, token)
+    if not user:
+        return JSONResponse(status_code=401, content={"code": 1, "message": "登录凭证无效哦 (´･ω･`) 重新登录一下嘛~"})
+    body = ics_service.build_reminders_ics(
+        [reminder_service._to_dict(r) for r in reminder_service._list(db, user.id)], user.id)
+    if not body:
+        return JSONResponse(status_code=400, content={"code": 1, "message": "还没有带时间的提醒可以导出哦 (。•́︿•̀。)"})
+    return _ics_response(body, "anda-reminders.ics")
+
+@router.get("/{reminder_id}/ics")
+def reminder_ics(reminder_id: int, authorization: Optional[str] = Header(default=None),
+                 token: str = "", db: Session = Depends(get_db)):
+    # 单个提醒 → ICS 文件下载（VEVENT + VALARM，提前量 >= 5 分钟）
+    user = _user_from_bearer_or_query(db, authorization, token)
+    if not user:
+        return JSONResponse(status_code=401, content={"code": 1, "message": "登录凭证无效哦 (´･ω･`) 重新登录一下嘛~"})
+    r = db.query(reminder_service.Reminder).filter(
+        reminder_service.Reminder.id == reminder_id, reminder_service.Reminder.user_id == user.id).first()
+    if not r:
+        return JSONResponse(status_code=404, content={"code": 1, "message": "提醒不存在，或者它不是你的哦 (´•̥ω•̥`)"})
+    body = ics_service.build_reminder_ics(reminder_service._to_dict(r), user.id)
+    if not body:
+        return JSONResponse(status_code=400, content={"code": 1, "message": "该提醒没有有效时间，生成不了日历事件呢 (。•́︿•̀。)"})
+    return _ics_response(body, f"reminder-{reminder_id}.ics")
 
 @router.post("/set")
 def set_reminder(req: ReminderSet, user: User = Depends(auth_service.get_current_user), db: Session = Depends(get_db)):

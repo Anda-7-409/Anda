@@ -7,6 +7,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from AI import model_router
+from AI.model_router import NoModelError   # 模型全挂的降级分支要用，漏 import 会 NameError
 from Backend.database import SessionLocal
 from Backend.models.reminder import Reminder
 from Backend.service.schedule_service import WEEK_CN
@@ -32,9 +33,9 @@ def set_reminder(db: Session, user_id: int, req) -> dict:
     text = (req.reminder_type or "").strip()
     time_str = (req.reminder_time or "").strip()
     if not text:
-        return {"ok": False, "message": "提醒内容不能为空哦~"}
+        return {"ok": False,"code": 20, "message": "提醒内容不能为空哦 (。•́︿•̀。) 提醒我提醒什么呢？"}
     if time_str and not _check_time(time_str):
-        return {"ok": False, "message": "时间格式不对哦，应为 HH:MM 或 YYYY-MM-DD HH:MM"}
+        return {"ok": False,"code": 21, "message": "时间格式不对哦 (๑•́ ₃ •̀๑) 应为 HH:MM 或 YYYY-MM-DD HH:MM"}
     r = Reminder(user_id=user_id, reminder_type=text, reminder_time=time_str)
     db.add(r)
     db.commit()
@@ -47,16 +48,16 @@ def get_reminders(db: Session, user_id: int) -> dict:
 def update_reminder(db: Session, user_id: int, reminder_id: int, req) -> dict:
     r = db.query(Reminder).filter(Reminder.id == reminder_id, Reminder.user_id == user_id).first()
     if not r:
-        return {"ok": False, "message": "提醒不存在或不属于你哦~"}
+        return {"ok": False,"code": 22, "message": "提醒不存在，或者它不是你的哦 (´•̥ω•̥`)"}
     if req.reminder_type is not None:
         text = req.reminder_type.strip()
         if not text:
-            return {"ok": False, "message": "提醒内容不能为空哦~"}
+            return {"ok": False,"code": 23, "message": "提醒内容不能为空哦 (。•́︿•̀。) 提醒我提醒什么呢？"}
         r.reminder_type = text
     if req.reminder_time is not None:
         time_str = req.reminder_time.strip()
         if time_str and not _check_time(time_str):
-            return {"ok": False, "message": "时间格式不对哦，应为 HH:MM 或 YYYY-MM-DD HH:MM"}
+            return {"ok": False,"code": 24, "message": "时间格式不对哦 (๑•́ ₃ •̀๑) 应为 HH:MM 或 YYYY-MM-DD HH:MM"}
         r.reminder_time = time_str
     db.commit()
     db.refresh(r)
@@ -65,7 +66,7 @@ def update_reminder(db: Session, user_id: int, reminder_id: int, req) -> dict:
 def delete_reminder(db: Session, user_id: int, reminder_id: int) -> dict:
     r = db.query(Reminder).filter(Reminder.id == reminder_id, Reminder.user_id == user_id).first()
     if not r:
-        return {"ok": False, "message": "提醒不存在或不属于你哦~"}
+        return {"ok": False,"code": 25, "message": "提醒不存在，或者它不是你的哦 (´•̥ω•̥`)"}
     db.delete(r)
     db.commit()
     return {"ok": True, "data": {"id": reminder_id}}
@@ -73,7 +74,7 @@ def delete_reminder(db: Session, user_id: int, reminder_id: int) -> dict:
 def mark_done(db: Session, user_id: int, reminder_id: int, done: int) -> dict:
     r = db.query(Reminder).filter(Reminder.id == reminder_id, Reminder.user_id == user_id).first()
     if not r:
-        return {"ok": False, "message": "提醒不存在或不属于你哦~"}
+        return {"ok": False,"code": 25, "message": "提醒不存在，或者它不是你的哦 (´•̥ω•̥`)"}
     r.is_done = done
     db.commit()
     return {"ok": True, "data": _to_dict(r)}
@@ -148,24 +149,35 @@ def set_tool(utterance: str, user_id: int, **_) -> dict:
         {"role": "user", "content":
             f"当前日期：{now.strftime('%Y-%m-%d')}（{WEEK_CN[now.isoweekday()]}），当前时刻：{now.strftime('%H:%M')}。用户话术：{utterance}"},
     ]
-    text, provider = model_router.chat(messages)
+    try:
+        msg, provider = model_router.chat("reasoning", messages)
+        text = (msg or {}).get("content") or ""
+    except NoModelError:
+        text, provider = None, ""
     if not text:
-        return {"ok": False, "error": "抽取模型暂不可用，稍后重试或走 POST /reminder/set 手动添加"}
+        return {"ok": False,"code": 12, "error": "抽取模型暂时打瞌睡了 (´・ω・`) 请稍后重试，或走 POST /reminder/set 手动添加"}
     data = _parse_json(text)
     if not data:
-        return {"ok": False, "error": "没听懂要提醒什么", "hint": "追问用户：提醒什么、几点"}
+        return {"ok": False,"code": 13, "error": "没听懂要提醒什么 (´･ω･`)", "hint": "追问用户：提醒什么、几点"}
     if "error" in data:
-        return {"ok": False, "error": str(data["error"]), "hint": "信息不全，向用户追问后再调用本工具"}
+        return {"ok": False,"code": 14, "error": str(data["error"]), "hint": "信息不全，向用户追问后再调用本工具"}
     time_str = str(data.get("reminder_time") or "").strip()
     if not time_str or not _check_time(time_str):
-        return {"ok": False, "error": f"时间格式无法识别：{time_str or '空'}"}
+        return {"ok": False,"code": 18, "error": f"时间格式无法识别：{time_str or '空'} (。•́︿•̀。) 试试 HH:MM 或 YYYY-MM-DD HH:MM"}
     req = type("Req", (), {"reminder_type": str(data.get("reminder_type") or ""),
                            "reminder_time": time_str})()
     with SessionLocal() as db:
         result = set_reminder(db, user_id, req)
+        # 顺带生成日历导出链接（AI 回答里原样给出，用户点击即下载 .ics 导入系统日历）
+        ics_url = ""
+        from Backend.models.user import User
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            from Backend.service import ics_service
+            ics_url = ics_service.reminder_ics_url(user, result["data"]["id"])
     if not result["ok"]:
-        return {"ok": False, "error": result["message"]}
-    return {"ok": True, "reminder": result["data"], "extracted_by": provider}
+        return {"ok": False,"code": 19, "error": result["message"]}
+    return {"ok": True, "reminder": result["data"], "extracted_by": provider, "ics_url": ics_url}
 
 def query_tool(utterance: str, user_id: int, **_) -> dict:
     with SessionLocal() as db:

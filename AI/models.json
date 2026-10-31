@@ -1,0 +1,228 @@
+{
+    "models":[
+        {
+            "model_id":"mimo9b:latest",
+            "provider":"ollama", 
+            "endpoint":"http://localhost:11434/v1/chat/completions",
+            "api_key_env":"",
+            "model_name":"mimo9b:latest",
+            "timeout":120,
+            "ability_weights":{"chat": 3, "tool_use": 3, "code": 4, "reasoning": 5, "offline": 10},
+            "default":false ,
+            "Calling_time": 4
+        },
+        {
+            "model_id":"glm-4.7-flash",
+            "provider":"zhipu",
+            "endpoint":"https://open.bigmodel.cn/api/paas/v4/chat/completions",
+            "api_key_env":"GLM_API_KEY",
+            "model_name":"glm-4.7-flash",
+            "timeout":90,
+            "stream_timeout":15,
+            "extra_body":{"thinking":{"type":"enabled"}},
+            "ability_weights":{"chat": 7, "tool_use": 7, "code": 6, "reasoning": 6, "offline": 0,"general": 7},
+            "default":false ,
+            "Calling_time": 2
+        },
+        {
+            "model_id":"XingChenAGI/Xing4.0-29B",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/chat/completions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"XingChenAGI/Xing4.0-29B",
+            "extra_body":{"enable_thinking":true},
+            "timeout":120,
+            "stream_timeout":45,
+            "ability_weights":{"chat": 9, "tool_use": 8, "code": 8, "reasoning": 8, "long_context": 10,"general": 9},
+            "default":true ,
+            "Calling_time": 9
+        },
+        {
+            "model_id":"deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/chat/completions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"deepseek-ai/DeepSeek-R1-0528-Qwen3-8B",
+            "timeout":180,
+            "ability_weights":{"chat": 7, "code": 10, "reasoning": 10, "math": 10},
+            "default":false ,
+            "Calling_time": 7
+        },
+        {
+            "model_id":"Qwen/Qwen3-8B",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/chat/completions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"Qwen/Qwen3-8B",
+            "timeout":100,
+            "ability_weights":{"chat": 8, "tool_use": 7, "code": 8, "reasoning": 8},
+            "default":false ,
+            "Calling_time": 8
+        },
+        {
+            "model_id":"THUDM/GLM-4-9B-0414",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/chat/completions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"THUDM/GLM-4-9B-0414",
+            "timeout":60,
+            "ability_weights":{"chat": 7, "tool_use": 8, "code": 9},
+            "default":false ,
+            "Calling_time": 7
+        },
+        {
+            "model_id":"Qwen/Qwen3.5-4B",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/chat/completions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"Qwen/Qwen3.5-4B",
+            "timeout":60,
+            "ability_weights":{"chat": 6, "vision": 6, "tool_use": 6, "code": 6, "long_context": 8},
+            "default":false ,
+            "Calling_time": 6
+        },
+        {
+            "model_id":"glm-4-flash-250414",
+            "provider":"zhipu",
+            "endpoint":"https://open.bigmodel.cn/api/paas/v4/chat/completions",
+            "api_key_env":"GLM_API_KEY",
+            "model_name":"GLM-4-Flash-250414",
+            "timeout":60,
+            "ability_weights":{"chat": 5,"general": 8},
+            "default":false ,
+            "Calling_time": 7
+        },
+        {
+            "model_id":"glm-4-flash",
+            "provider":"zhipu",
+            "endpoint":"https://open.bigmodel.cn/api/paas/v4/chat/completions",
+            "api_key_env":"GLM_API_KEY",
+            "model_name":"glm-4-flash",
+            "timeout":60,
+            "ability_weights":{"chat": 5,"general": 8},
+            "default":false ,
+            "Calling_time": 7
+        },{
+            "model_id":"glm-4.6V-Flash",
+            "provider":"zhipu",
+            "endpoint":"https://open.bigmodel.cn/api/paas/v4/chat/completions",
+            "api_key_env":"GLM_API_KEY",
+            "model_name":"GLM-4.6V-Flash",
+            "timeout":100,
+            "ability_weights":{"vision": 10, "chat": 6,"general": 7},
+            "default":false ,
+            "Calling_time": 8
+        },{
+            "model_id":"deepseek-ai/DeepSeek-OCR",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/chat/completions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"deepseek-ai/DeepSeek-OCR",
+            "timeout":100,
+            "ability_weights":{"vision": 7, "ocr": 8},
+            "default":false ,
+            "Calling_time": 8
+        },{
+            "model_id":"PaddlePaddle/PaddleOCR-VL-1.54",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/chat/completions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"PaddlePaddle/PaddleOCR-VL-1.54",
+            "timeout":100,
+            "ability_weights":{"ocr": 10, "vision": 5},
+            "default":false ,
+            "Calling_time": 8
+        },{
+            "model_id":"XingChenAGI/XingChenASR-V3.2-Ultra",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/audio/transcriptions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"XingChenAGI/XingChenASR-V3.2-Ultra",
+            "timeout":100,
+            "ability_weights":{"asr": 10},
+            "default":false ,
+            "Calling_time": 8
+        },{
+            "model_id":"XingChenAGI/XingChenASR-V3.2",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/audio/transcriptions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"XingChenAGI/XingChenASR-V3.2",
+            "timeout":100,
+            "ability_weights":{"asr": 8},
+            "default":false ,
+            "Calling_time": 8
+        },{
+            "model_id":"XingChenAGI/XingChenASR-Diarize-V3.0",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/audio/transcriptions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"XingChenAGI/XingChenASR-Diarize-V3.0",
+            "timeout":100,
+            "ability_weights":{"asr": 7, "diarize": 10},
+            "default":false ,
+            "Calling_time": 8
+        },{
+            "model_id":"XingChenAGI/XingChenGSR-V1.0",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/audio/transcriptions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"XingChenAGI/XingChenGSR-V1.0",
+            "timeout":100,
+            "ability_weights":{"asr": 6, "semantic_asr": 9},
+            "default":false ,
+            "Calling_time": 8
+        },{
+            "model_id":"FunAudioLLM/SenseVoiceSmall",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/audio/transcriptions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"FunAudioLLM/SenseVoiceSmall",
+            "timeout":100,
+            "ability_weights":{"asr": 5, "emotion_asr": 9},
+            "default":false ,
+            "Calling_time": 8
+        },{
+            "model_id":"tencent/Hunyuan-MT-7B",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/chat/completions",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"tencent/Hunyuan-MT-7B",
+            "timeout":100,
+            "ability_weights":{"translation": 10},
+            "default":false ,
+            "Calling_time": 8
+        },{
+            "model_id":"Kwai-Kolors/Kolors",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/images/generations",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"Kwai-Kolors/Kolors",
+            "timeout":180,
+            "ability_weights":{"text_to_image": 10},
+            "default":false ,
+            "Calling_time": 8
+        },{
+            "model_id":"CogView-3-Flash",
+            "provider":"zhipu",
+            "endpoint":"https://open.bigmodel.cn/api/paas/v4/images/generations",
+            "api_key_env":"GLM_API_KEY",
+            "model_name":"CogView-3-Flash",
+            "timeout":180,
+            "ability_weights":{"text_to_image": 6},
+            "default":false ,
+            "Calling_time": 8
+        },{
+            "model_id":"BAAI/bge-m3",
+            "provider":"siliconflow",
+            "endpoint":"https://api.siliconflow.cn/v1/embeddings",
+            "api_key_env":"SILICONFLOW_API_KEY",
+            "model_name":"BAAI/bge-m3",
+            "timeout":100,
+            "ability_weights":{"embedding": 10},
+            "default":false ,
+            "Calling_time": 8
+        }
+
+    ]
+}

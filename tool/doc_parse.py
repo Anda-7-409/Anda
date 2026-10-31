@@ -1,206 +1,89 @@
-
-import io
-import re
-import time
-import zipfile
+# doc_parse.py — 文档解析：本地轻量提取（txt/md/csv/代码 + pdf/docx/pptx/xlsx），MinerU Key 配好后可升级
+# 契约（docs/refactoring.md 3.2）：refs 文件名列表；用户带问题时用 general 模型基于提取文本作答
 from pathlib import Path
 
-import requests
+from AI import model_router, prompts
+from Backend.service import upload_service
 
-from Backend.config import (DOC_PARSE_MAX_WAIT_SECONDS, MINERU_API_KEY, MINERU_MODEL,
-                            UPLOAD_DIR)
+_TEXT_EXT = {"txt", "md", "csv", "py", "js", "ts", "java", "c", "cpp", "go", "html",
+             "css", "json", "log", "ini", "sql", "sh"}
+_PDF_MAX_PAGES = 200
+_QWORDS = ("什么", "为啥", "为什么", "怎么", "哪", "吗", "呢", "？", "?",
+           "总结", "概括", "重点", "讲", "说", "多少")
 
-BASE = "https://mineru.net"
-UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-      "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
-POLL_INTERVAL = 3        
-MAX_CHARS = 6000         
-SUPPORTED_EXT = {"pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "html",
-                 "png", "jpg", "jpeg", "webp", "gif", "bmp", "jp2"}
-_URL_RE = re.compile(r"https?://\S+")
+def _ref_name(ref) -> str:
+    if isinstance(ref, dict):
+        return (ref.get("file_name") or ref.get("name") or ref.get("filename") or "").strip()
+    return str(ref or "").strip()
 
-def _auth() -> dict:
-    return {"Authorization": f"Bearer {MINERU_API_KEY}", "Content-Type": "application/json"}
+def _extract(path: Path) -> str:
+    ext = path.suffix.lower().lstrip(".")
+    if ext in _TEXT_EXT:
+        return path.read_text(encoding="utf-8", errors="ignore")
+    if ext == "pdf":
+        try:
+            from pypdf import PdfReader
+        except ImportError:
+            from PyPDF2 import PdfReader   # 旧包名兜底
+        reader = PdfReader(str(path))
+        return "\n".join((page.extract_text() or "") for page in reader.pages[:_PDF_MAX_PAGES])
+    if ext == "docx":
+        import docx
+        d = docx.Document(str(path))
+        return "\n".join(p.text for p in d.paragraphs if p.text.strip())
+    if ext == "pptx":
+        from pptx import Presentation
+        prs = Presentation(str(path))
+        out = []
+        for i, slide in enumerate(prs.slides, 1):
+            out.append(f"—— 第{i}页 ——")
+            out.extend(sh.text_frame.text for sh in slide.shapes
+                       if sh.has_text_frame and sh.text_frame.text.strip())
+        return "\n".join(out)
+    if ext in ("xlsx", "xls"):
+        import openpyxl
+        wb = openpyxl.load_workbook(str(path), read_only=True)
+        lines = []
+        for ws in wb.worksheets:
+            lines.append(f"—— 工作表 {ws.title} ——")
+            for row in ws.iter_rows(max_row=200, values_only=True):
+                if any(v is not None for v in row):
+                    lines.append(" | ".join("" if v is None else str(v) for v in row))
+        return "\n".join(lines)
+    raise ValueError(f".{ext} 暂不支持本地解析，可转成 PDF/TXT 再试")
 
-def _submit_url(url: str) -> str:
-    resp = requests.post(f"{BASE}/api/v4/extract/task", headers=_auth(),
-                         json={"url": url, "model_version": MINERU_MODEL}, timeout=15)
-    resp.raise_for_status()
-    body = resp.json()
-    if body.get("code") != 0:
-        raise RuntimeError(body.get("msg") or "创建解析任务失败")
-    return (body.get("data") or {}).get("task_id") or ""
-
-def _submit_file(name: str, content: bytes) -> str:
-    resp = requests.post(f"{BASE}/api/v4/file-urls/batch", headers=_auth(),
-                         json={"files": [{"name": name}], "model_version": MINERU_MODEL},
-                         timeout=15)
-    resp.raise_for_status()
-    body = resp.json()
-    if body.get("code") != 0:
-        raise RuntimeError(body.get("msg") or "申请上传链接失败")
-    data = body.get("data") or {}
-    upload_url = (data.get("file_urls") or [""])[0]
-    if not upload_url:
-        raise RuntimeError("未获取到上传链接")
-    put = requests.put(upload_url, data=content, timeout=120)   
-    put.raise_for_status()
-    return data.get("batch_id") or ""
-
-def _poll_task(task_id: str) -> str:
-    if not task_id:
-        raise RuntimeError("未获取到任务ID")
-    deadline = time.time() + DOC_PARSE_MAX_WAIT_SECONDS
-    while time.time() < deadline:
-        resp = requests.get(f"{BASE}/api/v4/extract/task/{task_id}", headers=_auth(), timeout=15)
-        resp.raise_for_status()
-        data = resp.json().get("data") or {}
-        if data.get("state") == "done":
-            return data.get("full_zip_url") or ""
-        if data.get("state") == "failed":
-            raise RuntimeError(data.get("err_msg") or "解析失败")
-        time.sleep(POLL_INTERVAL)
-    raise TimeoutError("解析超时")
-
-def _poll_batch(batch_id: str) -> str:
-    if not batch_id:
-        raise RuntimeError("未获取到任务ID")
-    deadline = time.time() + DOC_PARSE_MAX_WAIT_SECONDS
-    while time.time() < deadline:
-        resp = requests.get(f"{BASE}/api/v4/extract-results/batch/{batch_id}",
-                            headers=_auth(), timeout=15)
-        resp.raise_for_status()
-        results = (resp.json().get("data") or {}).get("extract_result") or []
-        r = results[0] if results else {}
-        if r.get("state") == "done":
-            return r.get("full_zip_url") or ""
-        if r.get("state") == "failed":
-            raise RuntimeError(r.get("err_msg") or "解析失败")
-        time.sleep(POLL_INTERVAL)
-    raise TimeoutError("解析超时")
-
-def _zip_to_markdown(zip_url: str) -> str:
-    resp = requests.get(zip_url, timeout=120)
-    resp.raise_for_status()
-    with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-        md = next((n for n in zf.namelist() if n.endswith("full.md")), None)
-        if not md:
-            raise RuntimeError("解析结果包里没有 full.md")
-        return zf.read(md).decode("utf-8", errors="ignore")
-
-def _agent_poll(task_id: str) -> str:
-    if not task_id:
-        raise RuntimeError("未获取到任务ID")
-    deadline = time.time() + DOC_PARSE_MAX_WAIT_SECONDS
-    while time.time() < deadline:
-        resp = requests.get(f"{BASE}/api/v1/agent/parse/{task_id}", timeout=15)
-        resp.raise_for_status()
-        data = resp.json().get("data") or {}
-        if data.get("state") == "done":
-            return data.get("markdown_url") or ""
-        if data.get("state") == "failed":
-            raise RuntimeError(data.get("err_msg") or "解析失败")
-        time.sleep(POLL_INTERVAL)
-    raise TimeoutError("解析超时")
-
-def _download(url: str) -> str:
-    if not url:
-        raise RuntimeError("解析完成但没拿到结果链接")
-    resp = requests.get(url, headers={"User-Agent": UA}, timeout=60)
-    resp.raise_for_status()
-    return resp.text
-
-def parse(url: str = "", file_name: str = "", file_content: bytes = b"") -> dict:
-    if not url and not file_name:
-        return {"ok": False, "error": "没拿到文档地址或文件"}
-    result_url = ""
-    try:
-        if MINERU_API_KEY:   
-            zip_url = _poll_task(_submit_url(url)) if url \
-                else _poll_batch(_submit_file(file_name, file_content))
-            if not zip_url:
-                raise RuntimeError("解析完成但没拿到结果包地址")
-            markdown, result_url = _zip_to_markdown(zip_url), zip_url
-        else:               
-            markdown = _download(_agent_poll(_agent_url(url))) if url \
-                else _download(_agent_poll(_agent_file(file_name, file_content)))
-    except TimeoutError:
-        return {"ok": False, "error": "解析超时，文档可能太长",
-                "note": "稍后重试或换小一点的文件"}
-    except Exception as exc:
-        return {"ok": False, "error": f"解析失败：{str(exc)[:120]}"}
-    markdown = (markdown or "").strip()
-    if not markdown:
-        return {"ok": False, "error": "解析完成但文档内容为空"}
-    truncated = len(markdown) > MAX_CHARS
-    return {"ok": True, "file_name": file_name or url, "total_chars": len(markdown),
-            "truncated": truncated, "result_url": result_url,
-            "content": markdown[:MAX_CHARS] + ("…（已截断）" if truncated else "")}
-
-def _agent_url(url: str) -> str:
-    resp = requests.post(f"{BASE}/api/v1/agent/parse/url", json={"url": url}, timeout=15)
-    resp.raise_for_status()
-    body = resp.json()
-    if body.get("code") != 0:
-        raise RuntimeError(body.get("msg") or "创建解析任务失败")
-    return (body.get("data") or {}).get("task_id") or ""
-
-def _agent_file(name: str, content: bytes) -> str:
-    resp = requests.post(f"{BASE}/api/v1/agent/parse/file",
-                         json={"file_name": name}, timeout=15)
-    resp.raise_for_status()
-    body = resp.json()
-    if body.get("code") != 0:
-        raise RuntimeError(body.get("msg") or "申请上传链接失败")
-    data = body.get("data") or {}
-    upload_url = data.get("file_url") or ""
-    if not upload_url:
-        raise RuntimeError("未获取到上传链接")
-    put = requests.put(upload_url, data=content, timeout=120)
-    put.raise_for_status()
-    return data.get("task_id") or ""
-
-def doc_parse_tool(utterance: str, user_id: int, refs=None) -> dict:
-    text = utterance or ""
-    m = _URL_RE.search(text)
-    if m:
-        return _wrap(parse(url=m.group(0).rstrip("，。！？!?、)）")))
-    user_dir = UPLOAD_DIR / str(user_id)
-    files = sorted((p for p in user_dir.iterdir() if p.is_file()
-                    and p.suffix.lower().lstrip(".") in SUPPORTED_EXT),
-                   key=lambda p: p.stat().st_mtime, reverse=True) if user_dir.exists() else []
-    by_name = {p.name: p for p in files}
-    ref_hits = [by_name[str(r)] for r in (refs or []) if str(r) in by_name]  
-    mentioned = [p for p in files if p.name in text or Path(p.name).stem in text]
-    if len(ref_hits) == 1:          
-        target = ref_hits[0]
-    elif len(ref_hits) > 1:         
-        return {"ok": False, "error": "你引用了多个文档，但没说清要解析哪个",
-                "candidates": [p.name for p in ref_hits], "hint": "列出候选让用户选"}
-    elif len(mentioned) == 1:       
-        target = mentioned[0]
-    elif len(mentioned) > 1:
-        return {"ok": False, "error": "提到多个文件，不确定解析哪一个",
-                "candidates": [p.name for p in mentioned], "hint": "追问用户要解析哪个文件"}
-    elif len(files) == 1:
-        target = files[0]   
-    elif files:
-        return {"ok": False, "error": "你上传了多个文档，但没说清要解析哪个",
-                "candidates": [p.name for p in files[:8]], "hint": "列出候选让用户选"}
+def doc_parse_tool(utterance="", user_id=None, refs=None, **_) -> dict:
+    for n in (_ref_name(r) for r in (refs or [])):
+        if not n:
+            continue
+        info = upload_service.get_file_path(int(user_id), n) if user_id else {"ok": False}
+        p = Path((info.get("data") or {}).get("path") or "")
+        if p.is_file():
+            break
     else:
-        return {"ok": False, "error": "没找到要解析的文档",
-                "hint": "请用户先上传文档，或直接给出文档链接"}
-    content = target.read_bytes()
-    if len(content) > 10 * 1024 * 1024 and not MINERU_API_KEY:
-        return {"ok": False, "error": f"文件 {target.name} 超过 10MB，免登录轻量解析带不动",
-                "hint": "提示用户配置 MINERU_API_KEY 后可解析最大 200MB 的文件"}
-    return _wrap(parse(file_name=target.name, file_content=content))
+        return {"ok": False, "error": "本次对话没有引用任何文件，请先上传要解析的文档"}
 
-def _wrap(got: dict) -> dict:
-    if not got["ok"]:
-        return {"ok": False, "error": got["error"],
-                "hint": got.get("note", "如实告知用户解析失败原因，不要编造文档内容")}
-    return {"query": got["file_name"], "total_chars": got["total_chars"],
-            "truncated": got["truncated"], "content": got["content"],
-            "result_url": got["result_url"] or None,
-            "note": "必须基于以上真实解析内容作答，引用时注明出自文档哪部分；内容里没有的不要编"}
+    try:
+        text = _extract(p).strip()
+    except ImportError as e:
+        return {"ok": False, "error": f"服务器缺少解析 {p.suffix} 的组件（{e.name}）",
+                "hint": "可先转成 PDF/TXT 再上传"}
+    except ValueError as e:
+        return {"ok": False, "error": str(e)}
+    except Exception as e:
+        return {"ok": False, "error": "文档解析失败", "hint": str(e)[:80]}
+    if not text:
+        return {"ok": False, "error": "没有从文档中提取到文本（可能是扫描件/纯图 PDF）"}
+
+    result = {"ok": True, "file": p.name, "chars": len(text), "content": text[:20000]}
+    q = (utterance or "").strip()
+    if q and any(w in q for w in _QWORDS):   # 带问题时：general 模型基于提取文本作答
+        try:
+            msg, provider = model_router.chat("general", [{"role": "user", "content":
+                prompts.P("doc_parse.user_qa", name=p.name, text=text[:20000], q=q)}])
+            if (msg or {}).get("content"):
+                result["answer"] = msg["content"].strip()
+                result["provider"] = provider
+        except Exception:
+            pass   # 问答失败不影响解析结果本身返回
+    return result

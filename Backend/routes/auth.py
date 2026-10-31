@@ -1,7 +1,7 @@
 # auth路由，从index接入，传到auth_service
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel 
 from sqlalchemy.orm import Session
@@ -47,9 +47,13 @@ def _fail(message, status=400):
     return JSONResponse(status_code=status, content={"code": 1, "message": message, "data": None})
 
 
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else ""
+
+
 @router.post("/register")
-def register(req: Register_must, db: Session = Depends(get_db)):
-    result = auth_service.register_user(db, req.username, req.password, req.email)
+def register(req: Register_must, request: Request, db: Session = Depends(get_db)):
+    result = auth_service.register_user(db, req.username, req.password, req.email, client_ip=_client_ip(request))
     if not result["ok"]:
         return _fail(result["message"])
     return _ok(result["message"])
@@ -63,8 +67,8 @@ def verify(token: str, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(req: Login_must, db: Session = Depends(get_db)):
-    result = auth_service.login(db, req.username, req.password)
+def login(req: Login_must, request: Request, db: Session = Depends(get_db)):
+    result = auth_service.login(db, req.username, req.password, client_ip=_client_ip(request))
     if not result["ok"]:
         return _fail(result["message"])
     return _ok(result["message"], {"token": result["token"], "expires_in": result["expires_in"]})
@@ -95,14 +99,14 @@ def update(
 
 
 @router.post("/forgot_password")
-def forgot_password(req: Forgot_password_must, db: Session = Depends(get_db)):
-    result = auth_service.forgot_password(db, req.email)
+def forgot_password(req: Forgot_password_must, request: Request, db: Session = Depends(get_db)):
+    result = auth_service.forgot_password(db, req.email, client_ip=_client_ip(request))
     if not result["ok"]:
         return _fail(result["message"])
     return _ok(result["message"])
 
 
-@router.post("/reset-password")
+@router.post("/reset_password")
 def reset_password(req: Reset_password_must, db: Session = Depends(get_db)):
     result = auth_service.reset_password(db, req.token, req.new_password)
     if not result["ok"]:

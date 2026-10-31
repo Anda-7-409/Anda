@@ -1,3 +1,8 @@
+【归档说明 · 2026-11-01】本文为开发期间的踩坑笔记（历史记录，按时间顺序追加，内容保持原样不再修订）。
+其中已过时的部分（如模型权重、9 个工具、memory 记忆）已在校订后的 plan.md / refactoring.md / contract.md / PROJECT_SUMMARY.md 中修正，本文仅作决策依据留档。
+
+====================================================================
+
 思路：针对安工小智仅支持单轮检索式应答，且回答局限于制度条文，无法结合个人课表与作息相结合，只能被动等待提问——本项目开发“安答：校园AI Agent助手”，将Agent架构引入校园场景。学生通过网页以自然语言导入课表、设置提醒、发起咨询，系统自动完成意图识别、任务拆解与工具链调用；服务端采用云端 GLM API 与本地 Ollama 模型混合部署——通用咨询问答经本地模型处理，而课表、作业、考试、复习计划等复杂任务则通过云端调用以保证准确度。在每节课前进行主动提醒，实现从“被动问答”到“主动服务”的升级。
 创新点：1. 场景创新——从“被动问答”到“主动服务”：系统根据课表，在每节课前自动根据场景提醒，提高用户效率
 2. 技术创新——从“单轮检索”到“Agent 编排”：引入意图识别、任务拆解与工具调用的 Agent 架构，通过多样的工具链辅助用户以提供学习与生活上便利。
@@ -132,3 +137,17 @@ skill/
 
    关键词路由第三次「换说法就漏」了（搜一下残留 → 引用文本污染 → 这次同义变体）。规则路由的优点是零成本可控，缺点是 覆盖面永远追不上自然语言 。`orchestrator.py` 里那句注释「第二版可升级为LLM拆解」就是解法——等你比赛功能稳定后，可以把`_plan_tools` 换成用`glm-4-flash` 
    （便宜槽位）做一次意图分类输出工具名，规则词表降级为兜底。这个改造半天能做完，要不要做由你定，现在先把规则网补密。
+
+最后一个修复（`div.appendChild(bubble)` ） ：你问的“根据”最实在的一条——不接进 DOM 树的节点，`textContent` 更新一万次屏幕也不会动。这个 bug 绕了这么大一圈，教训是： 渲染问题先验证 DOM 挂接，再查网络 。
+改了 ：glm-4.7-flash 加`stream_timeout:15` +`extra_body: thinking` 、general 权重 10→5；星辰加`enable_thinking:true` 。
+
+根据 ：实测数据——glm-4.7-flash 免费额度 429 频发且挂了阻塞链首 60-90 秒，而星辰实测 1.9 秒出首块。权重排序的本质就是“用实测可用性给链路排序”，这不是拍脑袋，是数据。
+
+TODO: 添加调用时间权重。
+
+刷新后思考内容消失 —— 真 bug，原因是「存历史时把 reasoning 丢了」
+3 处修复全部应用完成，改动都在 agent_ai.html /Trae_project/Anda/Frontend/pages/agent_ai.html)：
+
+位置 改动 sendStream:797 /Trae_project/Anda/Frontend/pages/agent_ai.html#L797) 新增`reasoning` 变量积累思考文本，3 个 return 改为返回`{ answer, reasoning }` 对象 send:872-874 /Trae_project/Anda/Frontend/pages/agent_ai.html#L872-L874) 解构接收对象，历史消息多存一个`reasoning` 字段 appendMessage:731 /Trae_project/Anda/Frontend/pages/agent_ai.html#L731) + selectChat:707 /Trae_project/Anda/Frontend/pages/agent_ai.html#L707) 重放历史时若有`reasoning` 就重建折叠思考面板，`selectChat` 把存的字段传进去
+
+为什么这么改：思考文本之前只写进实时 DOM、函数结束就丢了，历史里没有它，刷新重放自然消失。现在它跟着消息对象走 localStorage 存储链路，重放时用同一套`.think` 样式重建面板——流式是「实时填充」，重放是「一次性填充」，行为一致且默认折叠。老历史记录没有`reasoning` 字段，`if (reasoning)` 跳过，完全向后兼容。

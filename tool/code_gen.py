@@ -1,86 +1,47 @@
-
-import re
+# code_gen.py — 代码生成：code 能力权重链（DeepSeek-R1-Qwen3-8B w10 → GLM-4-9B w9 → ...）
+# 契约（docs/refactoring.md 3.2）：model_router.chat("code")；产物存用户云盘，经 /upload/download 下载
 import time
-from pathlib import Path
 
-from AI import model_router
-from Backend.config import GLM_API_KEY, UPLOAD_DIR
+from AI import model_router, prompts
+from Backend import config
+from Backend.service import upload_service
 
-MAX_CODE_CHARS = 50_000
+_EXT = {"python": "py", "py": "py", "javascript": "js", "js": "js", "typescript": "ts",
+        "ts": "ts", "html": "html", "css": "css", "java": "java", "c": "c", "cpp": "cpp",
+        "c++": "cpp", "golang": "go", "go": "go", "sql": "sql", "shell": "sh", "bash": "sh",
+        "json": "json"}
 
-# 语言标签 -> 文件扩展名（围栏块标注的 tag 一律小写后查表，查不到落到 .txt）
-EXT_MAP = {
-    "python": ".py", "python3": ".py", "py": ".py",
-    "javascript": ".js", "js": ".js", "node": ".js", "nodejs": ".js",
-    "typescript": ".ts", "ts": ".ts",
-    "html": ".html", "css": ".css",
-    "java": ".java", "c": ".c", "cpp": ".cpp", "c++": ".cpp",
-    "c#": ".cs", "cs": ".cs", "go": ".go", "golang": ".go",
-    "rust": ".rs", "rs": ".rs", "php": ".php",
-    "sql": ".sql", "shell": ".sh", "bash": ".sh", "sh": ".sh",
-    "json": ".json", "yaml": ".yml", "yml": ".yml",
-    "markdown": ".md", "md": ".md", "matlab": ".m", "r": ".r",
-    "text": ".txt", "txt": ".txt",
-}
+def _extract(text: str) -> tuple:
+    # 从模型输出中取第一个 ```语言 围栏内的代码；无围栏时整体视为代码（默认 .py）
+    start = text.find("```")
+    if start == -1:
+        return text.strip(), "py"
+    rest = text[start + 3:]
+    nl = rest.find("\n")
+    tag = (rest[:nl] if nl != -1 else "").strip().lower() or "python"
+    end = rest.find("```", nl + 1 if nl != -1 else 0)
+    body = rest[(nl + 1) if nl != -1 else 0: end if end != -1 else None]
+    return body.strip(), _EXT.get(tag, "py")
 
-# 只认第一个围栏代码块；要求模型第一行就是 ```，避免把讲解文本误当代码
-_CODE_RE = re.compile(r"```([A-Za-z+#.]*)[ \t]*\r?\n(.*?)```", re.S)
+def code_gen_tool(utterance="", user_id=None, refs=None, **_) -> dict:
+    task = (utterance or "").strip()
+    if not task:
+        return {"ok": False, "error": "没有描述要生成什么代码"}
+    try:
+        msg, provider = model_router.chat("code", [{"role": "user", "content":
+            prompts.P("code_gen.user", task=task)}])
+    except Exception as e:
+        return {"ok": False, "error": "代码模型暂时都不可用，请稍后再试", "hint": str(e)[:80]}
+    code, ext = _extract((msg or {}).get("content") or "")
+    if not code.strip():
+        return {"ok": False, "error": "模型没有返回有效代码，请把需求描述得更具体一点"}
 
-_GEN_SYSTEM = (
-    "你是编程助手。用户会描述想要的一段代码，你只输出一个围栏代码块："
-    "第一行是```加上语言标注（如 ```python），最后一行是```，"
-    "代码块之外不要输出任何文字。代码要完整可保存、可直接运行或使用，"
-    "关键步骤加简短中文注释。"
-)
-
-
-def code_gen_tool(utterance: str, user_id: int, refs=None) -> dict:
-    if not GLM_API_KEY:
-        return {"ok": False, "error": "未配置 GLM_API_KEY，代码生成不可用",
-                "hint": "如实告知用户代码生成功能暂不可用，不要编造文件或链接"}
-    if not utterance or not utterance.strip():
-        return {"ok": False, "error": "没有收到代码需求",
-                "hint": "请用户描述想要什么代码"}
-
-    answer, _ = model_router.chat_text([
-        {"role": "system", "content": _GEN_SYSTEM},
-        {"role": "user", "content": utterance.strip()},
-    ])
-    if not answer:
-        return {"ok": False, "error": "代码生成模型暂时不可用",
-                "hint": "如实告知用户稍后再试，不要编造文件或链接"}
-
-    m = _CODE_RE.search(answer)
-    if not m or not m.group(2).strip():
-        return {"ok": False, "error": "模型没有返回有效的代码块",
-                "hint": "如实告知用户生成失败，建议换个更具体的描述重试"}
-    tag, code = m.group(1).strip().lower(), m.group(2).rstrip()
-
-    if len(code) > MAX_CODE_CHARS:
-        return {"ok": False, "error": f"生成的代码超过 {MAX_CODE_CHARS} 字符上限",
-                "hint": "建议用户把需求拆小一点再试"}
-
-    ext = EXT_MAP.get(tag, ".txt")
-    user_dir = UPLOAD_DIR / str(user_id)
-    user_dir.mkdir(parents=True, exist_ok=True)
-    base = time.strftime("gen_%Y%m%d_%H%M%S")
-    name = f"{base}{ext}"
-    n = 1
-    while (user_dir / name).exists():
-        name = f"{base}_{n}{ext}"
-        n += 1
-    (user_dir / name).write_text(code, encoding="utf-8")
-
-    lines = code.count("\n") + 1
-    preview_lines = code.splitlines()[:10]
-    return {
-        "ok": True,
-        "file_name": name,
-        "language": tag or "未知",
-        "lines": lines,
-        "download_url": f"/upload/download/{name}",
-        "preview": "\n".join(preview_lines) + ("\n..." if lines > 10 else ""),
-        "note": ("代码已真实生成并保存为文件，把文件名、语言、行数和下载链接告诉用户即可；"
-                 f"下载链接是 {name} 对应的 /upload/download/{name}，不要编造其他链接，"
-                 "不要在回复里重复粘贴全部代码，只转述预览。"),
-    }
+    name = f"anda_code_{int(time.time())}.{ext}"
+    up = upload_service.save_file(int(user_id or 0), name, "text/plain", code.encode("utf-8"))
+    if not up.get("ok"):
+        return {"ok": False, "error": "代码文件保存失败：" + str(up.get("message") or "")}
+    real = up["data"]["file_name"]   # save_file 重名时会加 (1) 后缀，用最终名拼链接
+    return {"ok": True, "file_name": real, "lines": code.count("\n") + 1,
+            "download_url": f"{config.FRONTEND_BASE_URL}/upload/download/{real}",
+            "code_preview": code[:200], "provider": provider,
+            "hint": "文件已保存到用户云盘，可在左侧文件管理器下载"}
