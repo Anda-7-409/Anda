@@ -19,10 +19,14 @@ def _chain(ability: str):
 
 def chat(ability: str, messages: list, tools=None):
     # 返回 (message, provider)，全部失败时抛 NoModelError(路由层转错误码 11)
-    for mid in _chain(ability):
+    chain = _chain(ability)
+    log.info("模型路由 -> 能力=%s 候选链=%s", ability,
+             " > ".join(chain) if chain else "（空）")
+    for i, mid in enumerate(chain, 1):
         m = _MODELS[mid]
         headers = {"Authorization": f"Bearer {os.environ[m['api_key_env']]}"
                    } if m.get("api_key_env") else {}
+        t0 = time.monotonic()
         try:
             payload = {"messages": messages}
             if tools:
@@ -34,9 +38,13 @@ def chat(ability: str, messages: list, tools=None):
             msg = r.json()["choices"][0]["message"]
             # content或tool_calls任一返回即视为成功
             if (msg.get("content") or "").strip() or msg.get("tool_calls"):
+                log.info("模型命中 -> %s（第 %d/%d 个候选，耗时 %.1fs）",
+                         mid, i, len(chain), time.monotonic() - t0)
                 return msg, f"{m.get('provider', 'unknown')}:{mid}"
+            log.warning("模型空响应 -> %s（content 与 tool_calls 均为空），换下一个候选", mid)
         except Exception as e:
-            log.warning("嗷！%s 模型调用失败：%s", mid, e)
+            log.warning("模型失败 -> %s：%s（耗时 %.1fs）", mid, e, time.monotonic() - t0)
+    log.warning("模型链全灭 -> 能力=%s，%d 个候选均失败", ability, len(chain))
     raise NoModelError(ability)
 
 def embed(texts: list):
@@ -48,6 +56,7 @@ def embed(texts: list):
             continue
         headers = {"Authorization": f"Bearer {os.environ[m['api_key_env']]}"
                    } if m.get("api_key_env") else {}
+        t0 = time.monotonic()
         try:
             r = httpx.post(m["endpoint"], headers=headers,
                            json={"model": m["model_name"], "input": texts},
@@ -55,10 +64,14 @@ def embed(texts: list):
             r.raise_for_status()
             data = sorted(r.json()["data"], key=lambda d: d.get("index", 0))
             if len(data) != len(texts):
+                log.warning("嵌入向量数不符 -> %s（要 %d 得 %d），换下一个候选", mid, len(texts), len(data))
                 continue
+            log.info("模型命中 -> %s（embedding，%d 条向量，耗时 %.1fs）",
+                     mid, len(data), time.monotonic() - t0)
             return [d["embedding"] for d in data]
         except Exception as e:
-            log.warning("嗷！嵌入模型 %s 也挂啦：-： %s", mid, e)
+            log.warning("模型失败 -> %s（embedding）：%s（耗时 %.1fs）", mid, e, time.monotonic() - t0)
+    log.warning("模型链全灭 -> 能力=embedding")
     raise NoModelError("embedding")
 
 def transcribe(audio: bytes, filename="audio.wav"):
@@ -70,6 +83,7 @@ def transcribe(audio: bytes, filename="audio.wav"):
             continue
         headers = {"Authorization": f"Bearer {os.environ[m['api_key_env']]}"
                    } if m.get("api_key_env") else {}
+        t0 = time.monotonic()
         try:
             r = httpx.post(m["endpoint"], headers=headers,
                            data={"model": m["model_name"]},
@@ -78,9 +92,13 @@ def transcribe(audio: bytes, filename="audio.wav"):
             r.raise_for_status()
             text = (r.json().get("text") or "").strip()
             if text:
+                log.info("模型命中 -> %s（asr，转写 %d 字，耗时 %.1fs）",
+                         mid, len(text), time.monotonic() - t0)
                 return text
+            log.warning("模型空响应 -> %s（asr 转写结果为空），换下一个候选", mid)
         except Exception as e:
-            log.warning("嗷！ASR模型 %s 挂啦 ：-： %s", mid, e)
+            log.warning("模型失败 -> %s（asr）：%s（耗时 %.1fs）", mid, e, time.monotonic() - t0)
+    log.warning("模型链全灭 -> 能力=asr")
     raise NoModelError("asr")
 
 _probe_state = {}   # model_id -> {"ok": bool, "checked_at": "HH:MM:SS", "error": str}
@@ -122,6 +140,8 @@ def probe_down():
         except Exception as e:
             err = str(e)[:120]
         _probe_state[mid] = {"ok": ok, "checked_at": time.strftime("%H:%M:%S"), "error": err}
+        if not ok:
+            log.warning("探活失败 -> %s：%s", mid, err or "HTTP错误")
 
 class NoModelError(Exception): pass
 
@@ -140,7 +160,7 @@ def chat_stream(ability: str, messages: list, tools=None):
     # 流式生成器，全部失败则降级使用非流式；带 tools 时支持 function calling：
     # 模型决定调工具时产出 {"type":"fc_tool_calls","calls":[{id,name,arguments}]}，
     # 由调用方执行工具后以 role:"tool" 回填消息再发起下一轮
-    for mid in _chain(ability):
+    for i, mid in enumerate(_chain(ability), 1):
         m = _MODELS[mid]
         headers = {"Authorization": f"Bearer {os.environ[m['api_key_env']]}"
                    } if m.get("api_key_env") else {}
@@ -148,6 +168,8 @@ def chat_stream(ability: str, messages: list, tools=None):
                    **m.get("extra_body", {})}
         if tools:
             payload["tools"] = tools
+        t0 = time.monotonic()
+        log.info("模型路由（流式）-> 尝试 %s（第 %d 个候选）", mid, i)
         try:
             with httpx.stream("POST", m["endpoint"], headers=headers,
                               json=payload, timeout=m.get("stream_timeout", m.get("timeout", 30))) as r:
@@ -162,6 +184,7 @@ def chat_stream(ability: str, messages: list, tools=None):
                     if obj.get("error"):
                         # 流内错误：SSE建立连接后返回HTTP200，错误在data块
                         if got:
+                            log.warning("流式中断 -> %s：已输出部分内容后模型报错", mid)
                             yield {"type": "error", "message": "回复中途被模型中断"}
                             return
                         break   # 如果首块前就报错则该模型失败
@@ -185,12 +208,15 @@ def chat_stream(ability: str, messages: list, tools=None):
                         got = True
                         yield {"type": "content", "delta": delta["content"]}
                 if pending:
+                    log.info("模型命中 -> %s（流式 FC，调用 %s，耗时 %.1fs）",
+                             mid, [pending[k]["name"] for k in sorted(pending)], time.monotonic() - t0)
                     yield {"type": "fc_tool_calls", "calls": [pending[i] for i in sorted(pending)]}
                     return
                 if got:
+                    log.info("模型命中 -> %s（流式作答，耗时 %.1fs）", mid, time.monotonic() - t0)
                     return
         except Exception as e:
-            log.warning("嗷！%s 流式调用失败：%s", mid, e)
+            log.warning("模型失败 -> %s（流式）：%s（耗时 %.1fs）", mid, e, time.monotonic() - t0)
     # 如果全部流式失败则采用非流式
     try:
         msg, provider = chat(ability, messages, tools)
