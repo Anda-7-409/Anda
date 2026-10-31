@@ -16,15 +16,15 @@ async def transcribe_audio(audio: UploadFile = File(...),
     try:
         blob = await audio.read()
     except Exception:
-        return JSONResponse(status_code=400, content={"code": 1, "message": "音频读取失败"})
+        return JSONResponse(status_code=400, content={"code": 1, "message": "音频读取失败 (╯°□°）╯︵ ┻━┻"})
     if not blob:
-        return JSONResponse(status_code=400, content={"code": 1, "message": "音频是空的，再录一次吧 ~"})
+        return JSONResponse(status_code=400, content={"code": 1, "message": "音频是空的，再录一次吧 (´･ω･`)"})
     if len(blob) > _MAX_SIZE:
-        return JSONResponse(status_code=400, content={"code": 1, "message": "音频超过 15MB 上限，说短一点 ~"})
+        return JSONResponse(status_code=400, content={"code": 1, "message": "音频超过 15MB 上限，说短一点点 (＞﹏＜)"})
     try:
         text = model_router.transcribe(blob, audio.filename or "audio.wav")
         return {"code": 0, "message": "ok", "data": {"text": text}}
     except model_router.NoModelError:
-        return JSONResponse(status_code=477, content={"code": 11, "message": "语音识别暂不可用，请直接打字 ~"})
+        return JSONResponse(status_code=477, content={"code": 11, "message": "语音识别暂时不可用，先打字跟我聊吧 (´・ω・`)"})
     except Exception as exc:
-        return JSONResponse(status_code=500, content={"code": 1, "message": f"转写失败：{exc}"})
+        return JSONResponse(status_code=500, content={"code": 1, "message": f"转写失败 (╯°□°）╯︵ ┻━┻ {exc}"})

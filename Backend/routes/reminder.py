@@ -47,11 +47,11 @@ def all_reminders_ics(authorization: Optional[str] = Header(default=None),
     # 全部提醒打包成一个 ICS（备份/批量导入）；注意必须注册在 /{reminder_id}/ics 之前，否则 "all" 会先被动态路由吃掉
     user = _user_from_bearer_or_query(db, authorization, token)
     if not user:
-        return JSONResponse(status_code=401, content={"code": 1, "message": "登录凭证无效哦~"})
+        return JSONResponse(status_code=401, content={"code": 1, "message": "登录凭证无效哦 (´･ω･`) 重新登录一下嘛~"})
     body = ics_service.build_reminders_ics(
         [reminder_service._to_dict(r) for r in reminder_service._list(db, user.id)], user.id)
     if not body:
-        return JSONResponse(status_code=400, content={"code": 1, "message": "还没有带时间的提醒可以导出哦~"})
+        return JSONResponse(status_code=400, content={"code": 1, "message": "还没有带时间的提醒可以导出哦 (。•́︿•̀。)"})
     return _ics_response(body, "anda-reminders.ics")
 
 @router.get("/{reminder_id}/ics")
@@ -60,14 +60,14 @@ def reminder_ics(reminder_id: int, authorization: Optional[str] = Header(default
     # 单个提醒 → ICS 文件下载（VEVENT + VALARM，提前量 >= 5 分钟）
     user = _user_from_bearer_or_query(db, authorization, token)
     if not user:
-        return JSONResponse(status_code=401, content={"code": 1, "message": "登录凭证无效哦~"})
+        return JSONResponse(status_code=401, content={"code": 1, "message": "登录凭证无效哦 (´･ω･`) 重新登录一下嘛~"})
     r = db.query(reminder_service.Reminder).filter(
         reminder_service.Reminder.id == reminder_id, reminder_service.Reminder.user_id == user.id).first()
     if not r:
-        return JSONResponse(status_code=404, content={"code": 1, "message": "提醒不存在或不属于你哦~"})
+        return JSONResponse(status_code=404, content={"code": 1, "message": "提醒不存在，或者它不是你的哦 (´•̥ω•̥`)"})
     body = ics_service.build_reminder_ics(reminder_service._to_dict(r), user.id)
     if not body:
-        return JSONResponse(status_code=400, content={"code": 1, "message": "该提醒没有有效时间，无法生成日历事件哦~"})
+        return JSONResponse(status_code=400, content={"code": 1, "message": "该提醒没有有效时间，生成不了日历事件呢 (。•́︿•̀。)"})
     return _ics_response(body, f"reminder-{reminder_id}.ics")
 
 @router.post("/set")

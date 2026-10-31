@@ -241,7 +241,7 @@ def calendar_export_tool(utterance: str, user_id: int, **_) -> dict:
     with SessionLocal() as db:
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
-            return {"ok": False, "code": 30, "error": "用户不存在"}
+            return {"ok": False, "code": 30, "error": "用户不存在，订阅链接怕是迷路了 (´•̥ω•̥`)"}
         token = calendar_token(user)
         course_count = db.query(schedule_service.Course).filter(schedule_service.Course.user_id == user_id).count()
         reminder_count = db.query(Reminder).filter(Reminder.user_id == user_id, Reminder.reminder_time != "").count()

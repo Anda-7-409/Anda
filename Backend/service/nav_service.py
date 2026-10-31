@@ -45,11 +45,11 @@ def resolve_dest(target: str) -> tuple:
 def plan(user_id: int, target: str, mode: str = "walk", origin: str = "") -> dict:
     target = (target or "").strip()
     if not target:
-        return {"ok": False, "message": "缺少目的地"}
+        return {"ok": False, "message": "缺少目的地哦 (´･ω･`) 要去哪儿呀？"}
     reported = origin or get_location(user_id)   
     origin = reported or default_origin()        
     if not origin:
-        return {"ok": False, "message": "还不知道你的当前位置：请点击聊天框旁的 📍 定位按钮并允许浏览器定位授权"}
+        return {"ok": False, "message": "还不知道你的当前位置呢 (´•̥ω•̥`) 请点击聊天框旁的 📍 定位按钮并允许浏览器定位授权"}
     if _COORD.match(target):
         dest, dest_name = target, "目标地点"
     else:
@@ -79,7 +79,7 @@ def nav_tool(utterance: str, user_id: int, **_) -> dict:
         target = target.replace(w, " ")
     target = re.sub(r"[？?！!。，,的到呢吗吧呀~\s]", "", target)
     if not target:
-        return {"ok": False, "error": "没听出目的地~ 试试：导航到逸夫楼"}
+        return {"ok": False, "error": "没听出目的地呢 (´･ω･`) 试试说：导航到逸夫楼"}
     got = plan(user_id, target)
     if not got["ok"]:
         return {"ok": False, "error": got["message"]}   

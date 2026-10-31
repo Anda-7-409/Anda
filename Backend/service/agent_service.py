@@ -178,7 +178,7 @@ def _build_ref_block(user: User, refs) -> str:
 
 def chat(db: Session, user: User, utterance: str, context=None, refs=None, chat_id=None) -> dict:
     if not utterance or not utterance.strip():
-        return {"ok": False, "message": "内容不能为空哦~ 再输入一次吧 -?v?-"}
+        return {"ok": False, "message": "内容不能为空哦 (。•́︿•̀。) 想聊点什么呀？"}
     ref_block = _build_ref_block(user, refs)
     ctx = list(context) if context else chat_history_service.recall_window(db, user.id)
     result = orchestrator.run(user.id, utterance.strip(), ctx, ref_block=ref_block, refs=list(refs or []))

@@ -2,8 +2,7 @@ from contextlib import asynccontextmanager
 from .database import init_db, close_db
 
 from fastapi import FastAPI
-from dotenv import load_dotenv
-load_dotenv()
+# .env 加载统一由 Backend/config._load_env 负责（上面 import 链已触发），此处不再重复加载
 
 def create_app() -> FastAPI:
     @asynccontextmanager
@@ -21,7 +20,9 @@ def create_app() -> FastAPI:
         from tool import web_search
         return {"code": 0, "message": "ok",
                 "data": {"service": "anda-api", "models": model_router.status(),
-                         "search": web_search.status()}}
+                         "search": web_search.status(),
+                         "note": "models.ok 为最近一次低频探活结果（仅 chat 能力模型每5分钟探活一次，"
+                                 "其余能力为配置检查）；checked_at 为最近探活时间，未探活则为 null"}}
     return app
 
 def register_routes(app: FastAPI):
