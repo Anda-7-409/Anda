@@ -943,16 +943,18 @@ async function sendStream(text, refsList) {
     return { answer: '', reasoning: '' };
   }
 }
+let sending = false;   // 流式回复未结束前禁止再次发送：按钮禁用只挡鼠标点击，Ctrl+Enter 会绕过，入口级加锁才拦得住
 async function send() {
     // 发送消息
     // 渲空对话消息
   const input = $('chat-input'); const text = input.value.trim();
     // 检查输入是否为空
-  if (!text) return;
+  if (!text || sending) return;
     // 禁用发送按钮
     // 渲空输入框
     // 渲染用户消息
   const btn = $('send-btn'); btn.disabled = true; input.value='';
+  sending = true;
     // 渲染用户消息
   appendMessage('user', text);
   if (!currentChatId) newChat();
@@ -976,7 +978,7 @@ async function send() {
   } catch (err) {
     console.error('send failed:', err);   // 前端异常至少可见，避免静默无反应
     appendMessage('ai', '出错了：' + (err && err.message || '未知错误') + '，请按 F12 看控制台详情');
-  } finally { saveHistory(); btn.disabled = false; input.focus(); loadSchedule(); loadReminders(); }   // 对话里可能刚改了课表/备忘/提醒，右栏立即同步
+  } finally { sending = false; saveHistory(); btn.disabled = false; input.focus(); loadSchedule(); loadReminders(); }   // 对话里可能刚改了课表/备忘/提醒，右栏立即同步
 }
 $('send-btn').onclick = send;
 // ===== 输入区：语音输入 —— WebAudio 采 PCM 编码 WAV → /asr 转写 → 文字回填输入框 =====

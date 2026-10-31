@@ -1,4 +1,4 @@
-import json, secrets, logging
+import json, secrets, logging, time
 from AI import model_router, prompts
 log = logging.getLogger("anda.orchestrator")
 TOOLS = {}
@@ -37,6 +37,9 @@ def _fc_tools():
 def _exec(call: dict, utterance: str, user_id: int, refs) -> dict:
     # 执行一次工具调用（FC 与关键词兜底共用）；模型提炼的 task 优先于用户原话，失败不抛出（ok 字段防幻觉）
     name = (call.get("name") or "").strip()
+    t0 = time.monotonic()
+    task_brief = (utterance or "").replace("\n", " ")[:40]
+    log.info("工具调用开始 -> %s（user_id=%s，task=%s）", name or "unknown", user_id, task_brief)
     try:
         args = json.loads(call.get("arguments") or "{}")
         if not isinstance(args, dict):
@@ -46,14 +49,19 @@ def _exec(call: dict, utterance: str, user_id: int, refs) -> dict:
     task = (args.get("task") or args.get("utterance") or "").strip() or utterance
     cfg = TOOLS.get(name)
     if not cfg:
+        log.warning("工具调用失败 -> %s：未注册的工具", name or "unknown")
         return {"tool_name": name or "unknown", "status": "fail",
                 "result": {"ok": False, "error": "未注册的工具"}}
     try:
         result = cfg["fn"](utterance=task, user_id=user_id, refs=list(refs or []))
     except Exception as e:
-        log.warning("嗷！%s 工具执行失败：%s", name, e)
+        log.warning("工具调用失败 -> %s：执行异常 %s（耗时 %.1fs）", name, e, time.monotonic() - t0)
         result = {"ok": False, "code": 51, "message": f"工具执行异常：{e}"}
-    return {"tool_name": name, "status": "ok" if result.get("ok") else "fail", "result": result}
+    ok = bool(result.get("ok"))
+    log.info("工具调用结束 -> %s：%s（耗时 %.1fs）", name,
+             "成功" if ok else f"失败 ok={result.get('ok')} msg={str(result.get('message') or result.get('error') or '')[:80]}",
+             time.monotonic() - t0)
+    return {"tool_name": name, "status": "ok" if ok else "fail", "result": result}
 
 def _normalize(ctx):
     # 记忆窗口里的 role 是 "user"/"ai"，OpenAI 兼容接口只认 assistant
@@ -61,6 +69,9 @@ def _normalize(ctx):
              "content": m.get("content", "")} for m in (ctx or [])]
 
 def run(user_id, utterance, ctx=None, ref_block="", refs=None):
+    t0 = time.monotonic()
+    log.info("Agent 开始 -> user_id=%s utterance=%s（refs=%d）",
+             user_id, (utterance or "").replace("\n", " ")[:40], len(refs or []))
     user_msg = f"{ref_block}\n\n{utterance}" if ref_block else utterance
     messages = [*_normalize(ctx), {"role": "user", "content": user_msg}]
     messages.insert(0, {"role": "system", "content": prompts.P("orchestrator.sys_fc")})
@@ -76,9 +87,12 @@ def run(user_id, utterance, ctx=None, ref_block="", refs=None):
         tc_list = (msg.get("tool_calls") or [])[:_MAX_CALLS]
         if not tc_list:
             answer = (msg.get("content") or "").strip()
+            log.info("FC 直答 -> 第 %d 轮模型未发起工具调用", _round + 1)
             break
         calls = [{"id": tc.get("id", ""), "name": (tc.get("function") or {}).get("name", ""),
                   "arguments": (tc.get("function") or {}).get("arguments")} for tc in tc_list]
+        log.info("FC 第 %d 轮 -> 发起 %d 个工具调用: %s",
+                 _round + 1, len(calls), [c["name"] for c in calls])
         executed = [_exec(c, utterance, user_id, refs) for c in calls]
         tool_calls.extend(executed)
         messages.append({"role": "assistant", "content": msg.get("content") or "", "tool_calls": tc_list})
@@ -87,14 +101,20 @@ def run(user_id, utterance, ctx=None, ref_block="", refs=None):
                         for c, e in zip(calls, executed))
 
     # 无回答，或 FC 只口头承诺没执行（关键词命中时）→ 走兜底补工具结果
+    if not tool_calls and answer and _is_promise(answer) and _match(utterance):
+        log.info("承诺检测触发 -> 模型口头承诺未执行工具，走兜底")
     if not answer or (not tool_calls and _is_promise(answer) and _match(utterance)):
         if tool_calls:
             # FC 已执行过工具但轮数用尽还没有回答：让模型基于工具结果做最终总结
             # （否则消息以 role:"tool" 结尾，无工具表的 general 调用会模仿出 <tool_call> 文本）
+            log.info("FC 总结 -> 工具已执行但无回答，让模型基于结果总结")
             messages.append({"role": "user",
                              "content": prompts.P("orchestrator.fc_summary")})
         else:   # FC 不可用/未执行才走关键词兜底；已执行过工具就不重复执行（防重复写库）
-            for name in _match(utterance)[:_MAX_CALLS]:
+            kw_names = _match(utterance)[:_MAX_CALLS]
+            if kw_names:
+                log.info("关键词兜底 -> 命中: %s", kw_names)
+            for name in kw_names:
                 tool_calls.append(_exec({"name": name, "arguments": "{}"}, utterance, user_id, refs))
             if tool_calls:
                 block = "\n".join(f"[{t['tool_name']}] {t['result']}" for t in tool_calls)
@@ -108,6 +128,7 @@ def run(user_id, utterance, ctx=None, ref_block="", refs=None):
             log.warning("嗷！%s 模型调用失败：%s", provider, e)
 
     if not answer:   # 全部在线模型挂了：最后试本地离线模型（mimo9b，断网/断API也能答）
+        log.info("离线降级 -> 在线链路无回答，尝试本地离线模型")
         try:
             msg, provider = model_router.chat("offline", messages)
             answer = (msg or {}).get("content") or ""
@@ -116,7 +137,12 @@ def run(user_id, utterance, ctx=None, ref_block="", refs=None):
 
     if not answer:
         answer, provider = prompts.P("orchestrator.demo"), "demo"
+        log.warning("演示兜底 -> 全部链路不可用，返回演示文案")
 
+    log.info("Agent 完成 -> provider=%s，工具 %d 次（成功 %d），answer %d 字，总耗时 %.1fs",
+             provider, len(tool_calls),
+             len([t for t in tool_calls if t["status"] == "ok"]), len(answer),
+             time.monotonic() - t0)
     return{
         "answer": answer,
         "tool_calls": tool_calls,
@@ -128,6 +154,9 @@ def run(user_id, utterance, ctx=None, ref_block="", refs=None):
 
 def run_stream(user_id, utterance, ctx=None, ref_block="", refs=None):
     # 流式版：主路径 FC 多轮（模型自动选工具，事件照常流式），不可用时退回关键词匹配兜底
+    t0 = time.monotonic()
+    log.info("Agent 开始（流式）-> user_id=%s utterance=%s（refs=%d）",
+             user_id, (utterance or "").replace("\n", " ")[:40], len(refs or []))
     user_msg = f"{ref_block}\n\n{utterance}" if ref_block else utterance
     messages = [*_normalize(ctx), {"role": "user", "content": user_msg}]
     messages.insert(0, {"role": "system", "content": prompts.P("orchestrator.sys_fc")})
@@ -142,6 +171,8 @@ def run_stream(user_id, utterance, ctx=None, ref_block="", refs=None):
                 if ev["type"] == "fc_tool_calls":
                     calls = ev["calls"][:_MAX_CALLS]
                     if calls:   # 模型已发起调用：先广播"正在调用工具"，执行完成再发 tools 结果
+                        log.info("FC 第 %d 轮（流式）-> 发起 %d 个工具调用: %s",
+                                 _round + 1, len(calls), [c.get("name") for c in calls])
                         yield {"type": "tool_start",
                                "names": [c.get("name") or "unknown" for c in calls]}
                 elif ev["type"] == "meta":
@@ -155,6 +186,8 @@ def run_stream(user_id, utterance, ctx=None, ref_block="", refs=None):
             log.warning("唉！FC 轮次 %s 调用失败：%s", _round, e)   
             break
         if answer.strip() or not calls:
+            if answer.strip():
+                log.info("FC 直答（流式）-> 第 %d 轮模型未发起工具调用", _round + 1)
             break   # 模型直接作答，或 FC 不可用（无内容也无调用）→ 跳出
         executed = [_exec(c, utterance, user_id, refs) for c in calls]
         tool_calls.extend(executed)
@@ -168,16 +201,20 @@ def run_stream(user_id, utterance, ctx=None, ref_block="", refs=None):
                         for c, e in zip(calls, executed))
 
     # 无回答，或 FC 只口头承诺没执行（关键词命中时）→ 走兜底补工具结果
+    if not tool_calls and answer.strip() and _is_promise(answer) and _match(utterance):
+        log.info("承诺检测触发 -> 模型口头承诺未执行工具，走兜底")
     if not answer.strip() or (not tool_calls and _is_promise(answer) and _match(utterance)):
         if tool_calls:
             # FC 已执行过工具但轮数用尽：让模型基于工具结果做最终总结（防止模仿出 <tool_call> 文本）
+            log.info("FC 总结 -> 工具已执行但无回答，让模型基于结果总结")
             messages.append({"role": "user",
                              "content": prompts.P("orchestrator.fc_summary")})
         else:   # FC 没执行过工具时才走关键词兜底（防重复写库）
             kw_calls = []
             kw_names = _match(utterance)[:_MAX_CALLS]
-            if kw_names:   # 与 FC 路径一致：执行前先广播"正在调用工具"
-                yield {"type": "tool_start", "names": kw_names}
+            if kw_names:
+                log.info("关键词兜底 -> 命中: %s", kw_names)
+                yield {"type": "tool_start", "names": kw_names}   # 与 FC 路径一致：执行前先广播"正在调用工具"
             for name in kw_names:
                 entry = _exec({"name": name, "arguments": "{}"}, utterance, user_id, refs)
                 kw_calls.append(entry)
@@ -198,6 +235,7 @@ def run_stream(user_id, utterance, ctx=None, ref_block="", refs=None):
                 yield ev
 
     if not answer.strip():   # 全部在线模型挂了：最后试本地离线模型（mimo9b，断网/断API也能答）
+        log.info("离线降级 -> 在线链路无回答，尝试本地离线模型")
         try:
             for ev in model_router.chat_stream("offline", messages):
                 if ev["type"] == "meta":
@@ -212,7 +250,13 @@ def run_stream(user_id, utterance, ctx=None, ref_block="", refs=None):
 
     if not answer.strip():
         answer, provider = prompts.P("orchestrator.demo"), "demo"
+        log.warning("演示兜底 -> 全部链路不可用，返回演示文案")
         yield {"type": "content", "delta": answer}
+
+    log.info("Agent 完成（流式）-> provider=%s，工具 %d 次（成功 %d），answer %d 字，总耗时 %.1fs",
+             provider, len(tool_calls),
+             len([t for t in tool_calls if t["status"] == "ok"]), len(answer),
+             time.monotonic() - t0)
     yield {"type": "done", "answer": answer, "provider": provider,
            "actions_taken": [t["tool_name"] for t in tool_calls if t["status"] == "ok"],
            "needs_confirm": False, "action_id": secrets.token_hex(4)}

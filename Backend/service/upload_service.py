@@ -1,10 +1,13 @@
 
+import logging
 import secrets
 import time
 import uuid
 from pathlib import Path
 
 from Backend.config import UPLOAD_DIR
+
+log = logging.getLogger("anda.upload")
 
 MAX_SIZE = 10 * 1024 * 1024  
 ALLOWED_EXT = {"png", "jpg", "jpeg", "gif", "webp", "pdf", "doc", "docx",
@@ -29,6 +32,7 @@ def save_file(user_id: int, filename: str, content_type: str, content: bytes) ->
     # uuid 短后缀：同名文件并发上传也各存各的，不存在"exists 判断-写入"竞态覆盖问题
     target = user_dir / f"{Path(safe_name).stem}-{uuid.uuid4().hex[:8]}.{ext}"
     target.write_bytes(content)
+    log.info("文件上传 -> user_id=%s file=%s（%.1f KB）", user_id, target.name, len(content) / 1024)
 
     return {"ok": True, "data": {
         "file_id": secrets.token_hex(8),
@@ -68,7 +72,9 @@ def delete_file(user_id: int, filename: str) -> dict:
     if not got["ok"]:
         return got
     try:
-        got["data"]["path"].unlink()   
+        got["data"]["path"].unlink()
     except Exception as exc:
+        log.warning("文件删除失败 -> user_id=%s file=%s：%s", user_id, filename, exc)
         return {"ok": False,"code": 44, "message": f"删除失败了 (╯°□°）╯︵ ┻━┻ {exc}"}
+    log.info("文件删除 -> user_id=%s file=%s", user_id, got["data"]["file_name"])
     return {"ok": True, "data": {"file_name": got["data"]["file_name"]}}
