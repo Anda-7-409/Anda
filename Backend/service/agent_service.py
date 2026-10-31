@@ -1,13 +1,17 @@
-from AI import memory, orchestrator
+import json
+
+from AI import orchestrator
 from sqlalchemy.orm import Session
 
 from Backend.models.memo import Memo
 from Backend.models.user import User
-from Backend.service import memo_service, reminder_service, schedule_service, upload_service
+from Backend.service import chat_history_service, memo_service, nav_service, reminder_service, schedule_service, upload_service
 from tool import web_search   
 from tool import doc_parse    
 from tool import image_understand  
 from tool import code_gen
+from tool import image_gen
+from tool import knowledge
 
 orchestrator.TOOLS["schedule_query"] = {
     "desc": "查询用户已录入的课表/日程。用户想知道有什么课、几点上课、某天的课程安排时使用；不用于添加、删除课程，也不用于设置提醒。",
@@ -76,7 +80,8 @@ orchestrator.TOOLS["web_search"] = {
     "desc": "联网搜索实时信息（新闻、热点、百科、官网、天气等）。当问题需要最新/外部信息而模型自己答不了时使用；校园个人数据（课表、提醒、备忘）不要用这个。",
     "keywords": ("搜索", "搜一下", "搜下", "帮我搜", "全网", "网上查", "上网查", "查一下", "查查",
                  "新闻", "热点", "百科", "官网", "网址", "最新消息"),
-    "exclude": ("课表", "提醒", "备忘", "笔记", "我的", "几节课", "有课", "没课"),
+    "exclude": ("课表", "提醒", "备忘", "笔记", "我的", "几节课", "有课", "没课",
+                "导航", "路线", "怎么去", "怎么走"),
     "fn": web_search.search_tool,
 }
 
@@ -95,6 +100,36 @@ orchestrator.TOOLS["code_gen"] = {
     "exclude": ("解释", "讲讲", "讲解", "这段", "哪里错", "报错", "运行", "执行",
                 "课表", "提醒", "备忘", "笔记", "图片", "照片", "验证码", "二维码"),
     "fn": code_gen.code_gen_tool,
+}
+
+orchestrator.TOOLS["nav"] = {
+    "desc": "校园导航与路线规划。用户想知道怎么去某地、导航到某地、两地怎么走时使用；返回距离、预计耗时、路线要点和高德导航链接。不用于搜索信息。",
+    "keywords": ("怎么去", "怎么走", "怎么过去", "过去怎么", "导航", "路线", "带我去",
+                 "如何去", "咋去", "咋走", "规划路线", "多远", "几公里"),
+    "exclude": ("课表", "提醒", "备忘", "笔记", "搜索", "搜一下", "解析", "图片", "删除", "取消"),
+    "fn": nav_service.nav_tool,
+}
+
+orchestrator.TOOLS["image_gen"] = {
+    "desc": "根据文字描述生成一张图片（AI绘画）。用户要求画/生成/绘制图片、海报、logo、插画、头像时使用；不用于识别用户已上传的图片。",
+    "keywords": ("画一张", "画个", "画一", "画幅", "帮我画", "来一张图", "生成图片", "生成一张",
+                 "绘制", "画图", "画个图", "海报", "插画", "头像", "logo", "LOGO"),
+    "exclude": ("识别", "看看", "看一下", "图里", "图片里", "图中", "什么图", "这是什么图",
+                "删除", "上传", "解析", "描述"),
+    "fn": image_gen.image_gen_tool,
+}
+
+orchestrator.TOOLS["knowledge"] = {
+    "desc": "查询安工大（安徽工业大学）校园知识库：食堂美食、宿舍、奖学金、军训、报到、校园跑、体测、晚自习、保研、转专业、快递、图书馆、校区、水电网络等校园生活/制度/设施问题。用户问'学校怎么样/有什么/在哪/怎么办'这类校园问题时使用；不用于课表增删查、提醒备忘、联网搜实时新闻。",
+    "keywords": ("食堂", "好吃", "吃什么", "宿舍", "寝室", "奖学金", "助学金", "军训",
+                 "报到", "开学要", "开学准备", "保研", "转专业", "校园跑", "体测",
+                 "晚自习", "校医院", "快递", "校园卡", "热水", "断电", "断网",
+                 "空调", "图书馆", "佳山", "秀山", "校区", "四六级", "理发",
+                 "安工大", "安徽工业大学", "学费", "缴费", "证件照", "校园网"),
+    "exclude": ("我的课表", "加课", "添加课程", "提醒", "备忘", "搜一下", "帮我搜",
+                "新闻", "热点", "画一张", "识别", "写代码", "解析", "导航", "怎么去",
+                "路线", "删除", "取消"),
+    "fn": knowledge.knowledge_tool,
 }
 
 TEXT_EXT = {"txt", "md", "csv", "json", "log"}
@@ -121,11 +156,39 @@ def _build_ref_block(user: User, refs) -> str:
     return "\n\n".join(parts)
 
 
-def chat(db: Session, user: User, utterance: str, context=None, refs=None) -> dict:
+def chat(db: Session, user: User, utterance: str, context=None, refs=None, chat_id=None) -> dict:
     if not utterance or not utterance.strip():
         return {"ok": False, "message": "内容不能为空哦~ 再输入一次吧 -?v?-"}
     ref_block = _build_ref_block(user, refs)
-    ctx = list(context) if context else memory.recall(user.id)
+    ctx = list(context) if context else chat_history_service.recall_window(db, user.id)
     result = orchestrator.run(user.id, utterance.strip(), ctx, ref_block=ref_block, refs=list(refs or []))
-    memory.remember(user.id, utterance.strip(), result["answer"])  
+    if chat_id:
+        # 带上 chat_id 才落库；页面记录与模型记忆同源（app.db/chat_message）
+        chat_history_service.save_message(db, user.id, chat_id, "user", utterance.strip())
+        chat_history_service.save_message(db, user.id, chat_id, "ai", result["answer"])
     return {"ok": True, "data": result}
+
+def chat_stream(db: Session, user: User, utterance: str, refs=None, chat_id=None):
+    # 流式对话：与 chat() 同一套 ref_block/记忆逻辑；消息实时落库 app.db/chat_message
+    ref_block = _build_ref_block(user, refs)
+    ctx = chat_history_service.recall_window(db, user.id)   # 先取旧上下文再存本轮提问，模型不会重复看到当前问题
+    if chat_id:
+        chat_history_service.save_message(db, user.id, chat_id, "user", utterance.strip())
+    answer, reasoning = "", ""
+    try:
+        for ev in orchestrator.run_stream(user.id, utterance.strip(), ctx,
+                                          ref_block=ref_block, refs=list(refs or [])):
+            yield ev
+            if ev["type"] == "tools":
+                for t in ev.get("tool_calls") or []:
+                    chat_history_service.save_message(
+                        db, user.id, chat_id, "tool",
+                        json.dumps(t.get("result"), ensure_ascii=False), tool=t.get("tool_name", ""))
+            elif ev["type"] == "content":
+                answer += ev["delta"]
+            elif ev["type"] == "reasoning":
+                reasoning += ev["delta"]
+    finally:
+        # finally 保证客户端中途断开时已生成的部分也落库（GeneratorExit 同样走 finally）
+        if chat_id and (answer or reasoning):
+            chat_history_service.save_message(db, user.id, chat_id, "ai", answer, reasoning=reasoning)
