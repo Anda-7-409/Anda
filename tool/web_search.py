@@ -92,10 +92,10 @@ def search(query, max_results=5) -> list:
         try:
             items = fn(query, max_results)
             if items:
-                log.info("嘿嘿！搜索源 %s 返回 %d 条结果", name, len(items))
+                log.info("搜索源 %s 返回 %d 条结果 ヾ(≧▽≦*)o", name, len(items))
                 return items
         except Exception as e:
-            log.warning("嗷！%s 搜索调用失败：%s", name, e)
+            log.warning("%s 搜索调用失败 (＞﹏＜)：%s", name, e)
             probe_down(name)
     return []
 

@@ -41,8 +41,8 @@ def init_db():
     from Backend.models import user, schedule, memo, reminder, chat
     Base.metadata.create_all(bind=engine)
     _migrate_user_columns()
-    print(f"[database] ~已就绪~ ：{APP_DB_PATH.as_posix()}")
+    print(f"[database] 数据库已就绪 (๑•̀ㅂ•́)و✧ {APP_DB_PATH.as_posix()}")
 
 def close_db():
     engine.dispose()
-    print("[database] 关闭了哦~ ")
+    print("[database] 数据库已关闭 (´･ω･`)")
