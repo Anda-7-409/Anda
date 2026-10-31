@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 from .database import init_db, close_db
 
 from fastapi import FastAPI
+from dotenv import load_dotenv
+load_dotenv()
 
 def create_app() -> FastAPI:
     @asynccontextmanager

@@ -213,6 +213,17 @@ a { color:#1a73e8; text-decoration:none; }
   .chat-messages { padding:12px; }
   .chat-input { padding:10px 12px; }
 }
+.think { margin-bottom:6px; border-left:3px solid #a5b4fc; background:#f8fafc; border-radius:6px; font-size:12px; color:#64748b; }
+.think summary { cursor:pointer; padding:4px 8px; user-select:none; }
+.think .think-body { padding:4px 10px 8px; white-space:pre-wrap; max-height:220px; overflow:auto; }
+/* 思维面板内的工具调用行：跟着思维流走，点击可展开返回详情 */
+.think .tool-item { margin:6px 0; border:1px dashed #c7d2fe; border-radius:6px; background:#eef2ff; }
+.think .tool-item summary { cursor:pointer; padding:3px 8px; color:#4f46e5; user-select:none; list-style:none; }
+.think .tool-item summary::-webkit-details-marker { display:none; }
+.think .tool-item summary::after { content:' >'; font-weight:600; }
+.think .tool-item[open] summary::after { content:' ⌄'; }
+.think .tool-item .tool-detail { margin:0; padding:6px 10px; max-height:240px; overflow:auto; white-space:pre-wrap; word-break:break-all; font-size:11px; line-height:1.5; color:#475569; border-top:1px dashed #c7d2fe; }
+.think .reason-text { white-space:pre-wrap; }
 </style>
 </head>
 <body>
@@ -635,7 +646,7 @@ loadFiles();
 let history = (() => { try { return JSON.parse(localStorage.getItem('agent_history') || '[]') || []; } catch { localStorage.removeItem('agent_history'); return []; } })();
 // 渲染历史对话列表
 let currentChatId = null;
-// 保存历史对话到 localStorage
+// 保存历史对话到 localStorage（仅本地缓存；云端由服务端在对话流内落库，前端只拉不推）
 function saveHistory(){ localStorage.setItem('agent_history', JSON.stringify(history)); }
 // 渲染历史对话列表
 function renderHistory() {
@@ -669,6 +680,8 @@ del.onclick = e => {
   e.stopPropagation();
   history = history.filter(x => x.id !== h.id);
   saveHistory();
+  if (token) fetch('/agent/history/' + h.id, { method:'DELETE',
+    headers:{ 'Authorization':'Bearer '+token } }).catch(()=>{});   // 服务端同删，其他设备刷新后也不再出现
   if (currentChatId === h.id) {
     currentChatId = null;
     if (history.length) selectChat(history[0].id); else newChat();
@@ -691,6 +704,7 @@ function selectChat(id) {
     // 切换到指定对话
   currentChatId = id;
   refs = []; renderRefs();   // 引用不跨对话残留：切走就清空，防止上个对话的文件带进这条消息
+  let pendingTools = [];   // 暂存 AI 工具消息，遇到其后的 ai 消息时并入思维面板
     // 渲空对话消息
   const h = history.find(x=>x.id===id);
     // 渲染指定对话的所有消息
@@ -701,7 +715,19 @@ function selectChat(id) {
     // 渲染消息
     // 将消息添加到父元素
     // 渲染历史对话列表
-  (h?.messages||[]).forEach(m => appendMessage(m.role, m.content, m.tool));
+  (h?.messages||[]).forEach(m => {
+    // AI 调用的工具消息（后端落库 role=tool）：不再渲染独立气泡，暂存后并入其后 ai
+    // 消息的思维面板（落库顺序保证 tool 先于 ai）；nav 成功结果额外出导航卡片
+    if (m.role === 'tool' && m.tool && m.tool !== 'upload') {
+      if (m.tool === 'nav') {
+        try { const r = JSON.parse(m.content); if (r && r.ok) appendNavCard(r); } catch {}
+      }
+      pendingTools.push({ tool_name: m.tool, content: m.content });
+      return;
+    }
+    if (m.role === 'user') pendingTools = [];   // 防御：正常落库顺序 tool 总在 ai 前
+    appendMessage(m.role, m.content, m.tool, m.reasoning, pendingTools.splice(0));
+  });
     // 渲染历史对话列表
   renderHistory();
 }
@@ -724,8 +750,8 @@ function newChat() {
 $('new-chat').onclick = newChat;
 
 // ===== 中栏：对话 =====
-// 渲染消息
-function appendMessage(role, content, toolName) {
+// 渲染消息（toolCalls：需要并入思维面板的工具调用记录 [{tool_name,content}]，历史重放用）
+function appendMessage(role, content, toolName, reasoning, toolCalls) {
     // 渲染消息
   const box = $('chat-messages');
   const div = document.createElement('div');
@@ -741,9 +767,26 @@ function appendMessage(role, content, toolName) {
   }
   bubble.className = 'bubble';
     // 设置消息文本内容
-  bubble.textContent = toolName
+  const text = toolName
     ? (toolName === 'upload' ? `文件上传\n${content}` : `调用工具: ${toolName}\n${content}`)
     : content;
+  if (reasoning || (toolCalls && toolCalls.length)) {
+    // 折叠思考面板：思维文本 + 工具调用行（可展开看返回详情），与实时流同一套样式
+    const think = document.createElement('details'); think.className = 'think';
+    think.innerHTML = '<summary>-思考过程-</summary><div class="think-body"></div>';
+    const thinkBody = think.querySelector('.think-body');
+    if (reasoning) {
+      const span = document.createElement('span'); span.className = 'reason-text';
+      span.textContent = reasoning;
+      thinkBody.appendChild(span);
+    }
+    (toolCalls || []).forEach(t => thinkBody.appendChild(makeToolItem(t.tool_name, t.content)));
+    const body = document.createElement('div');
+    body.textContent = text;
+    bubble.append(think, body);
+  } else {
+    bubble.textContent = text;
+  }
     // 将消息添加到父元素
   div.appendChild(bubble); box.appendChild(div);
     // 滚动到最底部
@@ -780,6 +823,97 @@ function appendNavCard(r) {
   div.appendChild(bubble); box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
+// 工具调用行（思维面板内）：一行"调用工具：XXX >"，点击展开看返回详情（实时流与历史重放共用）
+function makeToolItem(toolName, resultJson) {
+  const item = document.createElement('details'); item.className = 'tool-item';
+  const sum = document.createElement('summary');
+  sum.textContent = '调用工具：' + (toolName || 'unknown');
+  const pre = document.createElement('pre'); pre.className = 'tool-detail';
+  pre.textContent = resultJson || '';
+  item.append(sum, pre);
+  return item;
+}
+// 流式对话：SSE 逐块渲染 + 可折叠思考过程面板（模型不下发 reasoning 时自动隐藏）
+async function sendStream(text, refsList) {
+  const div = document.createElement('div'); div.className = 'msg ai';
+  const bubble = document.createElement('div'); bubble.className = 'bubble';
+  const think = document.createElement('details'); think.className = 'think';
+  think.innerHTML = '<summary>-思考过程-</summary><div class="think-body"></div>';
+  const body = document.createElement('div');
+  bubble.append(think, body);
+  div.appendChild(bubble);   // 关键：气泡挂进消息行，否则全程游离、流式渲染不可见
+  const box = $('chat-messages');
+  box.appendChild(div);
+  let answer = '', reasoning = '', sawThink = false;
+  // 思维面板分段渲染：思维文本段与工具调用行按到达顺序交替——工具行天然落在思维流的
+  // 真实时间位置（第几轮调用就在哪），后续思维另起一段，实现"跟着模型的思维面走"
+  const thinkBody = think.querySelector('.think-body');
+  let reasonSpan = null;
+  const newReasonSpan = () => {
+    reasonSpan = document.createElement('span');
+    reasonSpan.className = 'reason-text';
+    thinkBody.appendChild(reasonSpan);
+  };
+  try {
+    const res = await fetch('/agent/chat/stream', { method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
+      body: JSON.stringify({ utterance:text, refs:refsList, chat_id: currentChatId }) });
+    if (!res.ok || !res.body) throw new Error('http ' + res.status);
+    const reader = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream:true });
+      const parts = buf.split('\n\n'); buf = parts.pop();
+      for (const p of parts) {
+        const line = p.trim(); if (!line.startsWith('data:')) continue;
+        const payload = line.slice(5).trim(); if (payload === '[DONE]') continue;
+        let ev; try { ev = JSON.parse(payload); } catch { continue; }
+        if (ev.type === 'tools') {
+          // 工具调用并入思维面板：一行"调用工具：XXX >"，点击展开看返回详情
+          if (!sawThink) { think.open = true; sawThink = true; }
+          reasonSpan = null;   // 工具行截断当前思维段，之后新思维另起一段
+          (ev.tool_calls||[]).forEach(t => {
+            thinkBody.appendChild(makeToolItem(t.tool_name, JSON.stringify(t.result || {}, null, 2)));
+            // nav 的成功结果仍出独立导航卡片（要点按钮直达高德，不能只收在折叠里）
+            if (t.tool_name === 'nav') {
+              try { const r = t.result || {}; if (r.ok) appendNavCard(r); } catch {}
+            }
+          });
+          box.scrollTop = box.scrollHeight;
+        } else if (ev.type === 'reasoning') {
+          if (!sawThink) { think.open = true; sawThink = true; }
+          if (!reasonSpan) newReasonSpan();
+          reasoning += ev.delta;   // 变量留一份入历史，DOM 只管实时显示
+          reasonSpan.textContent += ev.delta;
+          box.scrollTop = box.scrollHeight;
+        } else if (ev.type === 'content') {
+          if (sawThink) think.open = false;   // 正文开始，思考面板自动收起
+          answer += ev.delta; body.textContent = answer;
+          box.scrollTop = box.scrollHeight;
+        } else if (ev.type === 'error') {
+          answer += '\n\n⚠️ ' + (ev.message || '回复中途中断');
+          body.textContent = answer;
+        } else if (ev.type === 'done') {
+          if (ev.answer) { answer = ev.answer; body.textContent = answer; }
+        }
+      }
+    }
+    if (!answer) body.textContent = '（无回复）';
+    // 思考面板没收到任何内容时隐藏，避免留个空壳
+    if (!sawThink) think.style.display = 'none';
+    return { answer, reasoning };
+  } catch {
+    if (answer) {
+      // 连接中断：已收到的内容照常保留并入历史，只追加中断提示（文章 5.3 的工程实践）
+      body.textContent = answer + '\n\n⚠️ 连接中断，回复可能不完整';
+      return { answer, reasoning };
+    }
+    body.textContent = '服务暂不可用，请稍后重试~';
+    think.style.display = 'none';
+    return { answer: '', reasoning: '' };
+  }
+}
 async function send() {
     // 发送消息
     // 渲空对话消息
@@ -805,18 +939,14 @@ async function send() {
     const textRefs = (text.match(/@[^@\s]+\.[A-Za-z0-9]+/g) || []).map(s => s.slice(1));
     const known = new Set(fmFiles.map(f => f.file_name));
     const allRefs = [...new Set([...refs, ...textRefs.filter(n => known.has(n))])];
-    const {ok, data} = await api('/agent/chat', { method:'POST', body:JSON.stringify({utterance:text, refs:allRefs}) });
-    if (ok && data?.data) {
-      const d = data.data;
-      (d.tool_calls||[]).forEach(t => appendMessage('tool', JSON.stringify(t.result||{}, null, 2), t.tool_name));
-      appendMessage('ai', d.answer || data.message || '（无回复）');
-      h.messages.push({role:'ai', content:d.answer||''});
+    const { answer, reasoning } = await sendStream(text, allRefs);
+    if (answer) {
+      h.messages.push({role:'ai', content:answer, reasoning});   // reasoning 一并入历史，刷新/重放可重建思考面板
       refs = []; renderRefs();   // 发送成功后清空卡片；失败保留，方便直接重发
-    } else {
-      appendMessage('ai', '服务暂不可用（' + (data.message||'后端未启动') + '）');
     }
-  } catch {
-    appendMessage('ai', '网络错误，请稍后重试吧~ ：v:');
+  } catch (err) {
+    console.error('send failed:', err);   // 前端异常至少可见，避免静默无反应
+    appendMessage('ai', '出错了：' + (err && err.message || '未知错误') + '，请按 F12 看控制台详情');
   } finally { saveHistory(); btn.disabled = false; input.focus(); loadSchedule(); loadReminders(); }   // 对话里可能刚改了课表/备忘/提醒，右栏立即同步
 }
 $('send-btn').onclick = send;
@@ -1270,6 +1400,27 @@ window.addEventListener('focus', pollDue);   // 窗口重新获得焦点立即�
 renderHistory();
 // 初始化时，选择第一个对话
 if (history.length) selectChat(history[0].id); else newChat();
+
+// ===== 聊天记录跨设备同步：登录后以服务端为准（换浏览器/换设备能看到完整记录） =====
+(async () => {
+  if (!token) return;
+  try {
+    const res = await fetch('/agent/history', { headers:{ 'Authorization':'Bearer '+token } });
+    if (!res.ok) return;
+    const r = await res.json();
+    if (r.code !== 0 || !Array.isArray(r.data) || !r.data.length) return;
+    // 云端有记录：云端为准覆盖本地，顺带清掉同浏览器换账号时的残留记录
+    history = r.data;
+    localStorage.setItem('agent_history', JSON.stringify(history));
+    if (history.some(x => x.id === currentChatId)) {
+      selectChat(currentChatId);            // 当前对话云端也有 → 用云端内容重放
+    } else {
+      currentChatId = null;
+      $('chat-messages').innerHTML = '';
+      renderHistory();
+    }
+  } catch { /* 后端不可达：继续用本地缓存 */ }
+})();
 
 // ===== 上报当前位置（导航工具依赖 /nav/location，后端缓存30分钟） =====
 // 浏览器首次会弹定位授权；拒绝也不影响其他功能，只是对话问"怎么去XX"时会提示先点 📍 按钮

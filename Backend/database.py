@@ -21,7 +21,7 @@ def get_db():
 def init_db():
     from Backend.models.memo import Memo
     Data_Dir.mkdir(parents=True, exist_ok=True)
-    from Backend.models import user, schedule, memo, reminder
+    from Backend.models import user, schedule, memo, reminder, chat
     Base.metadata.create_all(bind=engine)
     print(f"[database] ~已就绪~ ：{APP_DB_PATH.as_posix()}")
 

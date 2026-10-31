@@ -7,6 +7,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from AI import model_router
+from AI.model_router import NoModelError   # 模型全挂的降级分支要用，漏 import 会 NameError
 from Backend.database import SessionLocal
 from Backend.models.schedule import Course
 
@@ -38,7 +39,7 @@ def week_courses(db: Session, user_id: int) -> dict:
 
 def add_course(db: Session, user_id: int, req) -> dict:
     if req.end_slot < req.start_slot:
-        return {"ok": False, "message": "结束节次不能早于开始节次哦~ ?-?"}
+        return {"ok": False,"code": 26, "message": "结束节次不能早于开始节次哦~ ?-?"}
     course = Course(
         user_id=user_id,
         name=req.name.strip(),
@@ -56,7 +57,7 @@ def add_course(db: Session, user_id: int, req) -> dict:
 def delete_course(db: Session, user_id: int, course_id: int) -> dict:
     course = db.query(Course).filter(Course.id == course_id, Course.user_id == user_id).first()
     if not course:
-        return {"ok": False, "message": "课程不存在或不属于你哦~"}
+        return {"ok": False,"code": 27, "message": "课程不存在或不属于你哦~"}
     db.delete(course)
     db.commit()
     return {"ok": True, "data": {"id": course_id}}
@@ -125,14 +126,16 @@ def add_tool(utterance: str, user_id: int, **_) -> dict:
         {"role": "user", "content":
             f"今天是{WEEK_CN[today]}(weekday={today})，明天是{WEEK_CN[tomorrow]}(weekday={tomorrow})。用户话术：{utterance}"},
     ]
-    text, provider = model_router.chat(messages)
-    if not text:
-        return {"ok": False, "error": "抽取模型暂不可用，稍后重试或走 POST /schedule/courses 手动添加"}
+    try:
+        msg, provider = model_router.chat("reasoning", messages)
+        text = (msg or {}).get("content") or ""
+    except NoModelError:
+        return {"ok": False,"code": 12, "error": "抽取模型暂不可用，请稍后重试或手动添加"}
     data = _parse_json(text)
     if not data:
-        return {"ok": False, "error": "没听懂要加什么课", "hint": "追问用户：课程名、星期几、第几节"}
+        return {"ok": False,"code": 13, "error": "没有成功识别用户意图", "hint": "追问用户：课程名、星期几、第几节"}
     if "error" in data:
-        return {"ok": False, "error": str(data["error"]), "hint": "信息不全，向用户追问后再调用本工具"}
+        return {"ok": False,"code": 14, "error": str(data["error"]), "hint": "信息不全，向用户追问后再调用本工具"}
     try:
         req = SimpleNamespace(
             name=str(data.get("name") or "").strip(),
@@ -143,15 +146,15 @@ def add_tool(utterance: str, user_id: int, **_) -> dict:
             end_slot=int(data.get("end_slot") or data["start_slot"]),
         )
     except (KeyError, TypeError, ValueError):
-        return {"ok": False, "error": "抽取结果字段异常", "raw": str(data)[:200]}
+        return {"ok": False,"code": 15, "error": "抽取结果字段异常", "raw": str(data)[:200]}
     if not req.name:
-        return {"ok": False, "error": "缺少课程名称"}
+        return {"ok": False,"code": 16, "error": "缺少课程名称"}
     if not 1 <= req.weekday <= 7:
-        return {"ok": False, "error": f"星期几超出范围：{req.weekday}"}
+        return {"ok": False,"code": 17, "error": f"星期几超出范围：{req.weekday}"}
     if not (1 <= req.start_slot <= 12 and 1 <= req.end_slot <= 12):
-        return {"ok": False, "error": "节次需在 1-12 之间"}
+        return {"ok": False,"code": 28, "error": "节次需在 1-12 之间"}
     if req.end_slot < req.start_slot:
-        return {"ok": False, "error": "结束节次不能早于开始节次"}
+        return {"ok": False,"code": 29, "error": "结束节次不能早于开始节次 "}
     with SessionLocal() as db:
         result = add_course(db, user_id, req)  
     if not result["ok"]:
