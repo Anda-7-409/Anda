@@ -30,6 +30,7 @@
             "model_name":"XingChenAGI/Xing4.0-29B",
             "extra_body":{"enable_thinking":true},
             "timeout":120,
+            "stream_timeout":45,
             "ability_weights":{"chat": 9, "tool_use": 8, "code": 8, "reasoning": 8, "long_context": 10,"general": 9},
             "default":true
         },

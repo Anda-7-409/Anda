@@ -5,7 +5,7 @@ import re
 import sqlite3
 from pathlib import Path
 
-from AI import model_router
+from AI import model_router, prompts
 from Backend.config import Knowledge_DB_PATH
 
 KB_FILE = Path(__file__).parent.parent / "Data" / "Knowledge.txt"
@@ -115,10 +115,9 @@ def knowledge_tool(utterance, user_id, **_):
     block = "\n\n".join(f"【片段{i + 1}】\n{c}" for i, (_, c) in enumerate(hits))
     try:
         msg, _ = model_router.chat("general", [
-            {"role": "system", "content":
-                "你是校园AI助手安答。根据给定的知识库片段回答问题：多个片段的信息可以互补综合；"
-                "与问题无关的片段直接忽略；只有片段完全答不了才说不知道，不要编造。回答简洁友好。"},
-            {"role": "user", "content": f"知识库片段：\n{block}\n\n问题：{utterance.strip()}"},
+            {"role": "system", "content": prompts.P("knowledge.sys_rag")},
+            {"role": "user", "content": prompts.P(
+                "knowledge.user_rag", block=block, utterance=utterance.strip())},
         ])
         answer = (msg.get("content") or "").strip()
     except Exception:

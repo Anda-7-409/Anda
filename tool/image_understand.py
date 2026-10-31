@@ -3,7 +3,7 @@
 import base64
 from pathlib import Path
 
-from AI import model_router
+from AI import model_router, prompts
 from Backend.service import upload_service
 
 _MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
@@ -25,11 +25,11 @@ def image_understand_tool(utterance="", user_id=None, refs=None, **_) -> dict:
         if p.suffix.lower() in _MIME and p.is_file():
             break
     else:
-        return {"ok": False, "error": "本次对话里没有可识别的图片，请先上传一张图片再问我"}
+        return {"ok": False, "error": "嗷！本次对话里没有可识别的图片，请先上传一张图片再问我"}
 
     b64 = base64.b64encode(p.read_bytes()).decode()
     mime = _MIME[p.suffix.lower()]
-    question = (utterance or "").strip() or "请描述这张图片的内容"
+    question = (utterance or "").strip() or prompts.P("image_understand.default_question")
     messages = [{"role": "user", "content": [
         {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
         {"type": "text", "text": question},

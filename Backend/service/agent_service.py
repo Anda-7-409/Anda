@@ -1,17 +1,19 @@
 import json
 
-from AI import orchestrator
+from AI import orchestrator, prompts
 from sqlalchemy.orm import Session
 
 from Backend.models.memo import Memo
 from Backend.models.user import User
 from Backend.service import chat_history_service, memo_service, nav_service, reminder_service, schedule_service, upload_service
+from Backend.service import ics_service
 from tool import web_search   
 from tool import doc_parse    
 from tool import image_understand  
 from tool import code_gen
 from tool import image_gen
 from tool import knowledge
+from tool import translation
 
 orchestrator.TOOLS["schedule_query"] = {
     "desc": "查询用户已录入的课表/日程。用户想知道有什么课、几点上课、某天的课程安排时使用；不用于添加、删除课程，也不用于设置提醒。",
@@ -54,6 +56,15 @@ orchestrator.TOOLS["reminder_query"] = {
                  "该提醒", "提醒事项", "待办提醒", "提醒我什么", "看提醒", "提醒过我", "提醒记录", "提醒了吗"),
     "exclude": ("添加", "设置", "设个", "定个", "加个", "叫我", "喊我", "催我", "闹钟", "新建", "录入"),
     "fn": reminder_service.query_tool,
+}
+
+orchestrator.TOOLS["calendar_export"] = {
+    "desc": "把课表/提醒导出到手机或电脑的系统日历：返回课程表订阅链接（webcal，订阅一次后每周课程自动同步）"
+            "和提醒 ICS 日历文件下载链接。用户说'加到日历/订阅课表/导出日历/日历文件/ics/同步到日历'时使用。",
+    "keywords": ("日历", "订阅", "ics", "ICS", "导出课表", "导出提醒", "加到日历", "加入日历",
+                 "同步到日历", "日历文件", "订阅课表", "订阅提醒", "日历提醒"),
+    "exclude": ("删除", "移除", "取消", "退订"),
+    "fn": ics_service.calendar_export_tool,
 }
 
 orchestrator.TOOLS["doc_parse"] = {
@@ -132,6 +143,15 @@ orchestrator.TOOLS["knowledge"] = {
     "fn": knowledge.knowledge_tool,
 }
 
+orchestrator.TOOLS["translation"] = {
+    "desc": "文本翻译：把一段话在中文/英文/日文/韩文/法文等语言间互译。用户明确要求'翻译'某段文字、问'用英语怎么说'时使用；不用于搜索、解析文档、生成代码。",
+    "keywords": ("翻译", "译成", "译为", "译一下", "帮我译", "怎么用英语说", "怎么用英文说",
+                 "用英语说", "用英文说", "中译英", "英译中"),
+    "exclude": ("搜索", "搜一下", "新闻", "热点", "画一张", "识别", "写代码", "解析",
+                "课表", "提醒", "备忘", "导航", "食堂", "宿舍"),
+    "fn": translation.translation_tool,
+}
+
 TEXT_EXT = {"txt", "md", "csv", "json", "log"}
 REF_MAX_CHARS = 4000   
 
@@ -152,7 +172,7 @@ def _build_ref_block(user: User, refs) -> str:
             except Exception:
                 parts.append(f"（引用文件 {name} 读取失败）")
         else:
-            parts.append(f"（用户引用了文件 {name}，类型 .{ext}，非文本文件内容未注入；若用户在问图片相关内容，请基于图片理解工具的真实结果回答）")
+            parts.append(prompts.P("agent_service.ref_non_text", name=name, ext=ext))
     return "\n\n".join(parts)
 
 

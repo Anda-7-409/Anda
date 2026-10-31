@@ -36,7 +36,7 @@ def chat(ability: str, messages: list, tools=None):
             if (msg.get("content") or "").strip() or msg.get("tool_calls"):
                 return msg, f"{m.get('provider', 'unknown')}:{mid}"
         except Exception as e:
-            log.warning("model %s failed: %s", mid, e)
+            log.warning("嗷！%s 模型调用失败：%s", mid, e)
     raise NoModelError(ability)
 
 def embed(texts: list):
@@ -58,8 +58,30 @@ def embed(texts: list):
                 continue
             return [d["embedding"] for d in data]
         except Exception as e:
-            log.warning("embed model %s failed: %s", mid, e)
+            log.warning("嗷！嵌入模型 %s 也挂啦：-： %s", mid, e)
     raise NoModelError("embedding")
+
+def transcribe(audio: bytes, filename="audio.wav"):
+    # 语音转文字：audio/transcriptions 端点（multipart 上传，OpenAI whisper 兼容格式），
+    # 按 asr 权重滑链，返回转写文本；全部失败抛 NoModelError
+    for mid in _chain("asr"):
+        m = _MODELS[mid]
+        if not m["endpoint"].rstrip("/").endswith("transcriptions"):
+            continue
+        headers = {"Authorization": f"Bearer {os.environ[m['api_key_env']]}"
+                   } if m.get("api_key_env") else {}
+        try:
+            r = httpx.post(m["endpoint"], headers=headers,
+                           data={"model": m["model_name"]},
+                           files={"file": (filename, audio)},
+                           timeout=m.get("timeout", 100))
+            r.raise_for_status()
+            text = (r.json().get("text") or "").strip()
+            if text:
+                return text
+        except Exception as e:
+            log.warning("嗷！ASR模型 %s 挂啦 ：-： %s", mid, e)
+    raise NoModelError("asr")
 
 def status():
     return {mid: {"ok": bool(not m.get("api_key_env") or os.getenv(m["api_key_env"]))}
@@ -164,7 +186,7 @@ def chat_stream(ability: str, messages: list, tools=None):
                 if got:
                     return
         except Exception as e:
-            log.warning("stream model %s failed: %s", mid, e)
+            log.warning("嗷！%s 流式调用失败：%s", mid, e)
     # 如果全部流式失败则采用非流式
     try:
         msg, provider = chat(ability, messages, tools)

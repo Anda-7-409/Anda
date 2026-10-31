@@ -92,9 +92,10 @@ def search(query, max_results=5) -> list:
         try:
             items = fn(query, max_results)
             if items:
+                log.info("嘿嘿！搜索源 %s 返回 %d 条结果", name, len(items))
                 return items
         except Exception as e:
-            log.warning("search source %s failed: %s", name, e)
+            log.warning("嗷！%s 搜索调用失败：%s", name, e)
             probe_down(name)
     return []
 
@@ -105,7 +106,7 @@ def status() -> dict:
 def search_tool(utterance="", user_id=None, refs=None, **_) -> dict:
     q = (utterance or "").strip()
     if not q:
-        return {"ok": False, "error": "没有可搜索的内容"}
+        return {"ok": False, "error": "嗷！没有可搜索的内容"}
     results = search(q, 5)
     if not results:
         return {"ok": False, "error": "搜索服务暂时都不可用，请稍后再试"}

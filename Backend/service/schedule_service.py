@@ -40,9 +40,19 @@ def week_courses(db: Session, user_id: int) -> dict:
 def add_course(db: Session, user_id: int, req) -> dict:
     if req.end_slot < req.start_slot:
         return {"ok": False,"code": 26, "message": "结束节次不能早于开始节次哦~ ?-?"}
+    name = req.name.strip()
+    # 防重：同一用户同时段同课程名已存在 → 幂等返回既有记录，不再插入
+    # （FC 抖动重复调用工具/用户重复添加会造出脏数据，导出日历就会出现同时间重叠事件）
+    exists = db.query(Course).filter(
+        Course.user_id == user_id, Course.name == name,
+        Course.weekday == req.weekday, Course.start_slot == req.start_slot,
+        Course.end_slot == req.end_slot).first()
+    if exists:
+        return {"ok": True, "code": 0, "data": _to_dict(exists),
+                "message": "这门课已经在课表里啦，就不重复添加了哦~"}
     course = Course(
         user_id=user_id,
-        name=req.name.strip(),
+        name=name,
         teacher=(req.teacher or "").strip(),
         classroom=(req.classroom or "").strip(),
         weekday=req.weekday,
