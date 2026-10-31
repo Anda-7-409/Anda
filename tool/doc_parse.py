@@ -2,7 +2,7 @@
 # 契约（docs/refactoring.md 3.2）：refs 文件名列表；用户带问题时用 general 模型基于提取文本作答
 from pathlib import Path
 
-from AI import model_router
+from AI import model_router, prompts
 from Backend.service import upload_service
 
 _TEXT_EXT = {"txt", "md", "csv", "py", "js", "ts", "java", "c", "cpp", "go", "html",
@@ -80,8 +80,7 @@ def doc_parse_tool(utterance="", user_id=None, refs=None, **_) -> dict:
     if q and any(w in q for w in _QWORDS):   # 带问题时：general 模型基于提取文本作答
         try:
             msg, provider = model_router.chat("general", [{"role": "user", "content":
-                f"以下是文档《{p.name}》的内容：\n\n{text[:20000]}\n\n用户问题：{q}\n"
-                "请基于文档内容回答；文档里没有的信息要明确说明。"}])
+                prompts.P("doc_parse.user_qa", name=p.name, text=text[:20000], q=q)}])
             if (msg or {}).get("content"):
                 result["answer"] = msg["content"].strip()
                 result["provider"] = provider

@@ -168,9 +168,16 @@ def set_tool(utterance: str, user_id: int, **_) -> dict:
                            "reminder_time": time_str})()
     with SessionLocal() as db:
         result = set_reminder(db, user_id, req)
+        # 顺带生成日历导出链接（AI 回答里原样给出，用户点击即下载 .ics 导入系统日历）
+        ics_url = ""
+        from Backend.models.user import User
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            from Backend.service import ics_service
+            ics_url = ics_service.reminder_ics_url(user, result["data"]["id"])
     if not result["ok"]:
         return {"ok": False,"code": 19, "error": result["message"]}
-    return {"ok": True, "reminder": result["data"], "extracted_by": provider}
+    return {"ok": True, "reminder": result["data"], "extracted_by": provider, "ics_url": ics_url}
 
 def query_tool(utterance: str, user_id: int, **_) -> dict:
     with SessionLocal() as db:

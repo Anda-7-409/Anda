@@ -2,7 +2,7 @@
 # 契约（docs/refactoring.md 3.2）：model_router.chat("code")；产物存用户云盘，经 /upload/download 下载
 import time
 
-from AI import model_router
+from AI import model_router, prompts
 from Backend import config
 from Backend.service import upload_service
 
@@ -29,7 +29,7 @@ def code_gen_tool(utterance="", user_id=None, refs=None, **_) -> dict:
         return {"ok": False, "error": "没有描述要生成什么代码"}
     try:
         msg, provider = model_router.chat("code", [{"role": "user", "content":
-            f"生成满足以下需求的完整可运行代码，只输出一段代码并用 ```语言 标注语言：\n{task}"}])
+            prompts.P("code_gen.user", task=task)}])
     except Exception as e:
         return {"ok": False, "error": "代码模型暂时都不可用，请稍后再试", "hint": str(e)[:80]}
     code, ext = _extract((msg or {}).get("content") or "")

@@ -144,6 +144,9 @@ a { color:#1a73e8; text-decoration:none; }
 .upload-btn { width:34px; height:34px; border:none; border-radius:50%; background:#f0f4ff;color:#1a73e8; font-size:18px; cursor:pointer; line-height:1; user-select:none; transition:all .15s; }
 /* 模型选择已改为后端自动路由，前端不再提供手动切换 */
 .upload-btn:hover { background:#1a73e8; color:#fff; transform:scale(1.1); }
+/* 麦克风录音中：红色呼吸 */
+.mic-rec { background:#ff4d4f !important; color:#fff !important; animation:mic-pulse 1.2s ease-in-out infinite; }
+@keyframes mic-pulse { 0%,100%{ box-shadow:0 0 0 0 rgba(255,77,79,.45);} 50%{ box-shadow:0 0 0 7px rgba(255,77,79,0);} }
 .send-btn { padding:8px 24px; height:34px;background:linear-gradient(180deg,#69b1ff 0%,#5048e5 45%,#722ed1 100%); color:#fff; border:none; border-radius:20px; cursor:pointer; font-size:14px;font-weight:600;box-shadow:0 2px 0 #1557b0,0 4px 12px rgba(26,115,232,.35);transition:all .2s ease; }
 .send-btn:disabled { background:#9dc3f5; cursor:not-allowed; }
 .send-btn:hover:not(:disabled) { transform:translateY(-1px);box-shadow:0 2px 0 #1557b0,0 6px 18px rgba(26,115,232,.5); }
@@ -223,6 +226,9 @@ a { color:#1a73e8; text-decoration:none; }
 .think .tool-item summary::after { content:' >'; font-weight:600; }
 .think .tool-item[open] summary::after { content:' ⌄'; }
 .think .tool-item .tool-detail { margin:0; padding:6px 10px; max-height:240px; overflow:auto; white-space:pre-wrap; word-break:break-all; font-size:11px; line-height:1.5; color:#475569; border-top:1px dashed #c7d2fe; }
+.think .tool-pending { margin:6px 0; border:1px dashed #c7d2fe; border-radius:6px; background:#eef2ff; padding:3px 8px; color:#4f46e5; font-size:12px; }
+.think .tool-pending::after { content:'…'; animation: anda-dots 1.2s steps(1,end) infinite; }
+@keyframes anda-dots { 0%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'} }
 .think .reason-text { white-space:pre-wrap; }
 </style>
 </head>
@@ -289,6 +295,7 @@ a { color:#1a73e8; text-decoration:none; }
         <!-- 对话区输入发送按钮 -->
       <div class="chat-input-row">
   <button class="upload-btn" id="loc-btn" title="上报当前位置（问“怎么去XX”前先点我）">📍</button>
+  <button class="upload-btn" id="mic-btn" title="语音输入：点一下开始说，说完再点一下">🎤</button>
   <button class="upload-btn" id="upload-btn" title="上传文件 / 照片">＋</button>
   <input type="file" id="file-input" multiple hidden>
   <button class="send-btn" id="send-btn">发送</button>
@@ -301,7 +308,7 @@ a { color:#1a73e8; text-decoration:none; }
     <!-- 日程卡片标题 -->
     <section class="panel schedule">
         <!-- 日程卡片标题 -->
-      <div class="panel-header"><span>今日日程</span><span class="add-btn" id="add-memo-btn" title="添加日程">+</span></div>
+      <div class="panel-header"><span>今日日程</span><span><span class="add-btn" id="ics-subscribe-btn" title="订阅课表到系统日历（ICS）">📅</span><span class="add-btn" id="add-memo-btn" title="添加日程">+</span></span></div>
       <div class="memo-box" id="memo-box">
         <input id="memo-input" placeholder="输入备忘录，回车确认">
         <button id="memo-confirm">添加</button>
@@ -311,7 +318,7 @@ a { color:#1a73e8; text-decoration:none; }
     </section>
         <!-- 提醒卡片 -->
     <section class="panel reminders">
-      <div class="panel-header"><span>提醒</span><span class="add-btn" id="add-reminder-btn" title="添加提醒">+</span></div>
+      <div class="panel-header"><span>提醒</span><span><span class="add-btn" id="reminder-ics-all" title="全部提醒打包导出为 ICS 日历文件">⬇</span><span class="add-btn" id="add-reminder-btn" title="添加提醒">+</span></span></div>
       <div class="reminder-box" id="reminder-box">
         <input id="reminder-input" placeholder="提醒内容，如：交高数作业">
         <input type="time" id="reminder-time">
@@ -849,6 +856,7 @@ async function sendStream(text, refsList) {
   // 真实时间位置（第几轮调用就在哪），后续思维另起一段，实现"跟着模型的思维面走"
   const thinkBody = think.querySelector('.think-body');
   let reasonSpan = null;
+  let pendTool = null;   // "正在调用工具"占位行，结果到达后替换为真实工具行
   const newReasonSpan = () => {
     reasonSpan = document.createElement('span');
     reasonSpan.className = 'reason-text';
@@ -869,8 +877,19 @@ async function sendStream(text, refsList) {
         const line = p.trim(); if (!line.startsWith('data:')) continue;
         const payload = line.slice(5).trim(); if (payload === '[DONE]') continue;
         let ev; try { ev = JSON.parse(payload); } catch { continue; }
-        if (ev.type === 'tools') {
+        if (ev.type === 'tool_start') {
+          // 执行前先亮出"正在调用工具：XXX"占位行，结果到达（tools 事件）后替换为可展开详情
+          if (!sawThink) { think.open = true; sawThink = true; }
+          reasonSpan = null;
+          if (pendTool) pendTool.remove();
+          pendTool = document.createElement('div');
+          pendTool.className = 'tool-pending';
+          pendTool.textContent = '正在调用工具：' + ((ev.names || []).join('、') || '…');
+          thinkBody.appendChild(pendTool);
+          box.scrollTop = box.scrollHeight;
+        } else if (ev.type === 'tools') {
           // 工具调用并入思维面板：一行"调用工具：XXX >"，点击展开看返回详情
+          if (pendTool) { pendTool.remove(); pendTool = null; }   // 占位行让位给真实结果
           if (!sawThink) { think.open = true; sawThink = true; }
           reasonSpan = null;   // 工具行截断当前思维段，之后新思维另起一段
           (ev.tool_calls||[]).forEach(t => {
@@ -878,6 +897,16 @@ async function sendStream(text, refsList) {
             // nav 的成功结果仍出独立导航卡片（要点按钮直达高德，不能只收在折叠里）
             if (t.tool_name === 'nav') {
               try { const r = t.result || {}; if (r.ok) appendNavCard(r); } catch {}
+            }
+            // 提醒设置成功 → 自动下载 ICS 日历文件，引导用户用系统日历打开（到点前至少5分钟响铃）
+            if (t.tool_name === 'reminder_set') {
+              try {
+                const r = t.result || {};
+                if (r.ok && r.reminder?.id) {
+                  downloadIcs('/reminder/' + r.reminder.id + '/ics', 'reminder-' + r.reminder.id + '.ics',
+                    '已自动下载提醒的日历文件，请用系统日历打开（双击文件或在日历App里导入），到点前至少5分钟会响铃');
+                }
+              } catch {}
             }
           });
           box.scrollTop = box.scrollHeight;
@@ -950,6 +979,76 @@ async function send() {
   } finally { saveHistory(); btn.disabled = false; input.focus(); loadSchedule(); loadReminders(); }   // 对话里可能刚改了课表/备忘/提醒，右栏立即同步
 }
 $('send-btn').onclick = send;
+// ===== 输入区：语音输入 —— WebAudio 采 PCM 编码 WAV → /asr 转写 → 文字回填输入框 =====
+// 为什么用 WAV：所有 ASR 服务都吃 WAV，不赌浏览器 MediaRecorder 的 webm/opus 兼容性
+let rec = null;   // 录音会话 {stream, ctx, node, chunks, start, timer}
+const MAX_REC_MS = 60 * 1000;
+
+function encodeWav(chunks, sampleRate) {
+  const len = chunks.reduce((a, c) => a + c.length, 0);
+  const buf = new ArrayBuffer(44 + len * 2); const v = new DataView(buf);
+  const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0,'RIFF'); v.setUint32(4, 36 + len*2, true); ws(8,'WAVE'); ws(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,sampleRate,true); v.setUint32(28,sampleRate*2,true);
+  v.setUint16(32,2,true); v.setUint16(34,16,true); ws(36,'data'); v.setUint32(40,len*2,true);
+  let off = 44;
+  for (const c of chunks) for (let i = 0; i < c.length; i++, off += 2) {
+    const s = Math.max(-1, Math.min(1, c[i]));
+    v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
+function stopRec(send = true) {
+  if (!rec) return;
+  const { stream, ctx, node, chunks, timer, start } = rec; rec = null;
+  clearInterval(timer);
+  try { node.disconnect(); stream.getTracks().forEach(t => t.stop()); ctx.close(); } catch {}
+  const mic = $('mic-btn');
+  mic.classList.remove('mic-rec'); mic.textContent = '…';
+  if (!send) { mic.textContent = '🎤'; return; }
+  const blob = encodeWav(chunks, ctx.sampleRate);
+  if (blob.size < 2000) { mic.textContent = '🎤'; alert('没录到声音，再试一次吧 ~'); return; }
+  const fd = new FormData(); fd.append('audio', blob, 'voice.wav');
+  fetch('/asr', { method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd })
+    .then(r => r.json().then(j => ({ ok: r.ok, j })).catch(() => ({ ok: r.ok, j: {} })))
+    .then(({ ok, j }) => {
+      const text = ok && j.code === 0 ? ((j.data && j.data.text) || '') : '';
+      if (text) {
+        const input = $('chat-input');
+        input.value = input.value ? input.value + ' ' + text : text;   // 回填输入框，用户确认修正后再发
+        input.focus();
+      } else {
+        alert((j && (j.message || j.detail)) || '语音识别失败，请直接打字 ~');
+      }
+    })
+    .catch(() => alert('语音服务不可用，请直接打字 ~'))
+    .finally(() => { $('mic-btn').textContent = '🎤'; });
+}
+
+$('mic-btn').onclick = async () => {
+  if (rec) { stopRec(true); return; }   // 再点一下 = 说完了，停止并转写
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { alert('无法访问麦克风，请检查浏览器权限（地址栏左侧允许麦克风）'); return; }
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const src = ctx.createMediaStreamSource(stream);
+  const node = ctx.createScriptProcessor(4096, 1, 1);
+  const mute = ctx.createGain(); mute.gain.value = 0;   // ScriptProcessor 须连到 destination 才出数据，静音防回声
+  const chunks = [];
+  node.onaudioprocess = e => { if (rec) chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+  src.connect(node); node.connect(mute); mute.connect(ctx.destination);
+  rec = { stream, ctx, node, chunks, start: Date.now(), timer: null };
+  const mic = $('mic-btn');
+  mic.classList.add('mic-rec'); mic.textContent = '⏹ 0s';
+  rec.timer = setInterval(() => {
+    if (!rec) return;
+    const sec = Math.round((Date.now() - rec.start) / 1000);
+    mic.textContent = '⏹ ' + sec + 's';
+    if (Date.now() - rec.start >= MAX_REC_MS) stopRec(true);   // 60s 自动停并转写
+  }, 250);
+};
 // ===== 输入区左下角：上传文件 —— 逻辑链：选择→校验→上传→进度→结果→失败可重试 =====
 const MAX_SIZE = 10 * 1024 * 1024;
 const MAX_FILES = 5;
@@ -1268,6 +1367,16 @@ function renderReminder(r) {
   div.className = 'sch-item reminder-item';
   const t = document.createElement('div');
   t.className = 't'; t.textContent = r.reminder_type;
+  // ICS 导出：把这条提醒加进系统日历（导入后日历 App 会在事件前至少 5 分钟响铃）
+  if (!reminderLocal && r.id && r.reminder_time) {
+    const ics = document.createElement('span');
+    ics.className = 'memo-del'; ics.textContent = '📅'; ics.style.opacity = '.55'; ics.title = '导出为 ICS 日历文件';
+    ics.onclick = async e => {
+      e.stopPropagation();
+      await downloadIcs('/reminder/' + r.id + '/ics', 'reminder-' + r.id + '.ics');
+    };
+    t.appendChild(ics);
+  }
   const del = document.createElement('span');
   del.className = 'memo-del'; del.textContent = '×';
   del.onclick = async () => {
@@ -1307,7 +1416,12 @@ async function addReminder() {
     reminderList.push(r); saveReminders(); renderReminder(r);
   } else {
     const {ok, data} = await api('/reminder/set', { method:'POST', body: JSON.stringify({ reminder_type: text, reminder_time: time }) });
-    if (ok && data?.code === 0) { reminderList.push(data.data); renderReminder(data.data); }
+    if (ok && data?.code === 0) {
+      reminderList.push(data.data); renderReminder(data.data);
+      // 带时间的提醒落库成功 → 自动下载 ICS 日历文件（没设时间导不了事件，静默跳过）
+      if (time && data.data?.id) downloadIcs('/reminder/' + data.data.id + '/ics', 'reminder-' + data.data.id + '.ics',
+        '已自动下载提醒的日历文件，请用系统日历打开（双击文件或在日历App里导入），到点前至少5分钟会响铃');
+    }
     else { toast('添加失败：' + (data.message || data.detail || '后端未启动')); return; }
   }
   input.value = ''; $('reminder-time').value = '';
@@ -1317,6 +1431,36 @@ $('add-reminder-btn').onclick = () => { reminderBox.classList.toggle('show'); $(
 $('reminder-input').addEventListener('keydown', e => { if (e.key === 'Enter') addReminder(); });
 $('reminder-confirm').onclick = addReminder;
 loadReminders();
+
+// ===== ICS 日历导出：单个提醒 📅 / 全部打包 ⬇ / 课表订阅 📅 =====
+// 下载 .ics 必须带 Bearer 头（浏览器直开链接不会带 Authorization），所以用 fetch+blob 落盘
+async function downloadIcs(path, filename, tip) {
+  try {
+    const res = await fetch(path, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
+    if (!res.ok) { toast('导出失败：' + (res.status === 401 ? '登录过期' : 'HTTP ' + res.status)); return; }
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast(tip || ('已下载 ' + filename + '，打开即可导入系统日历（会提前至少5分钟提醒）'));
+  } catch { toast('导出失败：后端未启动或网络异常'); }
+}
+$('reminder-ics-all').onclick = () => downloadIcs('/reminder/all/ics', 'anda-reminders.ics');
+
+$('ics-subscribe-btn').onclick = async () => {
+  // 课表订阅：webcal 链接交给系统唤起日历 App；https 链接复制兜底（手动"添加订阅日历"粘贴）
+  const {ok, data} = await api('/schedule/ics/token');
+  const info = ok && data?.code === 0 ? data.data : null;
+  if (!info) { toast('获取订阅链接失败：' + (data?.message || data?.detail || '后端未启动')); return; }
+  try { await navigator.clipboard.writeText(info.https_url); } catch {}
+  const go = confirm('课程表订阅（每周自动同步）\n\n'
+    + 'webcal 链接（点击确定自动唤起日历App）：\n' + info.webcal_url + '\n\n'
+    + 'https 链接（已复制到剪贴板，可在日历App"添加订阅日历"手动粘贴）：\n' + info.https_url + '\n\n'
+    + '提示：改密码后订阅链接会失效，需重新订阅。确定=用 webcal 链接唤起日历App');
+  if (go) location.href = info.webcal_url;
+};
 
 // ===== 主动提醒：30s 轮询到点提醒；页面重新可见/聚焦时立刻补查（抵消浏览器后台节流） =====
 const firedReminders = new Set();   // 本轮会话内已弹过的 id，避免重复打扰
