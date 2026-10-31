@@ -1,241 +1,155 @@
-# AI 端重构 · 接口契约文档
+# AI 端重构：现状与架构规范
 
-> 目标：删除 `AI/` 与 `tool/` 全部旧代码后重写。
-> 本文档列出**必须保持兼容的对外契约**（Backend 保留不删，且它直接 import 了 AI 和 tool），
-> 以及**新架构建议的内部接口设计**（参考：多模型统一网关 + 模型注册表 + 路由规则）。
->
-> ⚠️ 核心原则：Backend 不动的前提下，下文第二、三章的函数签名与数据结构**一个都不能变**，
-> 否则 `Backend/app.py`、`agent_service.py`、`schedule_service.py`、`reminder_service.py`、`nav_service.py` 会直接 ImportError。
->
-> 📌 **函数级调用契约的最终权威版本见 `contract.md`**（含实测行号、认知修正与待核对项）；
-> 本文聚焦架构与配置规范，两者有出入时以 contract.md 为准。
+> **文档性质变更（2026-11-01）**：重构已完成（commit `0c132ca` 删除旧 AI/tool 并重写）。
+> 本文不再描述"重构计划"，而是描述**重构后的当前架构与契约**，与代码同步维护。
+> 若本文与代码冲突，以代码为准并回改本文。函数级契约见 [contract.md](contract.md)。
 
 ---
 
-## 一、当前依赖关系总览（删库前必看）
+## 一、架构现状
 
-| Backend 调用方 | 依赖的 AI/tool 接口 |
-|---|---|
-| `Backend/app.py` | `AI.health.start()`（lifespan 启动）、`AI.model_router.status()`、`tool.web_search.status()`（/health 接口） |
-| `Backend/service/agent_service.py` | `AI.memory.recall/remember`、`AI.orchestrator.TOOLS`（注册 9 个工具）、`AI.orchestrator.run(...)` |
-| `Backend/service/schedule_service.py` | `AI.model_router.chat(messages)` → `(text, provider)` |
-| `Backend/service/reminder_service.py` | `AI.model_router.chat(messages)` → `(text, provider)` |
-| `Backend/service/nav_service.py` | `tool.amap_mcp.geocode / search_poi / route` |
-| `Frontend/pages/agent_ai.html` | 工具名 `web_search` 等用于展示（名字须保留） |
+AI 端 = **统一 provider + 模型注册表 + 能力权重路由**：
+
+- 所有 LLM（云端厂商 + 本地 Ollama）统一走 OpenAI 兼容协议 `/chat/completions`，共用一个 httpx client，无需任何厂商 SDK；
+- 每个模型在 `AI/models.json` 登记：`model_id / provider / endpoint / api_key_env / model_name / timeout / ability_weights / default`；
+- `ability_weights` 是 `能力名: 权重(1-10)` 映射——请求某能力时，具备该能力的模型**按权重降序依次调用，第一个成功即返回**，权重本身编码 fallback 顺序，不手写 fallback 链；
+- 请求特征附在模型条目上（如 `stream_timeout`、`enable_thinking`），由网关透传；
+- 无 API key 的模型自动跳过；本地 Ollama 登记 `offline: 10`，云全挂时兜底。
+
+### 依赖总览（实际）
+
+```
+Backend/app.py        → AI.health.start()（lifespan 启动健康巡检线程）
+Backend/app.py        → AI.model_router.status()、tool.web_search.status()（/health 端点）
+Backend/routes/asr.py → AI.model_router.transcribe()（语音转写）
+Backend/service/agent_service.py
+                      → AI.orchestrator.run / run_stream（对话入口）
+                      → AI.prompts（构建 system/工具结果模板）
+                      → tool.amap_mcp（导航三接口直连，非工具注册）
+                      → Backend/service/chat_history_service（对话记忆，单一真相源 app.db/chat_message）
+Backend/service/schedule_service.py → AI.model_router.chat("reasoning", messages)（课表抽取）
+Backend/service/reminder_service.py → AI.model_router.chat("reasoning", messages)（提醒抽取）
+tool/*                → AI.model_router.chat("code"|"vision"|"general"|"translation") + embed()
+tool/image_gen.py     → 自管源顺序（/images/generations 非 chat 端点，走不了能力链）
+```
+
+> ⚠️ 旧文档中的 `AI.memory` 已删除：记忆改由 Backend 的 chat_history_service + chat_message 表承担（跨设备同步）。
+> ⚠️ `AI/routes.json` 为旧版按能力指定 target/fallback 的配置，**当前代码不加载它**（已被 ability_weights 取代），仅留档。
 
 ---
 
-## 二、AI 包对外契约（重写后必须实现）
+## 二、模块契约（当前实现）
 
-### 2.1 `AI.health`
-
-```python
-def start() -> None
-```
-- 在 FastAPI lifespan 中调用，负责启动后台健康检查线程（非阻塞）。
-- 新架构中可在此同时实现 `model.json / routes.json` 的**配置热加载监听**。
-
-### 2.2 `AI.model_router`
+### 2.1 AI/model_router.py
 
 ```python
-def chat(messages: List[dict]) -> Tuple[Optional[str], Optional[str]]
-def status() -> dict
+chat(ability: str, messages: list, tools: list | None = None)
+    → tuple[dict, str]        # (完整 message dict, provider 名)；全链失败抛 NoModelError
+chat_stream(ability: str, messages: list, tools: list | None = None)
+    → generator               # 依次 yield {"type":"meta",...}、{"type":"delta",...}、
+                              #   {"type":"fc_tool_calls", "tool_calls":[...]}；
+                              #   内部失败降级非流式 chat，再失败 yield 空（不抛）
+status() → {"ok": bool}       # 仅检查 API key 环境变量是否配置（非真实探活）
+transcribe(audio_path: str)   # ASR 链（星尘 ASR 系列，specialist 接口）
+embed(texts: list) -> list    # bge-m3 嵌入（跳过非 embeddings 端点的模型）
+NoModelError                  # 自定义异常：链上无可用模型
 ```
-- `chat`：返回 `(回答文本, "provider:model_id" 标识)`；全部模型失败返回 `(None, None)`。
-  - 调用方：schedule_service.py:128、reminder_service.py:151，拿到 `text` 后直接做 JSON 解析（课程/提醒提取）。
-  - **新架构建议**：扩展可选参数 `capability: str = ""`、`model_id: str = ""`，默认行为与旧版一致（默认路由）。
-- `status`：返回 `{model_id: {"ok": bool, "checked_at": "HH:MM:SS"}}`，被 `/health` 接口原样返回给前端。
 
-### 2.3 `AI.orchestrator`
+- 消息格式即 OpenAI 格式（role/content/tool_calls/tool_call_id/name）；
+- 每次调用按 `ability_weights.get(ability, 0) > 0` 过滤模型并按权重排序，逐个尝试，异常/超时静默切下一个；
+- `timeout` 与 `stream_timeout`（若有）分别控制普通与流式请求。
+
+### 2.2 AI/orchestrator.py
 
 ```python
-TOOLS: dict   # 工具注册表，agent_service 启动时会往里塞 9 个工具
+TOOLS: dict[str, dict]   # 工具注册表：{工具名: {"desc", "keywords", "exclude", "fn"}}
 
-def run(user_id: int, utterance: str, context=None, ref_block: str = "", refs=None) -> dict
+run(utterance: str, user_id: int, context: list | None = None) -> dict
+    # 返回六键：answer / tool_calls / actions_taken / needs_confirm / action_id / provider
+    # 流程：FC 主路径（chat("tool_use", tools=…)）→ 工具执行回填（≤2轮×4次）→
+    #       关键词兜底（exclude 优先）→ 离线模型 → demo 文案；永不抛异常
+
+run_stream(utterance, user_id, context) -> generator
+    # 事件流：tool_start {"names"} / tools {"tool_calls"} / content / reasoning / done
+    # 执行逻辑与 run() 对齐，语义相同
 ```
 
-**`TOOLS` 注册表结构**（agent_service.py:12-97 写入，orchestrator 只读）：
+- FC 执行函数 `_exec(fn, task, user_id, refs)`：统一 `fn(utterance=task, user_id=..., refs=[...])` 调用；
+- 工具未注册 / 参数解析失败 / 函数异常 → 返回 `{"ok": False, "status": "fail", "error": ...}`，不中断管线；
+- `_is_promise()`：识别"模型口头承诺要执行但没调工具"的 FC 抖动（承诺词 + 无真实链接），触发兜底补执行。
+
+### 2.3 AI/prompts.py + AI/prompt.json
 
 ```python
-orchestrator.TOOLS["工具名"] = {
-    "desc": str,              # 工具描述（喂给 function calling 的 description）
-    "keywords": tuple[str],   # 离线兜底意图匹配关键词
-    "exclude": tuple[str],    # 排除词
-    "fn": Callable,           # 工具函数，签名见第三章
-}
+P(key, **kw) -> str   # 从 prompt.json 取提示词并插值；缺 key 返回占位符，不抛异常
 ```
 
-现有 9 个工具名（**名字不能改**，前端展示 + 离线路由都依赖）：
-`schedule_query`、`schedule_add`、`memo_list`、`reminder_set`、`reminder_query`、`doc_parse`、`image_understand`、`web_search`、`code_gen`
+现用 key：`orchestrator.sys_fc`（FC 系统提示词）、`fc_summary`、`fc_round2`、`tool_result_block`、`demo` 等。改提示词只动 prompt.json，不动代码。
 
-**`run()` 返回结构**（agent_service 直接透传给 `/agent/chat` 接口 → 前端渲染）：
+### 2.4 AI/health.py
 
-```python
-{
-    "answer": str,                  # 最终回答文本（模型不可用时给演示文案，不能返回 None）
-    "tool_calls": [ {"tool_name": str, "status": "success"|"failed", "result": dict} ],
-    "actions_taken": [str],         # 人类可读的动作描述
-    "needs_confirm": bool,          # 目前恒为 False，保留字段
-    "action_id": str,               # 本次执行唯一 ID（旧版用 secrets.token_hex(4)）
-    "provider": str,                # "provider:model_id"，用于前端显示本次由谁作答
-    # 新架构建议追加：{"degraded": bool}  是否走了 fallback 降级
-}
-```
-
-**`run()` 内部语义要求**：
-1. 主路径：function calling（模型带工具表调用，多轮，单轮最多 4 次工具调用，最多 2 轮）；
-2. FC 不可用时**离线兜底**：用 `TOOLS[name]["keywords"]/["exclude"]` 对 utterance 做关键词匹配选工具 → 直接执行 → 把工具结果拼进 prompt 再要一次普通回答；
-3. 全挂时返回演示文案，**绝不抛异常**（这是 agent 接口可用性的底线）。
-
-### 2.4 `AI.memory`
-
-```python
-def recall(user_id: int) -> List[dict]        # → [{"role": "user"|"ai", "content": str}]
-def remember(user_id: int, utterance: str, answer: str) -> None
-```
-- 内存版对话历史，每用户保留 12 条（6 轮）。
-- agent_service.chat() 里 `memory.recall(user.id)` 的结果会作为 `context` 传入 `orchestrator.run`，
-  最终由 prompt.build_messages 转 role：`"ai" → "assistant"`。
-
-### 2.5 `AI.prompt`（内部模块，但建议保留同等职责）
-
-```python
-MODEL_PROMPT: str          # 系统提示词（安答人设 + 工具使用原则 + 防幻觉约束）
-def build_messages(utterance: str, context: Optional[List[dict]] = None) -> List[dict]
-# → [{"role":"system",...}, {"role":"assistant",...}×N, {"role":"user",...}]，上下文窗口 6 条
-```
+`start()` 启动守护线程周期巡检；异常模型应调 `model_router.probe_down(model_id)` 降权冷却。**当前 probe_down 为空实现、status 仅查配置——"健康检查形同配置检查"是已知遗留项**（见 PROJECT_SUMMARY.md §六）。
 
 ---
 
-## 三、tool 包对外契约（重写后必须实现）
-
-### 3.1 工具函数统一签名（被 orchestrator.TOOLS 注册）
+## 三、工具契约（tool/）
 
 ```python
-def xxx_tool(utterance: str, user_id: int, refs=None) -> dict
+def xxx_tool(utterance="", user_id=None, refs=None, **_) -> dict
+    # 入参：utterance 任务话术；user_id 用户主键；refs 引用文件名列表（≤5）
+    # 出参：必须含 "ok": True/False；失败附 "error"；前端/编排器依赖 ok 判定，禁止无 ok 返回
+    # 工具内部自己捕获所有异常并转成 {"ok": False, "error": ...}，绝不向编排器抛异常
 ```
-- `utterance`：FC 模式下是模型生成的 task 描述；离线兜底模式下是用户原话。
-- `refs`：本次对话引用的文件名列表。
-- 返回 dict：成功 `{"ok": True, ...结果}`；失败 `{"ok": False, "error": str, "hint": str}`。
-- ⚠️ 提示词里明确要求：写库类工具必须返回 `ok:true/false`，模型据此决定是否声称"已完成"，
-  所以**返回结构里的 ok 字段是防幻觉机制的一部分，不能省**。
 
-### 3.2 各工具职责与 AI 侧需求
+**当前注册的 14 个工具**（agent_service.py 注册进 TOOLS）：
 
-| 工具 | 函数 | 依赖的 AI 能力 |
+| 工具名 | 实现 | 职责 |
 |---|---|---|
-| `web_search` | `web_search.search_tool` + 模块级 `search(query, max_results)`、`probe_down()`、`status()`（/health 用） | 无（纯 HTTP 聚合：qianfan→anysearch→bing→ddg，带冷却降级） |
-| `doc_parse` | `doc_parse.doc_parse_tool` | 调用 MinerU API（MINERU_API_KEY），可能需要普通 chat 做总结 |
-| `image_understand` | `image_understand.image_understand_tool` | **vision 能力**：`model_router.chat(messages, capability="vision")`，messages 里含 base64 图片 |
-| `code_gen` | `code_gen.code_gen_tool` | **代码生成**：`model_router.chat(messages, capability="code")` |
+| schedule_query / schedule_add | Backend/service/schedule_service.py | 课表查询 / AI 抽取添加（错误码 12-17/28/29） |
+| reminder_set / reminder_query | Backend/service/reminder_service.py | 提醒设置（AI 抽取）/ 查询 |
+| memo_list | Backend/service/memo_service.py | 备忘速查 |
+| calendar_export | Backend/service/ics_service.py | 课表导出 .ics |
+| doc_parse | tool/doc_parse.py | 文档抽取摘要（MinerU/本地解析 + LLM 摘要） |
+| image_understand | tool/image_understand.py | 图片理解（vision 能力链） |
+| web_search | tool/web_search.py | 联网搜索（千帆 AI 搜索 → AnySearch → DuckDuckGo 自管冷却链） |
+| code_gen | tool/code_gen.py | 代码生成并存用户云盘 |
+| nav | Backend/service/nav_service.py | 路线规划（amap_mcp 直连） |
+| image_gen | tool/image_gen.py | 文生图（Kolors → CogView 自管链） |
+| knowledge | tool/knowledge.py | 校园知识库问答（bge-m3 向量检索 + 摘要改写） |
+| translation | tool/translation.py | 翻译（translation 能力链，Hunyuan-MT） |
 
-### 3.3 `tool.amap_mcp`（nav_service 直接调用，非 orchestrator 工具）
+> Backend 侧工具（schedule/reminder/memo/ics/nav）与 tool/ 侧工具契约完全一致，同表注册。
 
-```python
-def geocode(address: str, city: str = None) -> dict | None
-def search_poi(keyword: str, city: str = None) -> dict | None
-def route(origin: str, dest: str, mode: str) -> dict        # mode: walk/bus/drive/riding
-```
-- 依赖 `.env` 的 `AMAP_MAPS_API_KEY`。
-- nav_service 的容错逻辑会处理 None，返回 None 表示"未获取到"。
-
----
-
-## 四、新架构内部接口设计（文章方案的落地）
-
-### 4.1 `AI/model.json` —— 模型注册表（已创建）
-
-字段约定（以现有文件为准，把 `ability` 定为标准字段名）：
-
-```json
-{
-    "model_id":    "工作台内部唯一标识",
-    "provider":    "ollama | zhipu | siliconflow | deepseek | dashscope",
-    "endpoint":    "OpenAI 兼容基础地址（不带 /chat/completions）",
-    "api_key_env": "环境变量名（密钥永不入配置文件），本地模型留空",
-    "model_name":  "传给供应商的真实模型名",
-    "timeout":     "秒",
-    "ability":     {"能力名": 权重1-10, "...": "..."},
-    "default":     "true 为无能力匹配时的最终兜底"
-}
-```
-
-> **能力级权重**（已替代旧的全局 weight 字段）：
-> `ability` 是 `{能力名: 权重}` 映射，只登记该模型真正具备的能力；
-> 请求某能力时，所有具备该能力的模型按**权重从高到低依次调用**，第一个成功即返回——
-> 权重本身编码了 fallback 顺序，无需手写 fallback 链。
-> 能力清单与各模型权重见 `AI/模型列表.md`。
-
-> 注意：Ollama 的 `http://localhost:11434/v1` 是 OpenAI 兼容端点，统一客户端可直接覆盖，
-> **不再需要单独的 ollama.py**（非流式 `/v1/chat/completions` 与 GLM/DeepSeek/SiliconFlow 完全同构）。
-
-### 4.2 路由决策（能力权重驱动，routes.json 变为可选）
-
-调用链直接由 `model.json` 的能力权重推导，**不再需要手写 routes.json**：
-
-```
-1. 显式指定：请求带 model_id → 直接路由该模型，不做匹配
-2. 能力匹配：请求带 capability（如 "tool_use" / "vision" / "code"）
-   → 收集 ability 中含该能力的模型 → 按该能力权重降序排列 → 依次调用，第一个成功即返回
-   → 同权重时按注册顺序
-3. 默认路由：无 capability 或无能力命中 → default 标记的模型；
-   失败后按 "chat" 能力权重降序继续尝试
-```
-
-- 全部失败返回 `(None, None)`，响应中带 `degraded: true` 标记走了降级路径。
-- `routes.json` 仅在需要**特例覆盖**时才创建（如"某类请求强制只走某模型"），默认不存在。
-- 离线场景：本地模型登记 `"offline": 10`，云模型全挂时由离线路由选中。
-
-### 4.3 建议的新文件结构
-
-```
-AI/
-├── __init__.py
-├── model.json          # 模型注册表（已创建）
-├── routes.json         # 路由规则（可选，能力权重方案下默认不需要）
-├── registry.py         # 加载/热重载 model.json + routes.json
-├── provider.py         # 统一 OpenAI 兼容客户端（chat / chat_with_tools，一个文件覆盖所有云厂商+Ollama）
-├── router.py           # 路由决策 + fallback 链 + 健康冷却表（对应旧 model_router）
-├── orchestrator.py     # FC 管线 + 离线关键词兜底（对外契约同 2.3）
-├── memory.py           # 对话历史（契约同 2.4）
-├── prompt/
-│   └── prompt.py       # 系统提示词（契约同 2.5）
-└── health.py           # 健康巡检线程 + 配置热加载（契约同 2.1）
-```
-
-### 4.4 统一 provider 客户端核心签名
+### tool/web_search.py 契约
 
 ```python
-def chat(messages: List[dict], entry: dict, temperature: float = 0.7) -> Optional[str]
-def chat_with_tools(messages: List[dict], tools: List[dict], entry: dict) -> Optional[dict]
-# entry 即 model.json 里的一条注册表记录；密钥从 os.environ[entry["api_key_env"]] 取
-# URL 拼接：f"{entry['endpoint'].rstrip('/')}/chat/completions"
-# 返回 None 表示该模型本次不可用（交由 router 走 fallback）
+search(query, max_results=5) -> list   # 自管源链：qianfan → anysearch → ddg，失败源冷却跳过
+probe_down(source) / status()          # 冷却标记 / 各源配置状态
 ```
 
 ---
 
-## 五、`.env` 依赖清单（config.py 已读取，重写时按需取用）
+## 四、环境变量（.env 实际所需）
 
-| 变量 | 用途 |
-|---|---|
-| `GLM_API_KEY` / `GLM_URL` / `GLM_MODEL` 等 | 智谱 OpenAI 兼容端点 |
-| `SILICONFLOW_API_KEY` | SiliconFlow（OpenAI 兼容，可代理 DeepSeek/Qwen 等） |
-| `OLLAMA_URL` | 本地模型 |
-| `QIANFAN_AI_SEARCH_KEY` / `ANY_SEARCH_KEY` | 搜索源 |
-| `MINERU_API_KEY` / `MINERU_MODEL` | 文档解析 |
-| `AMAP_MAPS_API_KEY` | 高德 MCP |
+```
+QQ_EMAIL_ADDRESS / QQ_EMAIL_AUTH_CODE      # 注册激活、密码重置邮件（未配置则开发模式打印链接）
+FRONTEND_BASE_URL                          # 激活/重置链接的站点根（默认 https://anda.dpdns.org）
+GLM_API_KEY                                # 智谱 BigModel（models.json 多模型依赖）
+SILICONFLOW_API_KEY                        # 硅基流动（默认主力 Xing4.0 依赖，务必配置）
+MINERU_API_KEY                             # 文档解析（doc_parse 云端链）
+AMAP_MAPS_API_KEY                          # 高德（导航 geocode/poi/route）
+QIANFAN_AI_SEARCH_KEY / ANY_SEARCH_KEY     # 联网搜索两源（都有 DDG 兜底）
+```
 
-> 新架构建议：模型列表全部移入 model.json 后，config.py 只需保留 `api_key_env` 指向的变量名存在即可。
+> Ollama 无需环境变量（endpoint 写在 models.json）。
+> ⚠️ .env.example 需按上表补齐（已知遗留）。
 
 ---
 
-## 六、重构验收清单
+## 五、待办（承接 PROJECT_SUMMARY.md §六）
 
-- [ ] `python -c "from AI import health, model_router, orchestrator, memory"` 无 ImportError
-- [ ] `from tool import web_search, doc_parse, image_understand, code_gen, amap_mcp` 无 ImportError
-- [ ] 启动 Backend 后 `GET /health` 返回 models + search 状态
-- [ ] `/agent/chat` 闲聊可答（走 default 路由）
-- [ ] 断掉主模型后回答正常且 `provider` 显示 fallback 模型
-- [ ] "提醒我明天8点开会" 离线兜底路径能触发 `reminder_set` 工具
-- [ ] 返回体包含 answer / tool_calls / actions_taken / action_id / provider 全字段
+- [ ] AI/routes.json 决定去留：已无代码引用，建议删除或文首标注"留档"；
+- [ ] 实现 probe_down 真实探活（低频轻量调用）或如实标注 status 为"配置检查"；
+- [ ] AI/ 补 `__init__.py`（tool/ 有，AI/ 靠命名空间包在跑，风格不一致）；
+- [ ] model_router 内嵌独立 FastAPI `/ai/chat`（L95-122，从未挂载）建议删除；
+- [ ] "调用时间权重"：按实测响应时间动态调整链序。

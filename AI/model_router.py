@@ -1,5 +1,5 @@
 # TODO: 以后部署添加日志记录
-import json, os, logging
+import json, os, logging, time
 from pathlib import Path
 import httpx
 
@@ -83,43 +83,47 @@ def transcribe(audio: bytes, filename="audio.wav"):
             log.warning("嗷！ASR模型 %s 挂啦 ：-： %s", mid, e)
     raise NoModelError("asr")
 
+_probe_state = {}   # model_id -> {"ok": bool, "checked_at": "HH:MM:SS", "error": str}
+
 def status():
-    return {mid: {"ok": bool(not m.get("api_key_env") or os.getenv(m["api_key_env"]))}
-            for mid, m in _MODELS.items()}
+    # /health 用：已探活模型返回最近一次真实探活结果，未探活模型退回配置检查
+    out = {}
+    for mid, m in _MODELS.items():
+        configured = bool(not m.get("api_key_env") or os.getenv(m["api_key_env"]))
+        entry = {"ok": configured, "checked_at": None}
+        probe = _probe_state.get(mid)
+        if probe:
+            entry["ok"] = probe["ok"] and configured
+            entry["checked_at"] = probe["checked_at"]
+            if probe.get("error"):
+                entry["error"] = probe["error"]
+        out[mid] = entry
+    return out
 
 def probe_down():
-    pass
+    # 低频轻量探活：对已配置密钥的 chat 模型发 1-token 请求，结果写入 _probe_state 供 /health 展示；
+    # 仅记录不熔断（真实调用的降级仍由 chat() 自身的滑链承担），探活失败不影响业务路由
+    for mid, m in _MODELS.items():
+        if not (m.get("api_key_env") and os.getenv(m["api_key_env"])):
+            continue
+        if m["ability_weights"].get("chat", 0) <= 0:
+            continue
+        ok, err = False, ""
+        try:
+            r = httpx.post(m["endpoint"],
+                           headers={"Authorization": f"Bearer {os.environ[m['api_key_env']]}"},
+                           json={"model": m["model_name"],
+                                 "messages": [{"role": "user", "content": "hi"}],
+                                 "max_tokens": 1},
+                           timeout=8)
+            ok = r.status_code < 400
+            if not ok:
+                err = f"HTTP {r.status_code}"
+        except Exception as e:
+            err = str(e)[:120]
+        _probe_state[mid] = {"ok": ok, "checked_at": time.strftime("%H:%M:%S"), "error": err}
 
 class NoModelError(Exception): pass
-
-# FastAPI 路由层
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-app = FastAPI()
-
-def _AI_return():
-    return JSONResponse(status_code=477, content={
-        "code": 11, "msg": "无可用模型,已切换演示模式",
-        "demo": True})
-
-def _body(req: Request):
-    try:
-        return req.json()
-    except Exception:
-        return {}
-
-@app.post("/ai/chat")
-def ai_chat(req: Request):
-    body = _body(req)
-    if not body.get("messages"):
-        return _AI_return()
-    try:
-        msg, provider = chat(
-            req.query_params.get("ability", "chat"),
-            body["messages"], body.get("tools"))
-        return {"message": msg, "provider": provider}
-    except NoModelError:
-        return _AI_return()
 
 def _parse_sse_line(line: str):
     if not line.startswith("data:"):

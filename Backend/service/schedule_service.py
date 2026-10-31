@@ -39,7 +39,7 @@ def week_courses(db: Session, user_id: int) -> dict:
 
 def add_course(db: Session, user_id: int, req) -> dict:
     if req.end_slot < req.start_slot:
-        return {"ok": False,"code": 26, "message": "结束节次不能早于开始节次哦~ ?-?"}
+        return {"ok": False,"code": 26, "message": "结束节次不能早于开始节次哦 (。•́︿•̀。) 时间不能倒流呀~"}
     name = req.name.strip()
     # 防重：同一用户同时段同课程名已存在 → 幂等返回既有记录，不再插入
     # （FC 抖动重复调用工具/用户重复添加会造出脏数据，导出日历就会出现同时间重叠事件）
@@ -49,7 +49,7 @@ def add_course(db: Session, user_id: int, req) -> dict:
         Course.end_slot == req.end_slot).first()
     if exists:
         return {"ok": True, "code": 0, "data": _to_dict(exists),
-                "message": "这门课已经在课表里啦，就不重复添加了哦~"}
+                "message": "这门课已经在课表里蹲着啦，就不重复添加了哦 (¬‿¬)"}
     course = Course(
         user_id=user_id,
         name=name,
@@ -67,7 +67,7 @@ def add_course(db: Session, user_id: int, req) -> dict:
 def delete_course(db: Session, user_id: int, course_id: int) -> dict:
     course = db.query(Course).filter(Course.id == course_id, Course.user_id == user_id).first()
     if not course:
-        return {"ok": False,"code": 27, "message": "课程不存在或不属于你哦~"}
+        return {"ok": False,"code": 27, "message": "课程不存在，或者它不是你的哦 (´•̥ω•̥`)"}
     db.delete(course)
     db.commit()
     return {"ok": True, "data": {"id": course_id}}
@@ -140,10 +140,10 @@ def add_tool(utterance: str, user_id: int, **_) -> dict:
         msg, provider = model_router.chat("reasoning", messages)
         text = (msg or {}).get("content") or ""
     except NoModelError:
-        return {"ok": False,"code": 12, "error": "抽取模型暂不可用，请稍后重试或手动添加"}
+        return {"ok": False,"code": 12, "error": "抽取模型暂时打瞌睡了 (´・ω・`) 请稍后重试，或走手动添加接口"}
     data = _parse_json(text)
     if not data:
-        return {"ok": False,"code": 13, "error": "没有成功识别用户意图", "hint": "追问用户：课程名、星期几、第几节"}
+        return {"ok": False,"code": 13, "error": "没听懂要加哪门课呢 (´･ω･`)", "hint": "追问用户：课程名、星期几、第几节"}
     if "error" in data:
         return {"ok": False,"code": 14, "error": str(data["error"]), "hint": "信息不全，向用户追问后再调用本工具"}
     try:
@@ -156,15 +156,15 @@ def add_tool(utterance: str, user_id: int, **_) -> dict:
             end_slot=int(data.get("end_slot") or data["start_slot"]),
         )
     except (KeyError, TypeError, ValueError):
-        return {"ok": False,"code": 15, "error": "抽取结果字段异常", "raw": str(data)[:200]}
+        return {"ok": False,"code": 15, "error": "抽取结果字段有点奇怪，模型怕是已读乱回了 (°ㅂ°╬) 换个说法再试一次吧", "raw": str(data)[:200]}
     if not req.name:
-        return {"ok": False,"code": 16, "error": "缺少课程名称"}
+        return {"ok": False,"code": 16, "error": "缺少课程名称哦 (。•́︿•̀。) 课程总得有个名字呀"}
     if not 1 <= req.weekday <= 7:
-        return {"ok": False,"code": 17, "error": f"星期几超出范围：{req.weekday}"}
+        return {"ok": False,"code": 17, "error": f"星期几超出范围：{req.weekday} (。•́︿•̀。) 一周只有 1-7 哦"}
     if not (1 <= req.start_slot <= 12 and 1 <= req.end_slot <= 12):
-        return {"ok": False,"code": 28, "error": "节次需在 1-12 之间"}
+        return {"ok": False,"code": 28, "error": "节次需在 1-12 之间哦 (。•́︿•̀。) 一天最多十二节课呀"}
     if req.end_slot < req.start_slot:
-        return {"ok": False,"code": 29, "error": "结束节次不能早于开始节次 "}
+        return {"ok": False,"code": 29, "error": "结束节次不能早于开始节次哦 (。•́︿•̀。) 时间不能倒流呀~"}
     with SessionLocal() as db:
         result = add_course(db, user_id, req)  
     if not result["ok"]:

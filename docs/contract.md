@@ -1,77 +1,99 @@
-# AI 重构 · 函数级契约清单（重写宪法）
+# 安答跨模块函数级契约清单（现状版 · 2026-11-01 校订）
 
-> 范围：方案一（去重 + 依赖单向化，目录结构不动）。
-> 原则：**6 个存活文件的调用面 100% 兼容**，其余随重建发挥。
-> 文档分工：架构与配置规范见 `refactoring.md`；**函数级契约以本文为准**。
-> 行号依据：云端 e91e6ef 版本实测。
+> 本文档曾是 AI 端重写前的"宪法"（重写期间任何函数签名改动必须先改本文再动代码）。
+> **重写已完成（commit 0c132ca）**，本文已按当前代码全面校订，作为现存权威契约维护。
+> 演进记录见 [refactoring.md](refactoring.md)，全景见 [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)。
 
 ---
 
-## A. 存活文件对 AI/ 的调用面（必须原样满足）
+## A. 存活的外部契约（Backend ↔ AI ↔ tool 实际调用）
 
-| 调用方 | 精确调用 | 契约要求 |
+| 调用方 | 被调 | 契约（签名 → 返回） |
 |---|---|---|
-| `Backend/app.py:10-11` | `health.start()` | **幂等**（`_started` 防重入）；daemon 线程：启动即初测 + 每 **300s** 循环 `model_router.probe_down()` 与 `web_search.probe_down()`，各自 try/except 互不拖累 |
-| `Backend/app.py:18-22` | `model_router.status()` / `web_search.status()` | `/health` 端点用，返回 **JSON 可序列化 dict**（内部形状重写时可自定） |
-| `Backend/service/agent_service.py:128` | `memory.recall(user.id)` | → `List[{"role","content"}]`（返回副本，外部修改不影响内态） |
-| `Backend/service/agent_service.py:130` | `memory.remember(user_id, utterance, answer)` | role 拼成 `"user"`/`"ai"`（**不是 assistant**）；容量上限见 G-2 |
-| `Backend/service/agent_service.py:129` | `orchestrator.run(user_id, utterance, ctx, ref_block=..., refs=...)` | → dict，**6 个键不可少**：`answer` / `tool_calls[{tool_name,status,result}]` / `actions_taken` / `needs_confirm` / `action_id` / `provider`（`action_id = secrets.token_hex(4)`） |
-| `Backend/service/agent_service.py:12-98` | `orchestrator.TOOLS["名"] = {desc, keywords, exclude, fn}` × **9** | 方案一将把 9 块声明搬走（见 F-1），但 `TOOLS` 容器名与 dict 结构**保持不变** |
-| `Backend/service/reminder_service.py:151`、`schedule_service.py:128` | `text, provider = model_router.chat(messages)` | **二元组 `(str\|None, str)`**；调用方只用 `if not text` 判不可用 |
-| `AI/health.py:14-29`（重写件） | `model_router.probe_down()` | 无参无返回值；启动与循环均调 |
+| Backend/app.py lifespan | `AI.health.start()` | 启动健康巡检守护线程 |
+| Backend/app.py `/health` | `AI.model_router.status()` | `→ {"ok": bool}`（仅 API key 配置检查） |
+| Backend/app.py `/health` | `tool.web_search.status()` | `→ {"qianfan": bool, "anysearch": bool}` |
+| Backend/routes/asr.py | `AI.model_router.transcribe(path)` | 音频文件路径 → 转写文本 |
+| Backend/service/agent_service.py | `AI.orchestrator.run(utterance, user_id, context)` | `→ {"answer", "tool_calls", "actions_taken", "needs_confirm", "action_id", "provider"}` |
+| Backend/service/agent_service.py | `AI.orchestrator.run_stream(utterance, user_id, context)` | 事件流：`tool_start / tools / content / reasoning / done` |
+| Backend/service/agent_service.py | `AI.prompts` / `Backend/service/chat_history_service` | 提示词插值 / 记忆窗口 `recall_window(db, user_id)` 与落库 |
+| Backend/service/agent_service.py | `tool.amap_mcp.geocode(addr, city) / search_poi(q, city) / route(origin, dest, mode, city)` | `→ dict`（经 nav_service 包装为 nav 工具） |
+| Backend/service/schedule_service.py | `AI.model_router.chat("reasoning", messages)` | `→ (msg_dict, provider)`，取 `msg.get("content")` 解析 JSON |
+| Backend/service/reminder_service.py | `AI.model_router.chat("reasoning", messages)` | 同上 |
+| tool/* | `AI.model_router.chat("code"\|"vision"\|"general"\|"translation", messages)` | 同上，失败抛 `NoModelError`（工具自行捕获转 `ok: False`） |
+| tool/knowledge.py | `AI.model_router.embed(texts)` | `→ list[vector]`（bge-m3） |
+| tool/image_gen.py | 自管 HTTP 链（Kolors → CogView） | 非 chat 端点，不走能力路由 |
 
-## B. 被删文件夹内部的互约（AI/ 重写件之间）
+**变更点（相对重写前）**：`chat(messages)` → `chat(ability, messages, tools)`；返回由 `(text, provider)` 改为 `(msg_dict, provider)`；`AI.memory` 删除，记忆改由 chat_history_service + app.db/chat_message 承担。
 
-```
-orchestrator ──→ model_router.chat_with_tools(messages, schemas) → (msg|None, provider)
-             ──→ model_router.chat(messages)                      → (text|None, provider)
-             ──→ AI.prompt.prompt.build_messages(utterance, context) → List[{"role","content"}]
-                   （ref_block 挂 messages[-1]；离线兜底路径对 ask 重新 build）
-glm.py / ollama.py / model_router ──→ Backend.config（常量见各文件 import 行）
-```
+---
 
-**认知修正 ①**：早期讨论提到的 `run()` 内 `refs` 未定义 NameError **已被上游修复**——现在 `run()` 签名含 `refs=None` 且一路透传到 `_exec_tool`。重建时这是**必须保留的正确行为**，不是要复刻的 bug。
+## B. AI 内部契约（orchestrator ↔ model_router ↔ prompts）
 
-## C. 工具函数签名契约（9 个工具统一）
+- orchestrator 以 `model_router.chat("tool_use", messages, tools=fc_spec)` 发起 FC；`NoModelError` → 跳出主路径进兜底链；
+- 兜底链顺序：**FC → 关键词匹配（exclude 优先）→ 离线模型（offline 权重）→ demo 文案**，任何一层失败不抛异常、静默降级；
+- 流式 `run_stream` 事件命名固定：`tool_start`(names) → `tools`(tool_calls 结果) → `content`/`reasoning`(增量) → `done`(收尾)；`_exec` 保证工具异常转为 `{"ok": False, ...}`；
+- 工具结果回填消息 `role:"tool"`，格式与 OpenAI 一致；
+- prompts：`P(key, **kw)` 从 prompt.json 插值，缺 key 返回占位符不抛异常。
+
+---
+
+## C. 工具函数统一签名（14 个，两端同契约）
 
 ```python
-fn(utterance=task, user_id=user_id, refs=refs or []) -> dict   # orchestrator._exec_tool 全部 kwargs 调用
+def xxx_tool(utterance="", user_id=None, refs=None, **_) -> dict
 ```
 
-- **Backend 系 5 个**：`schedule_service.query_tool / add_tool`、`memo_service.list_tool`、`reminder_service.set_tool / query_tool`
-- **tool 系 4 个**：`web_search.search_tool`（形参 `**_` 兼容）、`doc_parse.doc_parse_tool`、`image_understand.image_understand_tool`、`code_gen.code_gen_tool`
-- 现行签名已统一为 `(utterance, user_id, refs=None)`；重写时保持 **kwargs 兼容**即可（`refs` 可选）
+- 入参：`utterance` 任务话术；`user_id` 用户主键；`refs` 引用文件名列表（≤5）；
+- 出参：**必须含 `"ok": True/False`**——编排器据此判定工具状态，模型只许基于真实结果宣称完成（防幻觉闭环的基石）；
+- 工具内部自行捕获一切异常 → `{"ok": False, "error": ...}`，绝不向编排器抛出。
 
-## D. tool/ 对外的其他契约（不经 TOOLS 直接被调）
+| 工具名 | 所在文件 |
+|---|---|
+| schedule_query / schedule_add | Backend/service/schedule_service.py |
+| reminder_set / reminder_query | Backend/service/reminder_service.py |
+| memo_list | Backend/service/memo_service.py |
+| calendar_export | Backend/service/ics_service.py |
+| doc_parse | tool/doc_parse.py |
+| image_understand | tool/image_understand.py |
+| web_search | tool/web_search.py |
+| code_gen | tool/code_gen.py |
+| nav | Backend/service/nav_service.py（经 amap_mcp） |
+| image_gen | tool/image_gen.py |
+| knowledge | tool/knowledge.py |
+| translation | tool/translation.py |
 
-| 模块 | 调用方 | 签名 |
-|---|---|---|
-| `amap_mcp` | `nav_service` | `geocode(addr, city=) → {ok, location, name\|error}`；`search_poi(q, city=) → {ok, pois:[{name,address,...}]\|error}`；`route(origin, dest, mode) → {ok, data\|error}` |
-| `web_search` | `app.py` / `health.py` | `status() → dict`；`probe_down() → None` |
+---
 
-**认知修正 ②**：`TOOLS` 里**没有导航工具**——amap 只走 `routes/nav → nav_service` 直连。9 = 课表 2 + 提醒 2 + 备忘 1 + 文档 1 + 图片 1 + 搜索 1 + 代码 1。**重建时不要顺手新增工具**，新增即行为变更。
+## D. tool/amap_mcp.py 内部契约
 
-## E. 行为基线（重构验收对照，逐条测）
+- `geocode(addr, city="") → {"location": "lng,lat"}`；
+- `search_poi(q, city="") → {"name", "location", "address"}`（POI 名 → 坐标）；
+- `route(origin, dest, mode="walk", city="") → {"mode", "distance", "duration", "steps"}`；
+- 共性：`ok` 字段、失败 `error`、HTTP 层异常本地化（连接拒绝返回 `ok: False`）、超时 5s。
 
-| # | 基线行为 | 出处 |
-|---|---|---|
-| 1 | `chat` 顺序 = 意图偏好（关键词命中→GLM 池优先）→ **冷却重排**（60s 失败冷却，可用者优先）。旧 `COMPLEX_KEYWORDS` 本身不重建，见 F-4 | model_router |
-| 2 | FC 主路径**只走支持 tools 的池**；2 轮上限，第 3 次摘工具表收口 | orchestrator |
-| 3 | `answer is None` → 关键词兜底（exclude 优先于 keywords 匹配）→ 仍 None → **演示文案兜底，绝不抛异常** | orchestrator |
-| 4 | ref_block：主路径挂 `messages[-1]`、兜底路径拼进 ask；**永远不进历史轮** | orchestrator |
-| 5 | 记忆：存取窗口数字见 G-2；role `user`/`ai` | memory + prompt |
-| 6 | 空消息拦截在 service 层；service 返回 `{ok, data}`、routes 包 `{code, message, data}` | agent_service + routes |
+---
 
-## F. 方案一设计决策点（动工前定案）
+## E. 数据库与数据契约
 
-1. **工具注册触发点**：9 块声明搬回各自实现模块（自注册，消灭 Backend→AI.orchestrator 的反向注入）。推荐：`tool/__init__.py` 聚合导入 5 个子模块；Backend service 靠既有 import 链触发。**硬要求：首个 `/agent/chat` 请求前 `TOOLS` 必须满员**（读取发生在请求时，import 顺序天然满足）。
-2. **config 位置**：保留 `Backend/config.py`，记为**已知限制**（它是叶子模块，依赖语义实为"人人→配置"，病只在命名）。`AI.health → tool.web_search` 同理保留（探活是只读横切关注）。——这两条**文档化接受，不再列为待修**。
-3. **Session 模式（修正）**：**不强行收敛**。请求作用域（routes→service）用 `get_db` 注入；工具函数运行在请求作用域之外，**自开 `SessionLocal`**。两种模式文档化并存；把 db 穿透 `run()` 签名属于契约破坏，禁止。
-4. **关键词表（修正）**：旧 `model_router.COMPLEX_KEYWORDS` 的唯一职责是选模型，新架构由 `models.json` 的 `ability_weights` + `routes.json` 完全取代——**重建后自动消失**，不设替代品。
-5. **统一工具签名**：C 表的 kwargs 形态是标准，重建及未来新增工具照抄。
-6. **工具配置化（定案：不做）**：**不设 `tools.json`**。模型是纯配置实体，工具是代码实体（`fn` 无法进 JSON），配置化会让声明/实现分离换个文件类型复活（违反本文件 F-1）。如需可视化工具清单，加 `GET /agent/tools` 调试端点，从 `orchestrator.TOOLS` 动态生成——配置是输入，不是镜像。触发重新评估的条件：插件化需求 / 非程序员调关键词 / 工具数 30+。三者目前均不满足。
+- 用户数据隔离：所有业务表带 `user_id` 外键语义，路由层统一经 `get_current_user` 注入当前用户，查询必带 `user_id` 过滤（越权防线）；
+- 对话记忆单一真相源：`app.db / chat_message` 表（chat_history_service 读写），含 reasoning 字段（重放思考面板）；
+- 上传目录 `Data/uploads/{user_id}/`，引用经 `_build_ref_block` 注入对话上下文（≤5 个文件）。
 
-## G. 待核对项（开工对应 Step 时以云端原文为准）
+---
 
-1. **注册表文件名**：实际为 `AI/models.json`（非 model.json）。
-2. **记忆窗口容量**：两处文档分别写"12 轮"与"12 条（6 轮）"——**Step 2（memory.py）开工时以云端 memory.py 原文实测为准**，本清单不预填数字。
+## F. 统一响应契约
+
+- service 层：`{"ok": bool, "data": ...}`；routes 层：`{"code": int, "message": str, "data": ...}`（code=0 成功）；
+- 错误码分段见 [Error_code_documentation.md](../Error_code_documentation.md)（1x 抽取 / 2x CRUD / 4x 上传）。
+
+---
+
+## G. 重写期间的关键决策（已生效，留档）
+
+1. ✅ 不用 MCP：单机项目，统一 OpenAI 协议网关替代进程间通信；
+2. ✅ 不用厂商 SDK：云端 + 本地 Ollama 共用一个 httpx client；
+3. ✅ 不做显式 fallback 链：能力权重编码调用顺序（models.json 数据驱动）；
+4. ✅ 删除 AI/memory：记忆由 Backend chat_history_service 承担（持久化 + 跨设备）；
+5. ✅ prompts 集中 prompt.json：改提示词不动代码；
+6. ✅ 工具双端同契约：Backend service 工具与 tool/ 工具同表注册、同签名、同 ok 约定。

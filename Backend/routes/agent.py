@@ -37,7 +37,7 @@ def chat_stream(req: ChatRequest,
                 user: User = Depends(auth_service.get_current_user),
                 db: Session = Depends(get_db)):
     if not req.utterance or not req.utterance.strip():
-        return JSONResponse(status_code=400, content={"code": 1, "message": "内容不能为空哦~", "data": None})
+        return JSONResponse(status_code=400, content={"code": 1, "message": "内容不能为空哦 (。•́︿•̀。) 想聊点什么呀？", "data": None})
     def gen():
         for ev in agent_service.chat_stream(db, user, req.utterance, req.refs, req.chat_id):
             yield f"data: {json.dumps(ev, ensure_ascii=False)}\n\n"

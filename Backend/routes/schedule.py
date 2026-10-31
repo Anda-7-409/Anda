@@ -42,7 +42,7 @@ def ics_feed(token: str = "", db: Session = Depends(get_db)):
     # 课程表订阅源：日历 App 定期拉取（无法带 Authorization 头，只能用 ?token= 鉴权）
     user = ics_service.user_by_calendar_token(db, token)
     if not user:
-        return JSONResponse(status_code=401, content={"code": 1, "message": "订阅链接无效或已失效（改过密码需重新订阅）哦~"})
+        return JSONResponse(status_code=401, content={"code": 1, "message": "订阅链接无效或已失效（改过密码需重新订阅）哦 (´•̥ω•̥`)"})
     body = ics_service.build_schedule_ics(schedule_service.week_courses(db, user.id)["data"], user.id)
     # inline：日历 App 直接读取 feed 内容；REFRESH-INTERVAL 已在 ICS 内声明
     return Response(body, media_type="text/calendar; charset=utf-8",

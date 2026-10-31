@@ -25,9 +25,9 @@ def list_memos(db: Session, user_id: int) -> dict:
 def add_memo(db: Session, user_id: int, content: str) -> dict:
     text = (content or "").strip()
     if not text:
-        return {"ok": False, "message": "备忘录内容不能为空哦~"}
+        return {"ok": False, "message": "备忘录内容不能为空哦 (´･ω･`) 写点什么再保存嘛~"}
     if len(text) > 200:
-        return {"ok": False, "message": "备忘录太长啦，200 字以内哦 ~"}
+        return {"ok": False, "message": "备忘录太长啦，200 字以内哦～小本本装不下了 (＞﹏＜)"}
     memo = Memo(user_id=user_id, content=text)
     db.add(memo)
     db.commit()
@@ -37,7 +37,7 @@ def add_memo(db: Session, user_id: int, content: str) -> dict:
 def delete_memo(db: Session, user_id: int, memo_id: int) -> dict:
     memo = db.query(Memo).filter(Memo.id == memo_id, Memo.user_id == user_id).first()
     if not memo:
-        return {"ok": False, "message": "备忘录不存在或不属于你哦~"}
+        return {"ok": False, "message": "这条备忘录不存在，或者它不是你的哦 (´•̥ω•̥`)"}
     db.delete(memo)
     db.commit()
     return {"ok": True, "data": {"id": memo_id}}
