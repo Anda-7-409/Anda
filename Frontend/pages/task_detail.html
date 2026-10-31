@@ -2,9 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 任务详情页面 用于显示用户任务的详细信息，如任务类型、任务内容、任务状态、工具调用链等 -->
+    <!-- 任务详情页面：负责展示任务类型、内容、状态、工具调用链等全部家当 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- task_detail.html 用户任务详情页面 用于显示用户任务的详细信息，如任务类型、任务内容、任务状态、工具调用链等 -->
+    <!-- task_detail.html 用户任务详情页（和上面那条说的是同一件事，历史遗留谁也舍不得删 (¬‿¬)） -->
     <title>任务详情 · 安答</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -35,14 +35,14 @@
 </head>
 <body>
     <div class="container">
-        <!-- 顶栏：返回工作台 + 页面标题 -->
+        <!-- 顶栏：回工作台的退路 + 页面标题 -->
         <div class="topbar">
             <button class="back-btn" id="back-btn">← 返回工作台</button>
             <div class="page-title">任务详情</div>
             <div style="width:84px"></div>
         </div>
 
-        <!-- 任务基本信息 -->
+        <!-- 任务基本信息：ID/类型/状态/时间四件套 -->
         <div class="card">
             <div class="meta-grid">
                 <div class="meta-item"><div class="label">任务 ID</div><div class="value" id="task-id">-</div></div>
@@ -54,7 +54,7 @@
             <div class="content-box" id="task-content">加载中，安答在翻资料…</div>
         </div>
 
-        <!-- 工具调用链 -->
+        <!-- 工具调用链：安答干活的全过程都在这儿 -->
         <div class="card">
             <div class="section-title" style="margin-top:0">工具调用链</div>
             <div id="tool-chain" class="empty">工具们还没出动呢 (´•̥ω•̥`)</div>
@@ -62,16 +62,16 @@
     </div>
 
     <script>
-        // 未登录跳回首页（与 agent_ai.html 保持一致）
+        // 未登录就请回首页（与 agent_ai.html 保持同一个口径）
         const token = localStorage.getItem('token');
         if (!token) location.href = '../index.html';
 
         const $ = id => document.getElementById(id);
 
-        // 返回工作台
+        // 返回工作台的退路
         $('back-btn').onclick = () => location.href = './agent_ai.html';
 
-        // API 封装：带 Authorization，失败兜底不抛异常
+        // API 封装：带 Authorization；失败也不抛异常，默默兜底 (´･ω･`)
         const api = async (url) => {
             try {
                 const res = await fetch(url, { headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } });
@@ -80,7 +80,7 @@
             } catch { return { ok: false, data: {} }; }
         };
 
-        // 状态 -> 样式映射
+        // 状态 -> 样式映射表
         function statusTag(status) {
             const map = {
                 success: ['status-success', '成功'],
@@ -94,7 +94,7 @@
             return `<span class="status-tag ${cls}">${text}</span>`;
         }
 
-        // 渲染任务详情
+        // 渲染任务详情，一个人撑起整个页面 (๑•̀ㅂ•́)و✧
         function renderTask(t) {
             $('task-id').textContent = t.task_id ?? t.id ?? '-';
             $('task-type').textContent = t.type || t.task_type || '-';
@@ -102,7 +102,7 @@
             $('task-time').textContent = t.created_at || t.time || '-';
             $('task-content').textContent = t.content || t.question || t.utterance || '（任务内容空空的呢 (´･ω･`)）';
 
-            // 工具调用链
+            // 工具调用链：没有就老实挂着"还没出动"
             const chain = t.tool_calls || [];
             const box = $('tool-chain');
             if (!chain.length) { box.className = 'empty'; box.textContent = '工具们还没出动呢 (´•̥ω•̥`)'; return; }
@@ -117,12 +117,12 @@
                 </div>`).join('');
         }
 
-        // 简易 HTML 转义，防止结果内容破坏页面
+        // 简易 HTML 转义：工具返回啥都可能有，先转义再上屏，别把页面拆了 (๑•̀ㅂ•́)و✧
         function escapeHtml(s) {
             return String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
         }
 
-        // 入口：URL 取任务 ID -> 拉详情 -> 失败用 mock 兜底
+        // 入口：URL 取任务 ID -> 拉详情 -> 拉不到就用 mock 兜底
         (async () => {
             const params = new URLSearchParams(location.search);
             const taskId = params.get('id');
@@ -134,7 +134,7 @@
             }
 
             if (!task) {
-                // 兜底 mock：后端未实现 / 未启动时页面仍可预览
+                // 兜底 mock：后端还没睡醒时，页面也不至于开天窗 (´•̥ω•̥`)
                 task = {
                     task_id: taskId || 'T-1001',
                     type: '复习计划生成',

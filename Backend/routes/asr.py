@@ -8,7 +8,7 @@ from Backend.service import auth_service
 
 router = APIRouter()
 
-_MAX_SIZE = 15 * 1024 * 1024   # 前端单条语音限 60s WAV（约 5MB），15MB 已宽裕
+_MAX_SIZE = 15 * 1024 * 1024   # 前端单条语音限 60s WAV（约 5MB），15MB 已宽裕（宽裕的部分是留给人手滑的 (¬‿¬)）
 
 @router.post("")
 async def transcribe_audio(audio: UploadFile = File(...),

@@ -18,7 +18,7 @@ class Register_must(BaseModel):
     password: str
     email: str
 
-# 缺少必填项,经过fastapi时触发422错误
+# 缺少必填项,经过fastapi时触发422错误（422 这位不速之客，fastapi 替咱把关 (。•́︿•̀。)）
 class Login_must(BaseModel):
     username: str
     password: str

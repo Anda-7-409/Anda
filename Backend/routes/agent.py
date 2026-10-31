@@ -45,7 +45,7 @@ def chat_stream(req: ChatRequest,
     return StreamingResponse(gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
-# ===== 聊天记录：app.db/chat_message 单一真相源，跨设备同步 =====
+# ===== 聊天记录：app.db/chat_message 单一真相源，跨设备同步（一本账记到底 (๑•̀ㅂ•́)و✧） =====
 @router.get("/history")
 def get_history(user: User = Depends(auth_service.get_current_user),
                 db: Session = Depends(get_db)):

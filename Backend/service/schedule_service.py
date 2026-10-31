@@ -7,7 +7,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from AI import model_router
-from AI.model_router import NoModelError   # 模型全挂的降级分支要用，漏 import 会 NameError
+from AI.model_router import NoModelError   # 模型全挂的降级分支要用，漏 import 会 NameError（这个跟头栽过一次 (＞﹏＜)）
 from Backend.database import SessionLocal
 from Backend.models.schedule import Course
 
@@ -42,7 +42,7 @@ def add_course(db: Session, user_id: int, req) -> dict:
         return {"ok": False,"code": 26, "message": "结束节次不能早于开始节次哦 (。•́︿•̀。) 时间不能倒流呀~"}
     name = req.name.strip()
     # 防重：同一用户同时段同课程名已存在 → 幂等返回既有记录，不再插入
-    # （FC 抖动重复调用工具/用户重复添加会造出脏数据，导出日历就会出现同时间重叠事件）
+    # （FC 抖动重复调用工具/用户重复添加会造出脏数据，导出日历就会出现同时间重叠事件，吃相很难看 (。•́︿•̀。)）
     exists = db.query(Course).filter(
         Course.user_id == user_id, Course.name == name,
         Course.weekday == req.weekday, Course.start_slot == req.start_slot,

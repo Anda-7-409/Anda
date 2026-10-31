@@ -13,7 +13,7 @@ class User(Base):
     reset_token = Column(String(64), default="")
     verify_expires = Column(DateTime, nullable=True)   # 激活链接独立过期，与重置链路解耦
     reset_expires = Column(DateTime, nullable=True)    # 重置链接独立过期，避免旧激活链接被"续命"
-    session_token = Column(String(64), default="")     # 仅存 SHA-256 摘要，明文不落库
+    session_token = Column(String(64), default="")     # 仅存 SHA-256 摘要，明文不落库（安全这根弦不能松 (๑•̀ㅂ•́)و✧）
     session_expires = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

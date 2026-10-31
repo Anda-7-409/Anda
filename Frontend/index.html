@@ -6,7 +6,7 @@
     <title>安答：校园AI Agent助手 ✧</title>
         <link rel="stylesheet" href="./assets/style.css">
     <!-- 手机端缩小看板娘：远程 waifu.css 是动态插入 head 的（晚于本标签），用 body 前缀抬高特异性确保覆盖；电脑端不受影响 -->
-           <!-- 手机端看板娘适配：缩小尺寸；隐藏"坦克大战"按钮（触屏无法键盘操作，纯占位）；远程 waifu.css 动态插入 head（晚于本标签），用 body 前缀 + !important 确保覆盖；电脑端不受影响 -->
+           <!-- 手机端看板娘适配：缩小尺寸；"坦克大战"按钮藏起来（触屏没法键盘操作，留着纯占位）；远程 waifu.css 动态插入 head（晚于本标签），只能 body 前缀 + !important 硬压，电脑端不受影响 -->
         <style>
         @media (max-width: 768px) {
             body #waifu,
@@ -25,14 +25,14 @@
             <div class="logo">安 答</div>
         </div>
         <div class="main">
-            <!-- 核心展示区 -->
+            <!-- 核心展示区：安答的门面担当 ✧ -->
             <div class="hero-section">
                 <div class="title">安答：校园AI Agent助手</div>
                 <div class="subtitle">从“被动问答”到“主动服务”～一句自然语言，搞定课表、提醒与办事查询</div>
                 <div class="notice">原版官方功能请转移至 ->安徽工业大学->智慧校园->安工小智 哦～</div>
             </div>
 
-            <!-- 认证表单区：JS fetch 提交，token 存 localStorage -->
+            <!-- 认证表单区：JS fetch 提交，token 存 localStorage 借住一晚 (¬‿¬) -->
             <div class="auth-section">
                 <form id="login-form" class="login-form">
                     <div class="form-group">
@@ -48,7 +48,7 @@
                 </form>
                 <div class="auth-links">
                     <a href="./pages/register.html">还没有账号？点这里加入安答～</a>
-                    <!-- 忘记密码链接：先输入邮箱申请重置链接（QQ邮箱SMTP发送） -->
+                    <!-- 忘记密码链接：先输邮箱申请重置链接（QQ邮箱SMTP代发），安答只能帮你到这了 (´･ω･`) -->
                     <a href="./pages/forgot_password.html">忘记密码？</a>
                 </div>
             </div>
@@ -60,7 +60,7 @@
 
     <script>
         document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); // 阻止整页跳转
+            e.preventDefault(); // 拦下整页跳转，表单的事交给 JS (๑•̀ㅂ•́)و✧
             const msg = document.getElementById('login-msg');
             const btn = e.target.querySelector('button');
             btn.disabled = true;
@@ -77,7 +77,7 @@
                 const data = await res.json();
                 if (res.ok) {
                     localStorage.setItem('token', data.data.token);
-                    location.href = './pages/agent_ai.html'; // agent_ai.html 第 1 期实现
+                    location.href = './pages/agent_ai.html'; // 登录成功直奔主战场 agent_ai.html（第 1 期实现的正主）
                 } else {
                     msg.textContent = data.message || '登录没成功呢 (＞﹏＜) 再核对一下嘛~';
                 }

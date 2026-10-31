@@ -5,7 +5,7 @@ from sqlalchemy import Column, DateTime, Integer, String, Text
 from Backend.database import Base
 
 class ChatMessage(Base):
-    # 聊天记录单一真相源：页面跨设备记录与模型记忆都从这张表派生
+    # 聊天记录单一真相源：页面跨设备记录与模型记忆都从这张表派生（一张表管两摊事，省心 (๑•̀ㅂ•́)و✧）
     __tablename__ = "chat_message"
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, index=True, nullable=False)

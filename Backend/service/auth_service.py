@@ -34,17 +34,17 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return secrets.compare_digest(dk.hex(), digest)
 
 
-# ---------- 登录态 token 只存 SHA-256 摘要：拖库也无法直接冒用会话 ----------
+# ---------- 登录态 token 只存 SHA-256 摘要：拖库也无法直接冒用会话（安全小金库 (๑•̀ㅂ•́)و✧） ----------
 def _token_digest(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-# ---------- 内存限流：滑动窗口计数，防在线爆破 / 批量注册 / 邮件轰炸 ----------
+# ---------- 内存限流：滑动窗口计数，防在线爆破 / 批量注册 / 邮件轰炸（总有人想搞事情 (。•́︿•̀。)） ----------
 _rl_lock = threading.Lock()
 _rl_hits = defaultdict(deque)   # key -> 窗口内被放行请求的 monotonic 时间戳
 
 def _rate_limit(key: str, max_calls: int, window_seconds: int) -> bool:
-    """放行返回 True；窗口内已达上限返回 False。进程重启即清零，学生项目够用。"""
+    """放行返回 True；窗口内已达上限返回 False。进程重启即清零，学生项目够用（重启也算一种"重置"嘛 (¬‿¬)）。"""
     now = time.monotonic()
     with _rl_lock:
         dq = _rl_hits[key]
@@ -59,7 +59,7 @@ _LOGIN_LIMIT = (10, 5 * 60)       # 同一 IP+用户名：10 次 / 5 分钟（�
 _LOGIN_IP_LIMIT = (30, 5 * 60)    # 同一 IP：30 次 / 5 分钟（换用户名扫号）
 _REGISTER_LIMIT = (10, 3600)      # 同一 IP 注册（触发发信）：10 次 / 小时
 _FORGOT_LIMIT = (10, 3600)        # 同一 IP 忘记密码：10 次 / 小时
-_FORGOT_EMAIL_LIMIT = (5, 3600)   # 同一邮箱收重置邮件：5 封 / 小时（防邮件轰炸）
+_FORGOT_EMAIL_LIMIT = (5, 3600)   # 同一邮箱收重置邮件：5 封 / 小时（防邮件轰炸，真被刷过才懂有多烦 (。•́︿•̀。)）
 
 _UNIFIED_FORGOT_MSG = "若该邮箱已注册，重置链接将发送至邮箱，请注意查收（15分钟内有效）"
 
@@ -183,7 +183,7 @@ def update_profile(db: Session, user: User, username: Optional[str] = None, emai
     try:
         db.commit()
     except Exception:
-        # 异常细节只进日志，不给前端回传原文，避免泄露内部实现
+        # 异常细节只进日志，不给前端回传原文，避免泄露内部实现（家丑不外扬 (¬‿¬)）
         db.rollback()
         log.exception("更新资料失败 user_id=%s (╯°□°）╯︵ ┻━┻", user.id)
         return {"ok": False, "message": "更新失败了 (╯°□°）╯︵ ┻━┻ 请稍后再试"}

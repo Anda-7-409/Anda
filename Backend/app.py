@@ -20,7 +20,7 @@ try:
 except Exception:
     logging.basicConfig(level=logging.INFO, format=_LOG_FMT)
 # 降噪：watchfiles 的 change detected 刷屏（Data 目录的日志/数据库写入每次都报）
-# 与 httpx 每次模型请求一条的请求日志，对我们排查没用，压到 WARNING
+# 与 httpx 每次模型请求一条的请求日志，对我们排查没用，压到 WARNING（不然日志分分钟胖成猪 (。•́︿•̀。)）
 logging.getLogger("watchfiles.main").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 # .env 加载统一由 Backend/config._load_env 负责（上面 import 链已触发），此处不再重复加载

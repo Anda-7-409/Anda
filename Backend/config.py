@@ -29,7 +29,7 @@ TOKEN_TTL_SECONDS = 15 * 60
 SESSION_TTL_SECONDS = 24 * 60 * 60
 
 # 模型清单（endpoint/model_name/ability_weights 等）统一由 AI/models.json 管理，
-# 此处只保留搜索、文档解析、地图等直接消费的环境变量配置。
+# 此处只保留搜索、文档解析、地图等直接消费的环境变量配置（各管各的，井水不犯河水 (๑•̀ㅂ•́)و✧）。
 
 QIANFAN_AI_SEARCH_KEY = os.environ.get("QIANFAN_AI_SEARCH_KEY", "")
 ANY_SEARCH_KEY = os.environ.get("ANY_SEARCH_KEY") or os.environ.get("ANYSEARCH_API_KEY", "")

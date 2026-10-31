@@ -1,5 +1,5 @@
 # image_gen.py — 文生图：Kolors(w10) → CogView-3-Flash(w6) 两级降级
-# 说明：/images/generations 不是 chat 端点，走不了 model_router 能力链，故自管源顺序
+# 说明：/images/generations 不是 chat 端点，走不了 model_router 能力链，故自管源顺序（画图和聊天不是一个工种，勉强理解 (。•́︿•̀。)）
 import logging
 import os
 

@@ -10,7 +10,7 @@ _MODELS = {m["model_id"]: m for m in json.loads(
     (AI_DIR / "models.json").read_text("utf-8"))["models"]}
 
 def _chain(ability: str):
-    # 调用工具的权重进行调用模型，过滤掉权重为0,没有配置API的模型或者说没有这个能力的权重的模型
+    # 按能力权重给模型排队，过滤掉权重为 0、没配 API Key、或压根没这能力的候选——安答的候选链，本质是场层层淘汰赛 (๑•̀ㅂ•́)و✧
     ids = [m["model_id"] for m in sorted(
         _MODELS.values(), key=lambda m: -m["ability_weights"].get(ability, 0))]
     return [mid for mid in ids
@@ -18,7 +18,7 @@ def _chain(ability: str):
             and (not m.get("api_key_env") or os.getenv(m["api_key_env"]))]
 
 def chat(ability: str, messages: list, tools=None):
-    # 返回 (message, provider)，全部失败时抛 NoModelError(路由层转错误码 11)
+    # 返回 (message, provider)，全部失败时抛 NoModelError(路由层转错误码 11)——模型链全灭这种惨案，最好一辈子别摊上 (╯°□°）╯︵ ┻━┻
     chain = _chain(ability)
     log.info("模型路由 -> 能力=%s 候选链=%s (๑•̀ㅂ•́)و✧", ability,
              " > ".join(chain) if chain else "（空）")
@@ -36,7 +36,7 @@ def chat(ability: str, messages: list, tools=None):
                            timeout=m.get("timeout", 30))
             r.raise_for_status()
             msg = r.json()["choices"][0]["message"]
-            # content或tool_calls任一返回即视为成功
+            # content或tool_calls任一返回即视为成功（两样全空的响应纯属白跑一趟 (。•́︿•̀。)）
             if (msg.get("content") or "").strip() or msg.get("tool_calls"):
                 log.info("模型命中 -> %s（第 %d/%d 个候选，耗时 %.1fs）ヾ(≧▽≦*)o",
                          mid, i, len(chain), time.monotonic() - t0)
@@ -49,7 +49,7 @@ def chat(ability: str, messages: list, tools=None):
 
 def embed(texts: list):
     # 文本向量化：embeddings 端点与 chat 不同，按 embedding 权重滑链；
-    # 返回与 texts 等长的向量列表，全部失败抛 NoModelError
+    # 返回与 texts 等长的向量列表，全部失败抛 NoModelError——向量都吐不出来，这位候选先歇着吧 (＞﹏＜)
     for mid in _chain("embedding"):
         m = _MODELS[mid]
         if not m["endpoint"].rstrip("/").endswith("embeddings"):
@@ -104,7 +104,7 @@ def transcribe(audio: bytes, filename="audio.wav"):
 _probe_state = {}   # model_id -> {"ok": bool, "checked_at": "HH:MM:SS", "error": str}
 
 def status():
-    # /health 用：已探活模型返回最近一次真实探活结果，未探活模型退回配置检查
+    # /health 用：已探活模型返回最近一次真实探活结果，没探过的只能退回配置检查凑合 (´･ω･`)
     out = {}
     for mid, m in _MODELS.items():
         configured = bool(not m.get("api_key_env") or os.getenv(m["api_key_env"]))
@@ -120,7 +120,8 @@ def status():
 
 def probe_down():
     # 低频轻量探活：对已配置密钥的 chat 模型发 1-token 请求，结果写入 _probe_state 供 /health 展示；
-    # 仅记录不熔断（真实调用的降级仍由 chat() 自身的滑链承担），探活失败不影响业务路由
+    # 仅记录不熔断（真实调用的降级仍由 chat() 自身的滑链承担），探活失败不影响业务路由。
+    # 免费额度金贵，1-token 已是探活界的极限省法，再多真舍不得 (。•́︿•̀。)
     for mid, m in _MODELS.items():
         if not (m.get("api_key_env") and os.getenv(m["api_key_env"])):
             continue
@@ -175,19 +176,19 @@ def chat_stream(ability: str, messages: list, tools=None):
                               json=payload, timeout=m.get("stream_timeout", m.get("timeout", 30))) as r:
                 r.raise_for_status()
                 got = False
-                pending = {}   # index -> {"id","name","arguments"}（流式 tool_calls 按 index 分片到达，需攒齐）
+                pending = {}   # index -> {"id","name","arguments"}（流式 tool_calls 按 index 分片到达，得攒齐了再拼，急不得）
                 yield {"type": "meta", "provider": f"{m.get('provider', 'unknown')}:{mid}"}
                 for line in r.iter_lines():
                     obj = _parse_sse_line(line)
                     if not obj:
                         continue
                     if obj.get("error"):
-                        # 流内错误：SSE建立连接后返回HTTP200，错误在data块
+                        # 流内错误：SSE建立连接后返回HTTP200，错误藏在data块里——最坑的设计，状态码看着健康，肚子里全是坏消息 (＞﹏＜)
                         if got:
                             log.warning("流式中断 -> %s：已输出部分内容后模型报错 (＞﹏＜)", mid)
                             yield {"type": "error", "message": "回复中途被模型中断"}
                             return
-                        break   # 如果首块前就报错则该模型失败
+                        break   # 首块前就报错：该模型直接判负，换下一位
                     choice = (obj.get("choices") or [{}])[0]
                     delta = choice.get("delta") or {}
                     for tc in delta.get("tool_calls") or []:
@@ -217,7 +218,7 @@ def chat_stream(ability: str, messages: list, tools=None):
                     return
         except Exception as e:
             log.warning("模型失败 -> %s（流式）：%s（耗时 %.1fs）(＞﹏＜)", mid, e, time.monotonic() - t0)
-    # 如果全部流式失败则采用非流式
+    # 如果全部流式失败则采用非流式（流不动就不流了，回复总得送达 (。•́︿•̀。)）
     try:
         msg, provider = chat(ability, messages, tools)
         yield {"type": "meta", "provider": provider}

@@ -44,7 +44,7 @@ def _ics_response(body: str, filename: str) -> Response:
 @router.get("/all/ics")
 def all_reminders_ics(authorization: Optional[str] = Header(default=None),
                       token: str = "", db: Session = Depends(get_db)):
-    # 全部提醒打包成一个 ICS（备份/批量导入）；注意必须注册在 /{reminder_id}/ics 之前，否则 "all" 会先被动态路由吃掉
+    # 全部提醒打包成一个 ICS（备份/批量导入）；注意必须注册在 /{reminder_id}/ics 之前，否则 "all" 会先被动态路由吃掉（路由顺序这坑，摔过的人才懂 (＞﹏＜)）
     user = _user_from_bearer_or_query(db, authorization, token)
     if not user:
         return JSONResponse(status_code=401, content={"code": 1, "message": "登录凭证无效哦 (´･ω･`) 重新登录一下嘛~"})

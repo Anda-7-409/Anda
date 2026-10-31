@@ -1,4 +1,4 @@
-# amap_mcp.py — 高德地图 REST 客户端（"Web服务"类型 Key）
+# amap_mcp.py — 高德地图 REST 客户端（"Web服务"类型 Key）——安答的活地图 (๑•̀ㅂ•́)و✧
 # 契约（docs/refactoring.md 3.3；消费方：Backend/service/nav_service.py）：
 #   geocode(address, city)    -> {"ok","location":"lng,lat","name"} | {"ok":False,"error"}
 #   search_poi(keyword, city) -> {"ok","pois":[{"name","address","location"}]} | {"ok":False,"error"}
@@ -52,7 +52,7 @@ def search_poi(q: str, city: str = "") -> dict:
         return {"ok": False, "error": "地点搜索服务异常，请稍后再试"}
 
 def _route_steps(steps: list, *fields: str) -> list:
-    # 依次尝试多个字段名取步骤文本：高德不同接口/版本字段不同（新版步行是 instruction，旧版是 html）
+    # 依次尝试多个字段名取步骤文本：高德不同接口/版本字段不同（新版步行是 instruction，旧版是 html）——同一个家出来的接口，脾气全不一样 (。•́︿•̀。)
     out = []
     for s in steps:
         text = ""
@@ -97,7 +97,7 @@ def route(origin: str, dest: str, mode: str = "walk", city: str = "") -> dict:
                     "duration": transit.get("duration"), "steps": steps}
 
         if mode == "riding":
-            # 高德 v4 接口：返回结构是 {"errcode":0,"data":{"paths":[...]}}
+            # 高德 v4 接口：返回结构是 {"errcode":0,"data":{"paths":[...]}}（和 v3 完全两套长相，别问，问就是历史包袱 (＞﹏＜)）
             r = requests.get(f"{_BASE}/v4/direction/electrobike",
                              params={"key": config.AMAP_MAPS_API_KEY, "origin": origin,
                                      "destination": dest}, timeout=10)
@@ -108,7 +108,7 @@ def route(origin: str, dest: str, mode: str = "walk", city: str = "") -> dict:
             return {"ok": True, "distance": path.get("distance"), "duration": path.get("duration"),
                     "steps": _route_steps(path.get("steps") or [], "instruction")}
 
-        # 默认步行：步骤文本优先 instruction 字段，旧版接口回落到 html（带 <b> 标签，需清洗）
+        # 默认步行：步骤文本优先 instruction 字段，旧版接口回落到 html（带 <b> 标签，需清洗——导航步骤里蹦 HTML，也就高德干得出来）
         r = requests.get(f"{_BASE}/v3/direction/walking",
                          params={"key": config.AMAP_MAPS_API_KEY, "origin": origin,
                                  "destination": dest}, timeout=10)

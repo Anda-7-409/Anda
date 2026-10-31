@@ -7,7 +7,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from AI import model_router
-from AI.model_router import NoModelError   # 模型全挂的降级分支要用，漏 import 会 NameError
+from AI.model_router import NoModelError   # 模型全挂的降级分支要用，漏 import 会 NameError（同款跟头，绝不再栽 (＞﹏＜)）
 from Backend.database import SessionLocal
 from Backend.models.reminder import Reminder
 from Backend.service.schedule_service import WEEK_CN

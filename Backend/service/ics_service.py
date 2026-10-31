@@ -4,7 +4,7 @@ ICS（iCalendar / RFC 5545）日历导出服务。
 
 为什么用 ICS：它是日历互操作的行业标准，Apple 日历 / Google Calendar / Outlook /
 手机系统日历都原生支持"导入单个 .ics 文件"或"长期订阅一个 text/calendar 源（feed）"，
-无需自建推送通道即可获得系统级弹铃提醒（比网页轮询可靠）。
+无需自建推送通道即可获得系统级弹铃提醒（比网页轮询可靠，不用自己写轮询，谢天谢地 (๑•̀ㅂ•́)و✧）。
 
 - 课程表（每周重复）→ 订阅 feed：每门课一个 VEVENT 带 RRULE:FREQ=WEEKLY，
   客户端订阅一次，课程增删改后下次刷新自动同步（UID 稳定 → 客户端按 UID 更新而非重复）。
@@ -41,7 +41,7 @@ def _esc(text) -> str:
             .replace("\r\n", "\\n").replace("\n", "\\n"))
 
 def _fold(line: str) -> list:
-    # 按 UTF-8 字节折行，续行以空格开头；避免把多字节中文字符折断
+    # 按 UTF-8 字节折行，续行以空格开头；避免把多字节中文字符折断（中文被腰斩可就闹笑话了 (＞﹏＜)）
     raw = line.encode("utf-8")
     if len(raw) <= FOLD_BYTES:
         return [line]
@@ -194,7 +194,7 @@ def build_schedule_ics(courses: list, user_id: int) -> str:
             "REFRESH-INTERVAL;VALUE=DURATION:PT12H",
             "X-PUBLISHED-TTL:PT12H"]
     # 时段去重：课表没有周次/单双周概念，同一 (weekday,节次区间) 出现多条记录是重复录入
-    # （AI 抽取重试、用户重复添加都会造成），全部导出日历必重叠 → 按添加顺序只保留最早一条
+    # （AI 抽取重试、用户重复添加都会造成），全部导出日历必重叠 → 按添加顺序只保留最早一条（重复录入这锅，AI 和用户一起背 (。•́︿•̀。)）
     seen = set()
     for c in sorted(courses, key=lambda x: x.get("id", 0)):
         key = (c["weekday"], c["start_slot"], c["end_slot"])
