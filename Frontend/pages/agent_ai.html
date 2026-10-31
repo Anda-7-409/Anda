@@ -2,47 +2,47 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<!-- 程序服务主要实现页 --集成AI_agnet -->
+<!-- 程序服务主要实现页：集成 AI_agent，安答的正宫主战场 -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>安答 · AI Agent 工作台</title>
 <style>
-    /* 程序服务主要实现页 --集成AI_agnet */
+    /* 程序服务主要实现页：集成 AI_agent，样式从这里开张 */
 * { margin:0; padding:0; box-sizing:border-box; }
 html, body { height:100%; font-family:"Microsoft YaHei",sans-serif; background:#f5f7fa; color:#333; font-size:14px; }
 a { color:#1a73e8; text-decoration:none; }
-/* 全局样式 */
+/* 全局样式：一视同仁的那部分 */
 
-/* 三栏总布局 */
-/* 左中右布局 */
+/* 三栏总布局：左中右站好 */
+/* 左中右各自的样子 */
 .layout { display:flex; height:100vh; width:100vw; overflow:hidden; }
 .col { display:flex; flex-direction:column; height:100%; background:#fff; }
 .col-left { width:280px; border-right:1px solid #e4e7ed; }
 .col-center { flex:1; }
 .col-right { width:320px; border-left:1px solid #e4e7ed; }
 
-/* 通用面板 */
+/* 通用面板：各栏共用的外壳 */
 .panel { display:flex; flex-direction:column; overflow:hidden; }
 .panel-header { flex-shrink:0; padding:12px 16px; font-weight:bold; font-size:14px; border-bottom:1px solid #eef0f3; background:#fafbfc; display:flex; align-items:center; justify-content:space-between; }
 .add-btn { cursor:pointer; font-size:17px; font-weight:bold; color:#4f6ef7; line-height:1; user-select:none; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:#eef2ff; }
 .add-btn:hover { color:#fff; background:#4f6ef7; transform:scale(1.15); transition:all .15s; }
 .panel-body { flex:1; overflow-y:auto; padding:8px; }
 
-/* 左栏上下分栏 */
+/* 左栏上下分栏：文件在上，历史在下 */
 .col-left .file-manager { flex:0 0 45%; border-bottom:1px solid #eef0f3; }
 .col-left .history { flex:1; }
 
-/* 资源管理器（VS Code 式树状图，浅色与页面协调） */
-/* 折叠箭头（closed 时旋转 -90° 收拢） */
+/* 资源管理器（VS Code 式树状图，浅色系好跟页面和平共处） */
+/* 折叠箭头（closed 时旋转 -90°，乖巧收拢） */
 .fm-chevron { flex-shrink:0; width:12px; font-size:9px; color:#8a94a6; text-align:center; cursor:pointer; transition:transform .12s; }
 .fm-chevron.closed { transform:rotate(-90deg); }
-/* 根行：箭头 + 标题，工具条 hover 浮现 */
+/* 根行：箭头 + 标题，工具条 hover 才肯露面 */
 .fm-root { display:flex; align-items:center; gap:4px; padding:5px 10px; font-size:13px; font-weight:600; user-select:none; cursor:pointer; }
 .fm-root:hover { background:#eef5ff; }
 .fm-toolbar { margin-left:auto; display:none; gap:2px; }
 .fm-root:hover .fm-toolbar { display:flex; }
 .fm-toolbar button { border:none; background:transparent; color:#5b6b83; cursor:pointer; font-size:13px; width:22px; height:22px; padding:0; line-height:1; border-radius:4px; }
 .fm-toolbar button:hover { background:#dce8ff; color:#1a73e8; }
-/* 树：层级缩进 + 竖线导轨（资源管理器的 ├─ 线） */
+/* 树：层级缩进 + 竖线导轨（资源管理器同款 ├─ 线） */
 .fm-tree, .fm-children { list-style:none; }
 .fm-tree { padding:0 4px 4px; }
 .fm-children { margin:0 0 0 10px; padding-left:8px; border-left:1px solid #e4e7ed; }
@@ -62,7 +62,7 @@ a { color:#1a73e8; text-decoration:none; }
 .fm-row:hover .fm-del { display:inline; }
 .fm-row .fm-del:hover { background:#ffecec; }
 .fm-tree .fm-msg { padding:3px 6px 3px 27px; font-size:12px; color:#999; cursor:default; }
-/* 文件预览遮罩层 */
+/* 文件预览遮罩层：点开文件后的全屏小黑屋 */
 .preview-mask { display:none; position:fixed; inset:0; background:rgba(16,24,40,.45); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); z-index:50; align-items:center; justify-content:center; }
 .preview-mask.show { display:flex; }
 .preview-card { width:min(860px,92vw); height:min(620px,86vh); background:#fff; border-radius:16px; box-shadow:0 24px 64px rgba(16,24,40,.35); display:flex; flex-direction:column; overflow:hidden; animation:pv-pop .22s cubic-bezier(.34,1.56,.64,1); }
@@ -89,10 +89,10 @@ a { color:#1a73e8; text-decoration:none; }
 .pv-error { text-align:center; color:#c0392b; font-size:13px; }
 .pv-error .pv-err-icon { display:block; font-size:36px; margin-bottom:10px; }
 @media (prefers-reduced-motion: reduce) { .preview-card { animation:none; } }
-/* 轻提示 */
+/* 轻提示：toast 小纸条 */
 .toast { position:fixed; left:50%; bottom:90px; transform:translateX(-50%); background:#333c4d; color:#fff; padding:9px 18px; border-radius:8px; font-size:13px; z-index:60; box-shadow:0 6px 20px rgba(16,24,40,.25); }
 
-/* 历史对话 */
+/* 历史对话：翻旧账区 */
 .history-new { width:100%; padding:9px; background:linear-gradient(135deg,#4f8cff 0%,#1a73e8 50%,#6366f1 100%); color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; margin-bottom:10px;box-shadow:0 2px 0 #1557b0,0 4px 10px rgba(26,115,232,.30);transition:all .2s ease; }
 .history-new:hover { filter:brightness(1.1);transform:translateY(-1px); }
 .history-new:active { transform:translateY(1px); }
@@ -104,7 +104,7 @@ a { color:#1a73e8; text-decoration:none; }
 .history-title { font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .history-time { font-size:11px; color:#999; margin-top:2px; }
 
-/* 中间对话区 */
+/* 中间对话区：安答的主舞台 */
 .chat-header { flex-shrink:0; padding:14px 20px; border-bottom:1px solid #eef0f3; background:#fff; display:flex; align-items:center; justify-content:space-between; }
 .chat-header .title { font-size:16px; font-weight:bold; }
 .chat-header .status { font-size:12px; color:#43a047; }
@@ -120,16 +120,16 @@ a { color:#1a73e8; text-decoration:none; }
 .msg.tool .bubble.ok { background:#f0faf2; color:#2e7d32; border:1px solid #b9e0c4; }
 .msg.tool .bubble.err { background:#fff5f5; color:#c0392b; border:1px solid #f5c6c6; }
 .chat-input { flex-shrink:0; padding:12px 20px; border-top:1px solid #eef0f3; background:#fff; transition:background .15s, box-shadow .15s; }
-/* 拖文件悬停在输入区上的高亮提示 */
+/* 拖文件悬停在输入区上的高亮提示：告诉用户"松手吧，接住了" */
 .chat-input.drag-over { background:#eef5ff; box-shadow:inset 0 0 0 2px #1a73e8; }
-/* 引用文件卡片栏：＠引用/拖入的文件显示为小卡片，点 ✕ 一键移除 */
+/* 引用文件卡片栏：＠引用/拖入的文件变成小卡片，点 ✕ 一键送客 */
 .ref-bar { display:none; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .ref-bar.show { display:flex; }
 .ref-chip { display:inline-flex; align-items:center; gap:6px; max-width:240px; padding:3px 6px 3px 10px; background:#eef5ff; border:1px solid #dce8ff; color:#1a73e8; border-radius:14px; font-size:12px; user-select:none; }
 .ref-chip .chip-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
 .ref-chip .chip-x { flex-shrink:0; width:16px; height:16px; border:none; border-radius:50%; background:#dce8ff; color:#1a73e8; font-size:11px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; }
 .ref-chip .chip-x:hover { background:#e5484d; color:#fff; }
-/* 导航工具卡片：目的地/耗时/路线要点/一键打开高德（替代裸 JSON 气泡） */
+/* 导航工具卡片：目的地/耗时/路线要点/一键打开高德（谁想盯着裸 JSON 看呢 (¬‿¬)） */
 .msg.tool .bubble.nav-card { text-align:left; max-width:82%; padding:12px 16px; background:#f0fff4; border:1px solid #b7ebc6; color:#1f6b3a; box-shadow:0 2px 10px rgba(31,107,58,.10); }
 .nav-card .nav-head { font-weight:bold; font-size:13.5px; color:#14532d; margin-bottom:4px; }
 .nav-card .nav-head .nav-origin { font-weight:normal; font-size:11.5px; color:#4a9d68; }
@@ -142,16 +142,16 @@ a { color:#1a73e8; text-decoration:none; }
 .chat-input textarea:focus { border-color:#1a73e8;box-shadow:0 0 0 3px rgba(26,115,232,.15); }
 .chat-input-row { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
 .upload-btn { width:34px; height:34px; border:none; border-radius:50%; background:#f0f4ff;color:#1a73e8; font-size:18px; cursor:pointer; line-height:1; user-select:none; transition:all .15s; }
-/* 模型选择已改为后端自动路由，前端不再提供手动切换 */
+/* 模型选择已改为后端自动路由，前端的手动切换光荣下岗 (。•́︿•̀。) */
 .upload-btn:hover { background:#1a73e8; color:#fff; transform:scale(1.1); }
-/* 麦克风录音中：红色呼吸 */
+/* 麦克风录音中：红光一闪一闪，表示在认真听 */
 .mic-rec { background:#ff4d4f !important; color:#fff !important; animation:mic-pulse 1.2s ease-in-out infinite; }
 @keyframes mic-pulse { 0%,100%{ box-shadow:0 0 0 0 rgba(255,77,79,.45);} 50%{ box-shadow:0 0 0 7px rgba(255,77,79,0);} }
 .send-btn { padding:8px 24px; height:34px;background:linear-gradient(180deg,#69b1ff 0%,#5048e5 45%,#722ed1 100%); color:#fff; border:none; border-radius:20px; cursor:pointer; font-size:14px;font-weight:600;box-shadow:0 2px 0 #1557b0,0 4px 12px rgba(26,115,232,.35);transition:all .2s ease; }
 .send-btn:disabled { background:#9dc3f5; cursor:not-allowed; }
 .send-btn:hover:not(:disabled) { transform:translateY(-1px);box-shadow:0 2px 0 #1557b0,0 6px 18px rgba(26,115,232,.5); }
 .send-btn:active:not(:disabled){transform:translateY(1px);}
-/* 斜杠命令菜单 */
+/* 斜杠命令菜单：/ 一按就冒出来 */
 .slash-menu { display:none; position:absolute; bottom:100%; left:20px; width:320px; max-height:240px; overflow-y:auto; background:#fff; border:1px solid #e4e7ed; border-radius:10px; box-shadow:0 8px 24px rgba(16,24,40,.14); padding:6px; z-index:10; }
 .slash-menu.show { display:block; }
 .slash-group { font-size:11px; color:#999; padding:6px 10px 2px; }
@@ -159,7 +159,7 @@ a { color:#1a73e8; text-decoration:none; }
 .slash-item:hover, .slash-item.hl { background:#eef5ff; }
 .slash-item .name { font-size:13px; font-weight:600; color:#1a73e8; }
 .slash-item .desc { font-size:12px; color:#666; margin-top:2px; }
-/* 提醒面板 */
+/* 提醒面板：到点叫人的小闹钟 */
 .reminder-box { display:none; padding:10px 12px 0; gap:6px; }
 .reminder-box.show { display:flex; }
 .reminder-box input { border:1px solid #e4e7ed; border-radius:6px; font-size:13px; outline:none; }
@@ -169,11 +169,11 @@ a { color:#1a73e8; text-decoration:none; }
 .reminder-item { border-left-color:#722ed1; background:#faf8ff; }
 .reminder-item:hover { background:#f3edff; }
 .reminder-item .time { font-size:11px; color:#722ed1; font-weight:600; margin-top:3px; }
-/* 右栏上下分栏 */
+/* 右栏上下分栏：日程在上，提醒在下 */
 .col-right .schedule { flex:0 0 50%; border-bottom:1px solid #eef0f3; }
 .col-right .reminders { flex:1; }
 
-/* 日程卡片 */
+/* 日程卡片：今日行程排排坐 */
 .sch-item { padding:12px 14px; border-left:3px solid #1a73e8; background:#f8faff; border-radius:8px; margin-bottom:10px; box-shadow:0 1px 3px rgba(26,115,232,.08);transition:all .2s ease; }
 .sch-item:hover { background:#f0f4ff;transform:translateX(2px);box-shadow:0 2px 8px rgba(26,115,232,.15); }
 .sch-item .t { font-weight:600; font-size:13px; }
@@ -181,24 +181,24 @@ a { color:#1a73e8; text-decoration:none; }
 .sch-del { float:right; cursor:pointer; color:#9aa4b2; margin-left:6px; font-weight:bold; opacity:0; transition:opacity .15s; }
 .sch-item:hover .sch-del { opacity:1; }
 .sch-del:hover { color:#e5484d; }
-/* 备忘录输入框 */
+/* 备忘录输入框：随手记一笔 */
 .memo-box { display:none; padding:10px 12px 0; gap:8px; }
 .memo-box.show { display:flex; }
 .memo-box input { flex:1; border:1px solid #e4e7ed; border-radius:6px; padding:7px 10px; font-size:13px; outline:none; }
 .memo-box input:focus { border-color:#f59e0b; }
 .memo-box button { border:none; background:#f59e0b; color:#fff; border-radius:6px; padding:0 14px; cursor:pointer; font-size:13px; }
 
-/* 备忘录条目（橙色系，和蓝色课程区分开） */
+/* 备忘录条目（橙色系，坚决不和蓝色课程搞混 (๑•̀ㅂ•́)و✧） */
 .memo-item { border-left-color:#f59e0b; background:#fffaf0; }
 .memo-item:hover { background:#fff3dd; }
 .memo-del { float:right; cursor:pointer; color:#c9a227; margin-left:6px; }
 .memo-del:hover { color:#e5484d; }
-/* 技能/MCP 标签 */
+/* 技能/MCP 标签：安答的技能徽章墙 */
 .section-title { font-size:12px; color:#999; margin:10px 4px 6px; }
 .tag-row { display:flex; flex-wrap:wrap; gap:6px; padding:0 4px; }
 .tag { padding:4px 10px; background:#eef5ff; color:#1a73e8; border-radius:12px; font-size:12px; transition:all .15s ease;border:1px solid transparent;}
 .tag:hover { background:#dce8ff; transform:translateY(-2px); box-shadow:0 3px 8px rgba(26,115,232,.20); }
-/* ===== 手机端适配：左右栏改为抽屉，中栏独占全屏；电脑端不受影响 ===== */
+/* ===== 手机端适配：左右栏缩成抽屉，中栏独占全屏；电脑端请当无事发生 ===== */
 .m-btn { display:none; }
 .m-backdrop { display:none; }
 @media (max-width:768px) {
@@ -219,7 +219,7 @@ a { color:#1a73e8; text-decoration:none; }
 .think { margin-bottom:6px; border-left:3px solid #a5b4fc; background:#f8fafc; border-radius:6px; font-size:12px; color:#64748b; }
 .think summary { cursor:pointer; padding:4px 8px; user-select:none; }
 .think .think-body { padding:4px 10px 8px; white-space:pre-wrap; max-height:220px; overflow:auto; }
-/* 思维面板内的工具调用行：跟着思维流走，点击可展开返回详情 */
+/* 思维面板里的工具调用行：跟着思维流走，点开能看工具交了什么作业 */
 .think .tool-item { margin:6px 0; border:1px dashed #c7d2fe; border-radius:6px; background:#eef2ff; }
 .think .tool-item summary { cursor:pointer; padding:3px 8px; color:#4f46e5; user-select:none; list-style:none; }
 .think .tool-item summary::-webkit-details-marker { display:none; }
@@ -233,15 +233,15 @@ a { color:#1a73e8; text-decoration:none; }
 </style>
 </head>
 <body>
-    <!-- 三栏总布局 -->
+    <!-- 三栏总布局：左中右各就各位 -->
 <div class="layout">
-  <!-- 左栏 -->
+  <!-- 左栏：文件 + 历史的补给站 -->
   <aside class="col col-left">
-    <!-- 文件管理器（VS Code 资源管理器风格） -->
+    <!-- 文件管理器（VS Code 资源管理器风格，看着眼熟就对了） -->
     <section class="panel file-manager">
-        <!-- 面板标题 -->
+        <!-- 面板标题：招牌挂这儿 -->
       <div class="panel-header"><span>📂 文件管理器</span></div>
-      <!-- 根行：折叠箭头 + 工具条（上传/刷新/全部折叠，hover 浮现） -->
+      <!-- 根行：折叠箭头 + 工具条（上传/刷新/全部折叠，hover 才现身） -->
       <div class="fm-root" id="fm-root">
         <span class="fm-chevron" id="fm-root-chevron">▼</span>
         <span>我的文件</span>
@@ -251,48 +251,48 @@ a { color:#1a73e8; text-decoration:none; }
           <button id="fm-collapse" title="全部折叠">⊟</button>
         </span>
       </div>
-      <!-- 树内容 -->
+      <!-- 树内容：文件们的家 -->
       <div class="panel-body"><ul class="fm-tree" id="fm-tree"></ul></div>
     </section>
-    <!-- 历史对话 -->
+    <!-- 历史对话：和安答的聊天记录都在这 -->
     <section class="panel history">
-        <!-- 历史对话标题 -->
+        <!-- 历史对话标题：招牌 No.2 -->
       <div class="panel-header"><span>💬 历史对话</span></div>
-        <!-- 历史对话内容 -->
+        <!-- 历史对话内容：本体在下面 -->
       <div class="panel-body">
-        <!-- 新对话按钮 -->
+        <!-- 新对话按钮：开新坑专用 (๑•̀ㅂ•́)و✧ -->
         <button class="history-new" id="new-chat">+ 新对话</button>
-        <!-- 历史对话列表 -->
+        <!-- 历史对话列表：旧坑陈列架 -->
         <div id="history-list"></div>
       </div>
     </section>
   </aside>
 
-  <!-- 中栏 -->
-  <!-- 对话区 -->
+  <!-- 中栏：真正的舞台 -->
+  <!-- 对话区：和安答唠嗑的地方 -->
   <main class="col col-center">
-    <!-- 对话区标题 -->
+    <!-- 对话区标题：门面担当 -->
         <div class="chat-header">
-        <!-- 手机端：呼出左栏抽屉（文件+历史） -->
+        <!-- 手机端：这颗按钮呼出左栏抽屉（文件+历史） -->
       <button class="m-btn" id="btn-left" title="文件与历史">☰</button>
-        <!-- 对话区标题 -->
+        <!-- 对话区标题：门面担当 -->
       <span class="title">安答 AI Agent</span>
-        <!-- 对话区状态 -->
+        <!-- 对话区状态：安答的营业中灯牌 -->
       <span class="status">● 在线营业中～</span>
-        <!-- 手机端：呼出右栏抽屉（日程+提醒） -->
+        <!-- 手机端：这颗按钮呼出右栏抽屉（日程+提醒） -->
       <button class="m-btn" id="btn-right" title="日程与提醒">📅</button>
     </div>
-    <!-- 对话区消息 -->
+    <!-- 对话区消息：气泡们的剧场 -->
     <div class="chat-messages" id="chat-messages"></div>
-    <!-- 对话区输入 -->
+    <!-- 对话区输入：用户的话从这里进 -->
        <div class="chat-input">
-        <!-- 引用文件卡片栏：引用到对话的文件在这里显示，✕ 一键移除 -->
+        <!-- 引用文件卡片栏：引用进对话的文件在这排队，✕ 一键移除 -->
         <div class="ref-bar" id="ref-bar"></div>
-        <!-- 对话区输入文本框 -->
+        <!-- 对话区输入文本框：正文产地 -->
       <textarea id="chat-input" placeholder="和安答说说话吧～自然语言就好（Ctrl+Enter 发送）"></textarea>
-            <!-- 斜杠命令菜单（/ 呼出） -->
+            <!-- 斜杠命令菜单（/ 呼出，快捷指令都在这） -->
       <div class="slash-menu" id="slash-menu"></div>
-        <!-- 对话区输入发送按钮 -->
+        <!-- 对话区输入发送按钮：最后一公里 -->
       <div class="chat-input-row">
   <button class="upload-btn" id="loc-btn" title="上报当前位置（问“怎么去XX”前先点我）">📍</button>
   <button class="upload-btn" id="mic-btn" title="语音输入：点一下开始说，说完再点一下">🎤</button>
@@ -302,21 +302,21 @@ a { color:#1a73e8; text-decoration:none; }
 </div>
   </main>
 
-  <!-- 右栏 -->
-  <!-- 日程卡片 -->
+  <!-- 右栏：日程与提醒的值班室 -->
+  <!-- 日程卡片：今天要干嘛一目了然 -->
   <aside class="col col-right">
-    <!-- 日程卡片标题 -->
+    <!-- 日程卡片标题：值班室门牌 -->
     <section class="panel schedule">
-        <!-- 日程卡片标题 -->
+        <!-- 日程卡片标题：门牌的另一份拷贝 -->
       <div class="panel-header"><span>今日日程</span><span><span class="add-btn" id="ics-subscribe-btn" title="订阅课表到系统日历（ICS）">📅</span><span class="add-btn" id="add-memo-btn" title="添加日程">+</span></span></div>
       <div class="memo-box" id="memo-box">
         <input id="memo-input" placeholder="记点什么，回车收好~">
         <button id="memo-confirm">添加</button>
       </div>  
-      <!-- 日程卡片内容 -->
+      <!-- 日程卡片内容：日程本体 -->
       <div class="panel-body" id="schedule-list"></div>
     </section>
-        <!-- 提醒卡片 -->
+        <!-- 提醒卡片：怕你忘事的那个 -->
     <section class="panel reminders">
       <div class="panel-header"><span>提醒</span><span><span class="add-btn" id="reminder-ics-all" title="全部提醒打包导出为 ICS 日历文件">⬇</span><span class="add-btn" id="add-reminder-btn" title="添加提醒">+</span></span></div>
       <div class="reminder-box" id="reminder-box">
@@ -329,7 +329,7 @@ a { color:#1a73e8; text-decoration:none; }
   </aside>
 </div>
 
-<!-- 文件预览遮罩层（点击遮罩空白处关闭） -->
+<!-- 文件预览遮罩层：全屏看文件用的（点遮罩空白处关闭） -->
 <div class="preview-mask" id="preview-mask">
   <div class="preview-card">
     <div class="preview-bar">
@@ -371,28 +371,28 @@ a { color:#1a73e8; text-decoration:none; }
 })();
 </script>
 <script>
-// 未登录跳回首页
-// 从登录状态获取 token
+// 没登录？请回首页 (´･ω･`)
+// 从 localStorage 捞登录 token
 const token = localStorage.getItem('token');
-// 如果 token 不存在，跳回首页
+// token 都不在，跳回首页别逗留
 if (!token) { location.href = '../index.html'; }
-// 定义 API 函数
+// 定义 API 函数：安答的后勤线
 const api = async (url, opts={}) => {
   try {
-    // 发送 API 请求
+    // 发送 API 请求，Authorization 一起捎上
     const res = await fetch(url, { headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+token }, ...opts });
-    // 解析 JSON：500 等错误页不是 JSON，也不丢真实状态码（status 0 只代表真的连不上）
+    // 解析 JSON：500 等错误页不是 JSON，也别丢真实状态码（status 0 只代表真的连不上，别冤枉后端）
     let data = {};
     try { data = await res.json(); } catch {}
-    // 返回 API 响应（status 供调用方区分 401/网络失败等场景）
+    // 返回 API 响应（status 留给调用方区分 401/网络失败等场景）
     return { ok: res.ok, status: res.status, data };
-    // 如果 API 请求失败，返回错误响应
+    // 如果 API 请求失败，返回错误响应，异常不许乱飞
   } catch { return { ok:false, status:0, data:{} }; }
 };
 const $ = id => document.getElementById(id);
 
 // ===== 左栏上：资源管理器（VS Code 风格，真实数据：GET /upload/ 当前用户自己的文件） =====
-// 上传目录本身是平的，这里按扩展名分到虚拟文件夹展示（图片/文档/表格/演示/压缩包）
+// 上传目录本身是平的，只好按扩展名分到虚拟文件夹装门面（图片/文档/表格/演示/压缩包） (¬‿¬)
 const FM_GROUPS = [
   { key:'图片',   icon:'🖼', exts:['png','jpg','jpeg','gif','webp','bmp'] },
   { key:'文档',   icon:'📄', exts:['pdf','doc','docx','txt','md'] },
@@ -400,15 +400,15 @@ const FM_GROUPS = [
   { key:'演示',   icon:'📽', exts:['ppt','pptx'] },
   { key:'压缩包', icon:'🗜', exts:['zip'] },
 ];
-const fmOpenGroups = new Set(FM_GROUPS.map(g => g.key));  // 展开的分组（默认全展开）
-let fmRootOpen = true;                                     // 根节点是否展开
+const fmOpenGroups = new Set(FM_GROUPS.map(g => g.key));  // 展开的分组（默认全敞开）
+let fmRootOpen = true;                                     // 根节点开不开
 
 const fmGroupOf = name => {
   const ext = (name.split('.').pop() || '').toLowerCase();
   return FM_GROUPS.find(g => g.exts.includes(ext)) || { key:'其他', icon:'📦' };
 };
 
-// 状态行（空态/重试/过期提示统一走这里）
+// 状态行（空态/重试/过期提示统一走这，不许散装输出）
 function fmMsg(text, color) {
   const li = document.createElement('li');
   li.className = 'fm-msg';
@@ -417,12 +417,12 @@ function fmMsg(text, color) {
   return li;
 }
 
-// 每类文件的专属图标（像资源管理器按类型着色）
+// 每类文件的专属图标（像资源管理器一样按类型上色）
 const FM_ICONS = { png:'🖼️', jpg:'🖼️', jpeg:'🖼️', gif:'🖼️', webp:'🖼️', bmp:'🖼️', pdf:'📕', doc:'📘', docx:'📘', xls:'📗', xlsx:'📗', csv:'📊', ppt:'📙', pptx:'📙', txt:'📃', md:'📝', zip:'🗜️' };
 const extOf = name => (name.split('.').pop() || '').toLowerCase();
 const iconOf = name => FM_ICONS[extOf(name)] || '📄';
 
-// 渲染树：我的文件 → 类型文件夹（可折叠）→ 文件（点击预览，悬停出下载）
+// 渲染树：我的文件 → 类型文件夹（可折叠）→ 文件（点击预览，悬停出按钮）
 let fmFiles = [];   // 当前用户的已上传文件名列表（send 时校验正文 @引用 是否真实存在）
 function renderFm(files) {
   fmFiles = files;
@@ -511,7 +511,7 @@ async function loadFiles() {
     return;
   }
   if (status === 0 || status >= 500) {
-    // 加载瞬间后端可能正在重启：自动重试直到拿到结果，不再一次性摆烂
+    // 加载瞬间后端可能正在重启：自动重试直到叫醒它，绝不一次性摆烂 (๑•̀ㅂ•́)و✧
     box.appendChild(fmMsg(`${status === 0 ? '后端(8000)叫不醒' : '后端闹脾气了(HTTP ' + status + ')'}，5秒后再试一次…`, '#e2c08d'));
     setTimeout(loadFiles, 5000);
     return;
@@ -523,13 +523,13 @@ async function loadFiles() {
   renderFm(data.data || []);
 }
 
-// 上传成功后调用：自动展开该文件所属分组再刷新，新文件立刻可见
+// 上传成功后调用：自动展开文件所属分组再刷新，新文件火速亮相 (๑•̀ㅂ•́)و✧
 function revealFile(fileName) {
   fmOpenGroups.add(fmGroupOf(fileName).key);
   loadFiles();
 }
 
-// 根行交互：整体折叠/展开；工具条 上传/刷新/全部折叠
+// 根行交互：整体折叠/展开；工具条管 上传/刷新/全部折叠
 $('fm-root-chevron').onclick = () => {
   fmRootOpen = !fmRootOpen;
   $('fm-root-chevron').classList.toggle('closed', !fmRootOpen);
@@ -539,7 +539,7 @@ $('fm-upload').onclick = () => $('file-input').click();
 $('fm-refresh').onclick = loadFiles;
 $('fm-collapse').onclick = () => { fmOpenGroups.clear(); loadFiles(); };
 
-// ===== 文件下载与预览（fetch 带请求头取回二进制：img/iframe 标签带不了 Authorization） =====
+// ===== 文件下载与预览（fetch 带请求头取回二进制：img/iframe 标签带不上 Authorization，浏览器经典短板，只能手动搬 (´•̥ω•̥`)） =====
 const PREVIEW_IMG = ['png','jpg','jpeg','gif','webp','bmp'];
 const PREVIEW_TEXT = ['txt','md','csv','json','log'];
 
@@ -579,7 +579,7 @@ async function downloadFile(fileName) {
 
 const previewMask = $('preview-mask');
 
-// 删除文件：二次确认后调 DELETE 接口，成功刷新左栏树
+// 删除文件：二次确认后才肯动手调 DELETE，成功刷新左栏树
 async function removeFile(fileName) {
   if (!confirm(`确定删掉「${fileName}」吗？删了就找不回来啦 (。•́︿•̀。)`)) return;
   try {
@@ -643,41 +643,41 @@ async function previewFile(fileName) {
 }
 // 点遮罩空白处也能关掉预览
 previewMask.onclick = e => { if (e.target === previewMask) closePreview(); };
-// 按 Esc 也能关掉预览
+// 按 Esc 也能关掉预览，键盘党狂喜 (¬‿¬)
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && previewMask.classList.contains('show')) closePreview(); });
 
 loadFiles();
 
 // ===== 左栏下：历史对话（localStorage 持久化） =====
-// 从 localStorage 中获取历史对话
+// 从 localStorage 里捞历史对话
 let history = (() => { try { return JSON.parse(localStorage.getItem('agent_history') || '[]') || []; } catch { localStorage.removeItem('agent_history'); return []; } })();
-// 渲染历史对话列表
+// 渲染历史对话列表（这行注释在文件里迷路过好几次，见谅 (。•́︿•̀。)）
 let currentChatId = null;
-// 保存历史对话到 localStorage（仅本地缓存；云端由服务端在对话流内落库，前端只拉不推）
+// 保存历史对话到 localStorage（仅本地缓存；云端由服务端在对话流内落库，前端只拉不推，分工明确 (๑•̀ㅂ•́)و✧）
 function saveHistory(){ localStorage.setItem('agent_history', JSON.stringify(history)); }
-// 渲染历史对话列表
+// 渲染历史对话列表（这行注释在文件里迷路过好几次，见谅 (。•́︿•̀。)）
 function renderHistory() {
-    // 清空历史对话列表
+    // 清空历史对话列表：先腾地方
   const box = $('history-list'); box.innerHTML = '';
-    // 渲染历史对话列表
-    // 遍历历史对话列表
-    // 创建列表项
-    // 设置列表项类名
-    // 设置列表项文本内容
-    // 将列表项添加到父元素
+    // 渲染历史对话列表（这行注释在文件里迷路过好几次，见谅 (。•́︿•̀。)）
+    // 遍历历史对话列表：挨个点名
+    // 造列表项
+    // 给列表项戴类名
+    // 填上列表项内容
+    // 送进父元素怀里
   history.forEach(h => {
-    // 渲染当前列表项
-    // 创建列表项
-    // 设置列表项类名
-    // 设置列表项文本内容
-    // 将列表项添加到父元素
+    // 渲染当前列表项：主角登场
+    // 造列表项
+    // 给列表项戴类名
+    // 填上列表项内容
+    // 送进父元素怀里
     const div = document.createElement('div');
-    // 设置列表项类名
-    // 设置列表项文本内容
-    // 将列表项添加到父元素
+    // 再戴一次类名
+    // 再填一次内容
+    // 再送一次父元素
     div.className = 'history-item' + (h.id===currentChatId?' active':'');
-    // 设置列表项文本内容
-    // 将列表项添加到父元素
+    // 内容单独再补一笔
+    // 送进父元素
     div.innerHTML = `<div class="history-title">${h.title}</div><div class="history-time">${h.time}</div>`;
     const del = document.createElement('span');
 del.className = 'del-btn';
@@ -688,40 +688,40 @@ del.onclick = e => {
   history = history.filter(x => x.id !== h.id);
   saveHistory();
   if (token) fetch('/agent/history/' + h.id, { method:'DELETE',
-    headers:{ 'Authorization':'Bearer '+token } }).catch(()=>{});   // 服务端同删，其他设备刷新后也不再出现
+    headers:{ 'Authorization':'Bearer '+token } }).catch(()=>{});   // 服务端同步删，别的设备刷新后也不再阴魂不散
   if (currentChatId === h.id) {
     currentChatId = null;
     if (history.length) selectChat(history[0].id); else newChat();
   } else renderHistory();
 };
 div.appendChild(del);
-    // 点击列表项时，切换到该对话
-    // 渲空对话消息
+    // 点列表项就切到该对话
+    // 渲空对话消息：先腾空舞台
     // 遍历该对话的所有消息
-    // 渲染消息
-    // 将消息添加到父元素
-    // 渲染历史对话列表
+    // 渲染消息本体
+    // 消息送进父元素
+    // 渲染历史对话列表（这行注释在文件里迷路过好几次，见谅 (。•́︿•̀。)）
     div.onclick = () => selectChat(h.id);
-    // 将列表项添加到父元素
+    // 列表项送进父元素
     box.appendChild(div);
   });
 }
-// 切换到指定对话
+// 切换到指定对话：搬家现场
 function selectChat(id) {
-    // 切换到指定对话
+    // 切换到指定对话：搬家现场
   currentChatId = id;
   refs = []; renderRefs();   // 引用不跨对话残留：切走就清空，防止上个对话的文件带进这条消息
   let pendingTools = [];   // 暂存 AI 工具消息，遇到其后的 ai 消息时并入思维面板
-    // 渲空对话消息
+    // 渲空对话消息：先腾空舞台
   const h = history.find(x=>x.id===id);
-    // 渲染指定对话的所有消息
-    // 渲空对话消息
+    // 渲染指定对话的所有消息：老对话重放现场
+    // 渲空对话消息：先腾空舞台
   $('chat-messages').innerHTML = '';
-    // 渲染指定对话的所有消息
-    // 渁�历该对话的所有消息
-    // 渲染消息
-    // 将消息添加到父元素
-    // 渲染历史对话列表
+    // 渲染指定对话的所有消息：老对话重放现场
+    // 渲染该对话的所有消息（这行注释当年乱码，今日平反 (。•́︿•̀。)）
+    // 渲染消息本体
+    // 消息送进父元素
+    // 渲染历史对话列表（这行注释在文件里迷路过好几次，见谅 (。•́︿•̀。)）
   (h?.messages||[]).forEach(m => {
     // AI 调用的工具消息（后端落库 role=tool）：不再渲染独立气泡，暂存后并入其后 ai
     // 消息的思维面板（落库顺序保证 tool 先于 ai）；nav 成功结果额外出导航卡片
@@ -732,37 +732,37 @@ function selectChat(id) {
       pendingTools.push({ tool_name: m.tool, content: m.content });
       return;
     }
-    if (m.role === 'user') pendingTools = [];   // 防御：正常落库顺序 tool 总在 ai 前
+    if (m.role === 'user') pendingTools = [];   // 防御：正常落库顺序 tool 总在 ai 前，防的就是意外
     appendMessage(m.role, m.content, m.tool, m.reasoning, pendingTools.splice(0));
   });
-    // 渲染历史对话列表
+    // 渲染历史对话列表（这行注释在文件里迷路过好几次，见谅 (。•́︿•̀。)）
   renderHistory();
 }
 function newChat() {
-    // 创建新对话
+    // 创建新对话：开新坑
   currentChatId = 'c_' + Date.now();
-  refs = []; renderRefs();   // 新对话同样不带旧引用（send 内兜底调用时引用合并还没开始，不受影响）
-    // 渲空对话消息
+  refs = []; renderRefs();   // 新对话同样不带旧引用（send 内兜底调用时引用合并还没开始，不受影响，放心）
+    // 渲空对话消息：先腾空舞台
   $('chat-messages').innerHTML='';
-    // 渲染新对话的所有消息
-    // 渲染新对话的所有消息
-    // 渲染新对话的所有消息
-    // 渲染新对话的所有消息
-    // 渲染新对话的所有消息
+    // 渲染新对话的所有消息（复制粘贴五连，历史遗迹请勿模仿 (¬‿¬)）
+    // 渲染新对话的所有消息（复制粘贴五连，历史遗迹请勿模仿 (¬‿¬)）
+    // 渲染新对话的所有消息（复制粘贴五连，历史遗迹请勿模仿 (¬‿¬)）
+    // 渲染新对话的所有消息（复制粘贴五连，历史遗迹请勿模仿 (¬‿¬)）
+    // 渲染新对话的所有消息（复制粘贴五连，历史遗迹请勿模仿 (¬‿¬)）
   history.unshift({ id:currentChatId, title:'新对话', time:new Date().toLocaleString(), messages:[] });
-    // 保存新对话到 localStorage
+    // 保存新对话到 localStorage：落袋为安
   saveHistory(); renderHistory(); $('chat-messages').innerHTML='';
 }
-// 点击创建新对话按钮时，创建新对话
+// 点"新对话"按钮就开新坑
 $('new-chat').onclick = newChat;
 
 // ===== 中栏：对话 =====
 // 渲染消息（toolCalls：需要并入思维面板的工具调用记录 [{tool_name,content}]，历史重放用）
 function appendMessage(role, content, toolName, reasoning, toolCalls) {
-    // 渲染消息
+    // 渲染消息本体
   const box = $('chat-messages');
   const div = document.createElement('div');
-    // 设置消息类名
+    // 给消息定类名
   div.className = 'msg ' + (role==='user'?'user':(role==='tool'?'tool':'ai'));
   const bubble = document.createElement('div');
     // nav 工具的成功结果 → 结构化导航卡片（实时消息与历史重放都走这里，点按钮直达高德）
@@ -773,12 +773,12 @@ function appendMessage(role, content, toolName, reasoning, toolCalls) {
     } catch {}
   }
   bubble.className = 'bubble';
-    // 设置消息文本内容
+    // 填消息正文
   const text = toolName
     ? (toolName === 'upload' ? `文件上传\n${content}` : `调用工具: ${toolName}\n${content}`)
     : content;
   if (reasoning || (toolCalls && toolCalls.length)) {
-    // 折叠思考面板：思维文本 + 工具调用行（可展开看返回详情），与实时流同一套样式
+    // 折叠思考面板：思维文本 + 工具调用行（点开能看返回详情），与实时流同一套样式
     const think = document.createElement('details'); think.className = 'think';
     think.innerHTML = '<summary>-思考过程-</summary><div class="think-body"></div>';
     const thinkBody = think.querySelector('.think-body');
@@ -794,12 +794,12 @@ function appendMessage(role, content, toolName, reasoning, toolCalls) {
   } else {
     bubble.textContent = text;
   }
-    // 将消息添加到父元素
+    // 消息送进父元素
   div.appendChild(bubble); box.appendChild(div);
-    // 滚动到最底部
+    // 滚动到最底部，别错过新气泡
   box.scrollTop = box.scrollHeight;
 }
-// 导航卡片：把 nav 工具的真实结果拼成可点的一块（目的地/距离耗时/路线要点/高德直达按钮）
+// 导航卡片：把 nav 工具的真实结果拼成可点的一块（目的地/距离耗时/路线要点/高德直达按钮，拒绝天书 JSON）
 function appendNavCard(r) {
   const MODE_CN = { walk: '步行', ride: '骑行', drive: '驾车' };
   const box = $('chat-messages');
@@ -830,7 +830,7 @@ function appendNavCard(r) {
   div.appendChild(bubble); box.appendChild(div);
   box.scrollTop = box.scrollHeight;
 }
-// 工具调用行（思维面板内）：一行"调用工具：XXX >"，点击展开看返回详情（实时流与历史重放共用）
+// 工具调用行（思维面板内）：一行"调用工具：XXX >"，点开看返回详情（实时流与历史重放共用一套）
 function makeToolItem(toolName, resultJson) {
   const item = document.createElement('details'); item.className = 'tool-item';
   const sum = document.createElement('summary');
@@ -840,7 +840,7 @@ function makeToolItem(toolName, resultJson) {
   item.append(sum, pre);
   return item;
 }
-// 流式对话：SSE 逐块渲染 + 可折叠思考过程面板（模型不下发 reasoning 时自动隐藏）
+// 流式对话：SSE 逐块渲染 + 可折叠思考过程面板（模型不下发 reasoning 时面板识相隐身）
 async function sendStream(text, refsList) {
   const div = document.createElement('div'); div.className = 'msg ai';
   const bubble = document.createElement('div'); bubble.className = 'bubble';
@@ -848,15 +848,15 @@ async function sendStream(text, refsList) {
   think.innerHTML = '<summary>-思考过程-</summary><div class="think-body"></div>';
   const body = document.createElement('div');
   bubble.append(think, body);
-  div.appendChild(bubble);   // 关键：气泡挂进消息行，否则全程游离、流式渲染不可见
+  div.appendChild(bubble);   // 关键：气泡必须挂进消息行，否则全程游离、流式渲染看不见，当初排查好久 (＞﹏＜)
   const box = $('chat-messages');
   box.appendChild(div);
   let answer = '', reasoning = '', sawThink = false;
   // 思维面板分段渲染：思维文本段与工具调用行按到达顺序交替——工具行天然落在思维流的
-  // 真实时间位置（第几轮调用就在哪），后续思维另起一段，实现"跟着模型的思维面走"
+  // 真实时间位置（第几轮调用就在哪），后续思维另起一段，实现"跟着模型的思维面走" (๑•̀ㅂ•́)و✧
   const thinkBody = think.querySelector('.think-body');
   let reasonSpan = null;
-  let pendTool = null;   // "正在调用工具"占位行，结果到达后替换为真实工具行
+  let pendTool = null;   // "正在调用工具"占位行，等真结果到了就请它退场 (。•́︿•̀。)
   const newReasonSpan = () => {
     reasonSpan = document.createElement('span');
     reasonSpan.className = 'reason-text';
@@ -878,7 +878,7 @@ async function sendStream(text, refsList) {
         const payload = line.slice(5).trim(); if (payload === '[DONE]') continue;
         let ev; try { ev = JSON.parse(payload); } catch { continue; }
         if (ev.type === 'tool_start') {
-          // 执行前先亮出"正在调用工具：XXX"占位行，结果到达（tools 事件）后替换为可展开详情
+          // 执行前先亮出"正在调用工具：XXX"占位行，结果到达（tools 事件）后替换成可展开详情
           if (!sawThink) { think.open = true; sawThink = true; }
           reasonSpan = null;
           if (pendTool) pendTool.remove();
@@ -889,12 +889,12 @@ async function sendStream(text, refsList) {
           box.scrollTop = box.scrollHeight;
         } else if (ev.type === 'tools') {
           // 工具调用并入思维面板：一行"调用工具：XXX >"，点击展开看返回详情
-          if (pendTool) { pendTool.remove(); pendTool = null; }   // 占位行让位给真实结果
+          if (pendTool) { pendTool.remove(); pendTool = null; }   // 占位行让位给真身
           if (!sawThink) { think.open = true; sawThink = true; }
           reasonSpan = null;   // 工具行截断当前思维段，之后新思维另起一段
           (ev.tool_calls||[]).forEach(t => {
             thinkBody.appendChild(makeToolItem(t.tool_name, JSON.stringify(t.result || {}, null, 2)));
-            // nav 的成功结果仍出独立导航卡片（要点按钮直达高德，不能只收在折叠里）
+            // nav 的成功结果仍出独立导航卡片（按钮直达高德，不能只收在折叠里吃灰）
             if (t.tool_name === 'nav') {
               try { const r = t.result || {}; if (r.ok) appendNavCard(r); } catch {}
             }
@@ -913,11 +913,11 @@ async function sendStream(text, refsList) {
         } else if (ev.type === 'reasoning') {
           if (!sawThink) { think.open = true; sawThink = true; }
           if (!reasonSpan) newReasonSpan();
-          reasoning += ev.delta;   // 变量留一份入历史，DOM 只管实时显示
+          reasoning += ev.delta;   // 变量留一份进历史，DOM 只管实时露脸
           reasonSpan.textContent += ev.delta;
           box.scrollTop = box.scrollHeight;
         } else if (ev.type === 'content') {
-          if (sawThink) think.open = false;   // 正文开始，思考面板自动收起
+          if (sawThink) think.open = false;   // 正文开始，思考面板自觉收起
           answer += ev.delta; body.textContent = answer;
           box.scrollTop = box.scrollHeight;
         } else if (ev.type === 'error') {
@@ -929,12 +929,12 @@ async function sendStream(text, refsList) {
       }
     }
     if (!answer) body.textContent = '（安答这次沉默了 (´･ω･`)）';
-    // 思考面板没收到任何内容时隐藏，避免留个空壳
+    // 思考面板没收到任何内容就藏起来，空壳子挂着怪丢人的 (¬‿¬)
     if (!sawThink) think.style.display = 'none';
     return { answer, reasoning };
   } catch {
     if (answer) {
-      // 连接中断：已收到的内容照常保留并入历史，只追加中断提示（文章 5.3 的工程实践）
+      // 连接中断：已收到的内容照常保留并入历史，只追加中断提示（文章 5.3 的工程实践，finally 是最后的倔强）
       body.textContent = answer + '\n\n⚠️ 连接中断啦 (＞﹏＜) 回复可能不完整';
       return { answer, reasoning };
     }
@@ -945,20 +945,20 @@ async function sendStream(text, refsList) {
 }
 let sending = false;   // 流式回复未结束前禁止再次发送：按钮禁用只挡鼠标点击，Ctrl+Enter 会绕过，入口级加锁才拦得住
 async function send() {
-    // 发送消息
-    // 渲空对话消息
+    // 发送消息：主流程开跑
+    // 渲空对话消息：先腾空舞台
   const input = $('chat-input'); const text = input.value.trim();
-    // 检查输入是否为空
+    // 检查输入是否为空：空手可发不出弹幕
   if (!text || sending) return;
-    // 禁用发送按钮
-    // 渲空输入框
-    // 渲染用户消息
+    // 禁用发送按钮，防止连发
+    // 清空输入框
+    // 渲染用户消息：先让用户亮个相
   const btn = $('send-btn'); btn.disabled = true; input.value='';
   sending = true;
-    // 渲染用户消息
+    // 渲染用户消息：先让用户亮个相
   appendMessage('user', text);
   if (!currentChatId) newChat();
-    // 渲染新对话的所有消息
+    // 渲染新对话的所有消息（复制粘贴五连，历史遗迹请勿模仿 (¬‿¬)）
   const h = history.find(x=>x.id===currentChatId);
 
   h.messages.push({role:'user', content:text});
@@ -966,7 +966,7 @@ async function send() {
   saveHistory(); renderHistory();
    try {
     // 合并引用来源：输入框上方的文件卡片 + 正文里手打的 @文件名；正文匹配到的必须
-    // 是真实存在的文件才带上——否则邮箱(@xx@qq.com)、@10.30 之类都会被当成文件引用
+    // 是真实存在的文件才带上——否则邮箱(@xx@qq.com)、@10.30 之类全被错当文件，这坑踩过 (。•́︿•̀。)
     const textRefs = (text.match(/@[^@\s]+\.[A-Za-z0-9]+/g) || []).map(s => s.slice(1));
     const known = new Set(fmFiles.map(f => f.file_name));
     const allRefs = [...new Set([...refs, ...textRefs.filter(n => known.has(n))])];
@@ -976,13 +976,13 @@ async function send() {
       refs = []; renderRefs();   // 发送成功后清空卡片；失败保留，方便直接重发
     }
   } catch (err) {
-    console.error('send failed:', err);   // 前端异常至少可见，避免静默无反应
+    console.error('send failed:', err);   // 前端异常至少喊一声，别静悄悄装没事
     appendMessage('ai', '出小差错啦 (＞﹏＜) ' + (err && err.message || '未知错误') + '，按 F12 看看控制台嘛');
   } finally { sending = false; saveHistory(); btn.disabled = false; input.focus(); loadSchedule(); loadReminders(); }   // 对话里可能刚改了课表/备忘/提醒，右栏立即同步
 }
 $('send-btn').onclick = send;
 // ===== 输入区：语音输入 —— WebAudio 采 PCM 编码 WAV → /asr 转写 → 文字回填输入框 =====
-// 为什么用 WAV：所有 ASR 服务都吃 WAV，不赌浏览器 MediaRecorder 的 webm/opus 兼容性
+// 为什么用 WAV：所有 ASR 服务都吃 WAV，不赌浏览器 MediaRecorder 的 webm/opus 兼容性——赌过，输了 (´•̥ω•̥`)
 let rec = null;   // 录音会话 {stream, ctx, node, chunks, start, timer}
 const MAX_REC_MS = 60 * 1000;
 
@@ -1019,7 +1019,7 @@ function stopRec(send = true) {
       const text = ok && j.code === 0 ? ((j.data && j.data.text) || '') : '';
       if (text) {
         const input = $('chat-input');
-        input.value = input.value ? input.value + ' ' + text : text;   // 回填输入框，用户确认修正后再发
+        input.value = input.value ? input.value + ' ' + text : text;   // 回填输入框，让用户过目修正后再发
         input.focus();
       } else {
         alert((j && (j.message || j.detail)) || '语音没听清 (´･ω･`) 直接打字告诉我吧~');
@@ -1048,7 +1048,7 @@ $('mic-btn').onclick = async () => {
     if (!rec) return;
     const sec = Math.round((Date.now() - rec.start) / 1000);
     mic.textContent = '⏹ ' + sec + 's';
-    if (Date.now() - rec.start >= MAX_REC_MS) stopRec(true);   // 60s 自动停并转写
+    if (Date.now() - rec.start >= MAX_REC_MS) stopRec(true);   // 60s 到点自动停并转写，说太久也不惯着
   }, 250);
 };
 // ===== 输入区左下角：上传文件 —— 逻辑链：选择→校验→上传→进度→结果→失败可重试 =====
@@ -1057,14 +1057,14 @@ const MAX_FILES = 5;
 const OK_EXT = ['png','jpg','jpeg','gif','webp','pdf','doc','docx','xls','xlsx','ppt','pptx','txt','md','csv','zip'];
 const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(1) + ' KB' : (n/1048576).toFixed(1) + ' MB';
 
-// 上传结果写进当前对话历史（role:'tool'，刷新/切对话仍可见）
+// 上传结果写进当前对话历史（role:'tool'，刷新/切对话都还看得到）
 function pushToolHistory(content) {
   if (!currentChatId) newChat();
   const h = history.find(x => x.id === currentChatId);
   if (h) { h.messages.push({ role:'tool', content, tool:'upload' }); saveHistory(); }
 }
 
-// 新建一个可动态更新进度的 tool 气泡
+// 新建一个能动态刷新进度的 tool 气泡
 function makeBubble() {
   const div = document.createElement('div');
   div.className = 'msg tool';
@@ -1139,7 +1139,7 @@ $('file-input').addEventListener('change', async e => {
   for (const f of files.slice(0, MAX_FILES)) await uploadFile(f);
 });
 // ===== 引用已上传文件：＠按钮或拖入后在输入框上方生成文件卡片，点 ✕ 一键移除，发送时随 utterance 一并交给后端 =====
-let refs = [];                                       // 当前引用的文件列表（卡片数据源）
+let refs = [];                                       // 当前引用的文件列表（卡片们的口粮）
 const refBar = $('ref-bar');
 function renderRefs() {
   refBar.innerHTML = '';
@@ -1157,13 +1157,13 @@ function renderRefs() {
     x.className = 'chip-x';
     x.textContent = '✕';
     x.title = '一键移除引用';
-    x.onclick = () => { refs = refs.filter(n => n !== name); renderRefs(); };  // 一键删除：无二次确认
+    x.onclick = () => { refs = refs.filter(n => n !== name); renderRefs(); };  // 一键删除：不搞二次确认，干脆
     chip.append(ic, nm, x);
     refBar.appendChild(chip);
   });
 }
 function insertRef(fileName) {
-  if (refs.includes(fileName)) { toast('已经在引用列表里啦 (¬‿¬) ' + fileName); return; }  // 避免重复引用同一文件
+  if (refs.includes(fileName)) { toast('已经在引用列表里啦 (¬‿¬) ' + fileName); return; }  // 同一个文件别引用两遍
   refs.push(fileName);
   renderRefs();
   $('chat-input').focus();
@@ -1172,7 +1172,7 @@ function insertRef(fileName) {
 
 // ===== 拖文件到对话框：校验→上传→成功后自动插引用（复用 uploadFile 逻辑链） =====
 const chatInputArea = document.querySelector('.chat-input');
-let dragDepth = 0;  // dragenter/dragleave 会在子元素间穿棱，用计数避免高亮闪爆
+let dragDepth = 0;  // dragenter/dragleave 会在子元素间反复横跳，用计数兜住，不然高亮闪到你眼花 (＞﹏＜)
 
 chatInputArea.addEventListener('dragenter', e => {
   if (![...(e.dataTransfer?.types || [])].includes('Files')) return;
@@ -1181,7 +1181,7 @@ chatInputArea.addEventListener('dragenter', e => {
 });
 chatInputArea.addEventListener('dragover', e => {
   if (![...(e.dataTransfer?.types || [])].includes('Files')) return;
-  e.preventDefault();           // 不 preventDefault 浏览器默认行为是打开文件而非上传
+  e.preventDefault();           // 不 preventDefault 的话，浏览器默认行为是打开文件而非上传，翻车现场
   e.dataTransfer.dropEffect = 'copy';
 });
 chatInputArea.addEventListener('dragleave', () => {
@@ -1196,15 +1196,15 @@ chatInputArea.addEventListener('drop', async e => {
   if (files.length > MAX_FILES) appendMessage('tool', `一次最多 ${MAX_FILES} 个文件，先传前 ${MAX_FILES} 个哦`, 'upload');
   for (const f of files.slice(0, MAX_FILES)) {
     const okName = f.name;
-    const passed = await uploadFile(f);   // 与 ＋ 按钮同一条逻辑链（含进度/重试/兑底）
+    const passed = await uploadFile(f);   // 与 ＋ 按钮同一条逻辑链（含进度/重试/兜底）
     if (passed) insertRef(okName);        // 上传成功才插引用，失败不插
   }
 });
 
-// ===== 模型选择：由后端自动路由，前端不再指定模型 =====
+// ===== 模型选择：后端自动路由说了算，前端不插手 =====
 $('chat-input').addEventListener('keydown', e => { if (e.ctrlKey && e.key==='Enter') send(); });
 
-// ===== 右栏上：今日日程（调 /schedule/today，失败用 mock）；抽成幂等函数供实时刷新反复调用 =====
+// ===== 右栏上：今日日程（调 /schedule/today，失败用 mock）；抽成幂等函数，实时刷新怎么调都不乱 =====
 async function loadSchedule() {
   const box = $('schedule-list');
   const {ok, data} = await api('/schedule/today');
@@ -1218,14 +1218,14 @@ async function loadSchedule() {
     <div class="sch-item"><div class="t">${c.name}${c.id ? `<span class="sch-del" data-id="${c.id}" data-name="${String(c.name).replace(/"/g,'&quot;')}">×</span>` : ''}</div>
     <div class="meta">第${c.start_slot}-${c.end_slot}节 · ${c.classroom||''} ${c.teacher||''}</div></div>`).join('')
     : '<div style="color:#999;text-align:center;padding:20px">今天没课，安心躺平～</div>';
-  // 删除按钮：悬停浮现（同文件管理器约定）；mock 兑底数据没有 id，不出按钮
+  // 删除按钮：悬停浮现（同文件管理器约定）；mock 兜底数据没有 id，不出按钮
   box.querySelectorAll('.sch-del').forEach(btn => {
     btn.onclick = e => { e.stopPropagation(); removeCourse(+btn.dataset.id, btn.dataset.name); };
   });
-  loadMemos();   // 整体重画会把备忘录一起清掉：课表画完必须重新拉备忘录，两者都往 schedule-list 写，串行避免异步互相覆盖
+  loadMemos();   // 整体重画会把备忘录一起端掉：课表画完必须重拉备忘录，两者都往 schedule-list 写，不串行就互相覆盖，这坑很阴间 (。•́︿•̀。)
 }
 async function removeCourse(id, name) {
-  // 二次确认（项目硬约束）：课程是每周循环的，删的是整行，不是只删今天这一次
+  // 二次确认（项目硬约束）：课程每周循环，删的是整行，不是只删今天这一趟
   if (!confirm(`确定删掉「${name}」吗？课程每周循环，删了所有星期都不见啦 (。•́︿•̀。)`)) return;
   const {ok, data} = await api('/schedule/courses/' + id, { method:'DELETE' });
   if (ok && data?.code === 0) { toast('删掉啦～' + name); loadSchedule(); }
@@ -1235,7 +1235,7 @@ loadSchedule();
 // ===== 今日日程加号：自定义备忘录（落库 app.db/memo 表；接口失败降级 localStorage 不白屏） =====
 const memoBox = $('memo-box');
 let memoList = [];      // 备忘数据：后端模式 [{id,content,created_at}] / 兜底模式 [{id:0,content}]
-let memoLocal = true;   // true=localStorage 兜底模式，false=后端落库模式
+let memoLocal = true;   // true=localStorage 兜底模式，false=后端落库模式，两条腿走路
 function saveMemos() { localStorage.setItem('memos', JSON.stringify(memoList)); }
 
 function renderMemo(m) {
@@ -1262,13 +1262,13 @@ async function loadMemos() {
     memoLocal = false;
     memoList = data.data || [];
   } else {
-    // 后端没起/401/token 过期：退回上次的本地数据，页面照常显示
+    // 后端没起/401/token 过期：退回上次的本地数据，页面照常营业
     memoLocal = true;
         let savedMemos = [];
     try { savedMemos = JSON.parse(localStorage.getItem('memos') || '[]') || []; } catch {}
     memoList = savedMemos.map(x => typeof x === 'string' ? {id:0, content:x} : x);
   }
-  document.querySelectorAll('#schedule-list .memo-item').forEach(el => el.remove());   // 只清备忘条目再重画：同一容器里还混着课表卡片，不能整体清空
+  document.querySelectorAll('#schedule-list .memo-item').forEach(el => el.remove());   // 只清备忘条目再重画：同一容器里混着课表卡片，整体清空会把课表也端走
   memoList.forEach(renderMemo);
 }
 
@@ -1289,7 +1289,7 @@ async function addMemo() {
 $('add-memo-btn').onclick = () => { memoBox.classList.toggle('show'); $('memo-input').focus(); };
 $('memo-input').addEventListener('keydown', e => { if (e.key === 'Enter') addMemo(); });
 $('memo-confirm').onclick = addMemo;
-// ===== 右栏下：技能 & MCP（对照 plan.md 的 skill/ 与 MCP/） =====
+// ===== 右栏下：技能 & MCP（对照 plan.md 的 skill/ 与 MCP/，名册如下） =====
 const skills = [
   {name:'search', desc:'查询课表、提醒等用户数据'},
   {name:'web_search', desc:'网络搜索:查询最新消息等'},
@@ -1301,7 +1301,7 @@ const mcps = [
   {name:'mcp_map', desc:'高德地图：位置、路径、导航'},
   {name:'mcp_weather', desc:'天气查询：课前出行建议'},
 ];
-// ===== 斜杠菜单：/ 呼出技能与 MCP =====
+// ===== 斜杠菜单：/ 一敲就呼出技能与 MCP =====
 const menu = $('slash-menu'), chatInput = $('chat-input');
 const allCmds = [
   ...skills.map(s => ({name:s.name, desc:s.desc, type:'技能'})),
@@ -1359,9 +1359,9 @@ chatInput.addEventListener('keydown', e => {
   else if (e.key==='ArrowUp') { e.preventDefault(); hlIndex=(hlIndex-1+flatItems.length)%flatItems.length; updateHl(); }
   else if (e.key==='Enter') { e.preventDefault(); pickCmd(flatCmds[hlIndex]); }
 });
-// ===== 提醒面板（落库 app.db/reminder 表；接口失败降级 localStorage 不白屏） =====
+// ===== 提醒面板（落库 app.db/reminder 表；接口失败降级 localStorage，绝不白屏） =====
 const reminderBox = $('reminder-box');
-let reminderList = [];   // 后端模式 [{id,reminder_type,reminder_time,is_done}] / 兜底模式 [{id:0,...}]
+let reminderList = [];   // 后端模式 [{id,reminder_type,reminder_time,is_done}] / 兜底模式 [{id:0,...}]，同备忘录一个套路
 let reminderLocal = true;
 function saveReminders() { localStorage.setItem('reminders', JSON.stringify(reminderList)); }
 function renderReminder(r) {
@@ -1369,7 +1369,7 @@ function renderReminder(r) {
   div.className = 'sch-item reminder-item';
   const t = document.createElement('div');
   t.className = 't'; t.textContent = r.reminder_type;
-  // ICS 导出：把这条提醒加进系统日历（导入后日历 App 会在事件前至少 5 分钟响铃）
+  // ICS 导出：把这条提醒塞进系统日历（导入后日历 App 会在事件前至少 5 分钟响铃）
   if (!reminderLocal && r.id && r.reminder_time) {
     const ics = document.createElement('span');
     ics.className = 'memo-del'; ics.textContent = '📅'; ics.style.opacity = '.55'; ics.title = '导出为 ICS 日历文件';
@@ -1398,7 +1398,7 @@ async function loadReminders() {
     reminderLocal = false;
     reminderList = data.data?.reminders || [];
   } else {
-    // 后端没起/401/token 过期：退回上次的本地数据，页面照常显示
+    // 后端没起/401/token 过期：退回上次的本地数据，页面照常营业
     reminderLocal = true;
        let savedRems = [];
     try { savedRems = JSON.parse(localStorage.getItem('reminders') || '[]') || []; } catch {}
@@ -1406,7 +1406,7 @@ async function loadReminders() {
       ? {id:0, reminder_type:x, reminder_time:''}
       : {id:0, reminder_type:x.reminder_type || x.text || '', reminder_time:x.reminder_time || x.time || ''});
   }
-  $('reminder-list').innerHTML = '';   // 清空重画：本函数会被对话后/轮询反复调用，必须幂等
+  $('reminder-list').innerHTML = '';   // 清空重画：本函数会被对话后/轮询反复叫醒，必须幂等
   reminderList.forEach(renderReminder);
 }
 async function addReminder() {
@@ -1420,7 +1420,7 @@ async function addReminder() {
     const {ok, data} = await api('/reminder/set', { method:'POST', body: JSON.stringify({ reminder_type: text, reminder_time: time }) });
     if (ok && data?.code === 0) {
       reminderList.push(data.data); renderReminder(data.data);
-      // 带时间的提醒落库成功 → 自动下载 ICS 日历文件（没设时间导不了事件，静默跳过）
+      // 带时间的提醒落库成功 → 自动下载 ICS 日历文件（没设时间导不出事件，识相静默跳过）
       if (time && data.data?.id) downloadIcs('/reminder/' + data.data.id + '/ics', 'reminder-' + data.data.id + '.ics',
         '日历文件自动下载好啦～用系统日历打开（双击文件或在日历App里导入），到点前至少5分钟会响铃哦');
     }
@@ -1435,7 +1435,7 @@ $('reminder-confirm').onclick = addReminder;
 loadReminders();
 
 // ===== ICS 日历导出：单个提醒 📅 / 全部打包 ⬇ / 课表订阅 📅 =====
-// 下载 .ics 必须带 Bearer 头（浏览器直开链接不会带 Authorization），所以用 fetch+blob 落盘
+// 下载 .ics 必须带 Bearer 头（浏览器直开链接不会带 Authorization），只好用 fetch+blob 落盘
 async function downloadIcs(path, filename, tip) {
   try {
     const res = await fetch(path, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
@@ -1464,10 +1464,10 @@ $('ics-subscribe-btn').onclick = async () => {
   if (go) location.href = info.webcal_url;
 };
 
-// ===== 主动提醒：30s 轮询到点提醒；页面重新可见/聚焦时立刻补查（抵消浏览器后台节流） =====
-const firedReminders = new Set();   // 本轮会话内已弹过的 id，避免重复打扰
+// ===== 主动提醒：30s 轮询到点提醒；页面重新可见/聚焦时立刻补查（抵消浏览器后台节流，浏览器的心思你别猜 (¬‿¬)） =====
+const firedReminders = new Set();   // 本轮会话内已弹过的 id，不重复打扰用户
 
-// 提醒音效：Web Audio 现场合成"叮-咚"，无需音频文件；浏览器自动播放策略要求先有用户手势，首次点击/按键时解锁
+// 提醒音效：Web Audio 现场合成"叮-咚"，无需音频文件；浏览器自动播放策略要求先有用户手势，首次点击/按键时解锁（规矩真多 (。•́︿•̀。)）
 let audioCtx = null;
 const requestNotify = () => { try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); } catch {} };
 const unlockAudio = () => { try { audioCtx && audioCtx.resume(); } catch {} requestNotify(); };   // 顺带申请系统通知权限（浏览器要求用户手势才弹授权框）
@@ -1478,7 +1478,7 @@ function playDing() {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     const now = audioCtx.currentTime;
-    [880, 1174.7].forEach((freq, i) => {   // 两声：叮（A5）→ 哮（D6）
+    [880, 1174.7].forEach((freq, i) => {   // 两声：叮（A5）→ 咚（D6）
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.type = 'sine'; osc.frequency.value = freq;
@@ -1493,7 +1493,7 @@ function playDing() {
 }
 
 // 系统级通知：浏览器最小化/在后台时，Windows 右下角也能弹提醒（localhost 属安全上下文，可直接用 Notification）
-let notifyHintShown = false;   // 被拒绝的提示每次会话只弹一次，不啯嗦
+let notifyHintShown = false;   // 被拒绝的提示每次会话只弹一次，不啰嗦
 function notifySystem(r) {
   try {
     if (!('Notification' in window)) return;
@@ -1531,7 +1531,7 @@ async function pollDue() {
       if (nowMin < at - 10 || nowMin > at) return;
     }
     firedReminders.add(r.id);
-    playDing();   // 先出声：toast 只有几秒，没声音很容易错过
+    playDing();   // 先出声：toast 只有几秒，没声音一晃就错过了
     notifySystem(r);   // 系统级通知：窗口不在前台时靠它到点弹
     toast((isLesson ? '📚 课前提醒（还有10分钟上课）：' : '⏰ 时间到啦：') + r.reminder_type
       + (r.reminder_time ? '（' + r.reminder_time + '）' : ''), 8000);
@@ -1542,9 +1542,9 @@ setInterval(pollDue, 30000);   // 30s 一次：提醒最多晚 30s 到
 document.addEventListener('visibilitychange', () => { if (!document.hidden) pollDue(); });   // 切回标签页立即补查
 window.addEventListener('focus', pollDue);   // 窗口重新获得焦点立即补查
 
-// 初始化
+// 初始化：开工 (๑•̀ㅂ•́)و✧
 renderHistory();
-// 初始化时，选择第一个对话
+// 初始化时选第一个对话垫场，没有就开新坑
 if (history.length) selectChat(history[0].id); else newChat();
 
 // ===== 聊天记录跨设备同步：登录后以服务端为准（换浏览器/换设备能看到完整记录） =====
@@ -1555,7 +1555,7 @@ if (history.length) selectChat(history[0].id); else newChat();
     if (!res.ok) return;
     const r = await res.json();
     if (r.code !== 0 || !Array.isArray(r.data) || !r.data.length) return;
-    // 云端有记录：云端为准覆盖本地，顺带清掉同浏览器换账号时的残留记录
+    // 云端有记录：以云端为准覆盖本地，顺带清掉同浏览器换账号时的残留
     history = r.data;
     localStorage.setItem('agent_history', JSON.stringify(history));
     if (history.some(x => x.id === currentChatId)) {
@@ -1565,12 +1565,12 @@ if (history.length) selectChat(history[0].id); else newChat();
       $('chat-messages').innerHTML = '';
       renderHistory();
     }
-  } catch { /* 后端不可达：继续用本地缓存 */ }
+  } catch { /* 后端不可达：继续用本地缓存垫着 */ }
 })();
 
 // ===== 上报当前位置（导航工具依赖 /nav/location，后端缓存30分钟） =====
 // 浏览器首次会弹定位授权；拒绝也不影响其他功能，只是对话问"怎么去XX"时会提示先点 📍 按钮
-let locating = false;   // 防抖：定位进行中不重复触发
+let locating = false;   // 防抖：定位进行中不重复触发，安答不抢跑
 async function reportLocation(manual = false) {
   if (!navigator.geolocation) { if (manual) toast('浏览器不支持定位'); return; }
   if (locating) return;
@@ -1589,8 +1589,8 @@ async function reportLocation(manual = false) {
     if (manual) toast(err.code === 1 ? '定位被拒绝：请在浏览器地址栏允许位置权限' : '定位失败，请重试');
   }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
 }
-$('loc-btn').addEventListener('click', () => reportLocation(true));   // 手动定位按钮
-reportLocation();   // 页面加载时静默尝试一次（用户授权过就直接上报，无需再点）
+$('loc-btn').addEventListener('click', () => reportLocation(true));   // 手动定位按钮：不想干等就自己戳一下
+reportLocation();   // 页面加载时静默试一次：授权过就直接上报，免得多此一点 (๑•̀ㅂ•́)و✧
 </script>
 </body>
 </html>

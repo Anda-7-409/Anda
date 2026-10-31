@@ -1,4 +1,4 @@
-# web_search.py — 联网搜索：qianfan → anysearch → ddg 三级聚合 + 冷却降级
+# web_search.py — 联网搜索：qianfan → anysearch → ddg 三级聚合 + 冷却降级（搜索界的替补席制度 (๑•̀ㅂ•́)و✧）
 # 契约（docs/refactoring.md 3.2；消费方：/health 与 orchestrator.TOOLS["web_search"]）：
 #   search_tool(utterance, user_id, refs) -> {"ok","query","results":[{title,url,snippet}]} | {"ok":False,"error"}
 #   search(query, max_results) -> list          # 聚合入口：按源顺序取第一个成功者
@@ -18,7 +18,7 @@ _TIMEOUT = 15
 _cooldown = {}   # source -> 进入冷却的时间戳
 
 def probe_down(source: str) -> None:
-    # 某源调用失败时标记冷却；冷却期内 search() 跳过它，避免每轮都撞死源
+    # 某源调用失败时标记冷却；冷却期内 search() 跳过它，避免每轮都撞死源——同一个坑不摔第二次 (。•́︿•̀。)
     _cooldown[source] = time.time()
 
 def _in_cooldown(source: str) -> bool:
@@ -69,12 +69,12 @@ def _anysearch(query: str, max_results: int) -> list:
         raise RuntimeError(f"anysearch 空结果：{data.get('error') or '未知错误'}")
     items = [{"title": m.group(1).strip(), "url": m.group(2), "snippet": ""}
              for m in re.finditer(r"\[([^\]\n]+)\]\s*\((https?://[^)\s]+)\)", text)]
-    if not items:   # 没解析出链接时整体作为摘要返回，模型仍可据此作答
+    if not items:   # 没解析出链接时整体作为摘要返回，模型仍可据此作答（聊胜于无 (´･ω･`)）
         items = [{"title": query, "url": "", "snippet": text[:300]}]
     return items[:max_results]
 
 def _ddg(query: str, max_results: int) -> list:
-    # 可选第三级：安装 duckduckgo_search 后自动启用，未安装则该源恒跳过
+    # 可选第三级：安装 duckduckgo_search 后自动启用，未安装则该源恒跳过（白嫖档，装不装随缘 (¬‿¬)）
     from duckduckgo_search import DDGS
     with DDGS() as d:
         return [{"title": x.get("title", ""), "url": x.get("href", ""),

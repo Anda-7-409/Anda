@@ -1,4 +1,4 @@
-# doc_parse.py — 文档解析：本地轻量提取（txt/md/csv/代码 + pdf/docx/pptx/xlsx），MinerU Key 配好后可升级
+# doc_parse.py — 文档解析：本地轻量提取（txt/md/csv/代码 + pdf/docx/pptx/xlsx），MinerU Key 配好后可升级（现在先凑合，凑合也是一种美德 (´･ω･`)）
 # 契约（docs/refactoring.md 3.2）：refs 文件名列表；用户带问题时用 general 模型基于提取文本作答
 from pathlib import Path
 
@@ -24,7 +24,7 @@ def _extract(path: Path) -> str:
         try:
             from pypdf import PdfReader
         except ImportError:
-            from PyPDF2 import PdfReader   # 旧包名兜底
+            from PyPDF2 import PdfReader   # 旧包名兜底（改个包名也是 pip 生态的老传统了 (。•́︿•̀。)）
         reader = PdfReader(str(path))
         return "\n".join((page.extract_text() or "") for page in reader.pages[:_PDF_MAX_PAGES])
     if ext == "docx":
@@ -85,5 +85,5 @@ def doc_parse_tool(utterance="", user_id=None, refs=None, **_) -> dict:
                 result["answer"] = msg["content"].strip()
                 result["provider"] = provider
         except Exception:
-            pass   # 问答失败不影响解析结果本身返回
+            pass   # 问答失败不影响解析结果本身返回（解析是解析，问答是问答，各管各的）
     return result

@@ -209,6 +209,6 @@ def chat_stream(db: Session, user: User, utterance: str, refs=None, chat_id=None
             elif ev["type"] == "reasoning":
                 reasoning += ev["delta"]
     finally:
-        # finally 保证客户端中途断开时已生成的部分也落库（GeneratorExit 同样走 finally）
+        # finally 保证客户端中途断开时已生成的部分也落库（GeneratorExit 同样走 finally）——断连不丢字，全靠它兜底 (。•́︿•̀。)
         if chat_id and (answer or reasoning):
             chat_history_service.save_message(db, user.id, chat_id, "ai", answer, reasoning=reasoning)

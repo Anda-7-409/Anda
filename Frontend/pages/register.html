@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>注册 - 安答：校园AI Agent助手</title>
-    <!-- 第一版不要样式文件！！！样式内联，与 index.html 保持一致 -->
+    <!-- 第一版不要样式文件！！！样式内联，与 index.html 保持一致——祖传规矩，别手痒 (¬‿¬) -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: "PingFang SC","Microsoft YaHei", "Segoe UI", sans-serif; min-height: 100vh; background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%); background-attachment: fixed; }
@@ -41,7 +41,7 @@
             <div class="auth-section">
                 <div class="title">注册账号</div>
                 <div class="subtitle">填好下面的小信息，激活邮件马上飞进你的邮箱～</div>
-                <!-- JS fetch 提交到 /auth/register，成功后提示查收激活邮件（QQ邮箱SMTP发送激活链接，点击后账号才激活） -->
+                <!-- JS fetch 提交到 /auth/register，成功后提示查收激活邮件（QQ邮箱SMTP发送激活链接，点完链接账号才算真的活了 (๑•̀ㅂ•́)و✧） -->
                 <form id="register-form" class="register-form">
                     <div class="form-group">
                         <label for="username">用户名</label>
@@ -70,7 +70,7 @@
 
     <script>
         document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); // 阻止整页跳转
+            e.preventDefault(); // 拦下整页跳转，表单的事交给 JS
             const msg = document.getElementById('register-msg');
             const btn = e.target.querySelector('button');
             btn.disabled = true;
@@ -88,7 +88,7 @@
                 const data = await res.json();
                 if (res.ok) {
                     msg.style.color = '#43a047';
-                    // 注册成功不再跳转：账号此时未激活，需点击QQ邮箱中的激活链接（GET /auth/verify?token=xxx）后才能登录
+                    // 注册成功不跳转：账号这会儿还在"沉睡"，得去QQ邮箱点激活链接（GET /auth/verify?token=xxx）才醒得过来 (´･ω･`)
                     msg.textContent = '注册成功！ヾ(≧▽≦*)o 激活邮件已飞向你的邮箱，查收并点链接完成激活（没收到记得翻翻垃圾箱哦~）';
                 } else {
                     msg.textContent = data.message || '注册没成功呢 (＞﹏＜) 再检查一下信息嘛~';

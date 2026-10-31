@@ -1,5 +1,5 @@
 # 校园知识库 RAG：Knowledge.txt → bge-m3 向量化 → Knowledge.db → 余弦检索 → general 链作答
-# 首次提问自动建索引；Knowledge.txt 更新后（mtime 变化）自动重建
+# 首次提问自动建索引；Knowledge.txt 更新后（mtime 变化）自动重建——用户改一次它跟一次，勤勤恳恳 (๑•̀ㅂ•́)و✧
 import json
 import re
 import sqlite3
@@ -10,9 +10,9 @@ from Backend.config import Knowledge_DB_PATH
 
 KB_FILE = Path(__file__).parent.parent / "Data" / "Knowledge.txt"
 TOP_K = 3
-SIM_THRESHOLD = 0.56   # 余弦阈值：实测真实命中0.58~0.72、无关问题0.50~0.54，取区分带下沿保召回
+SIM_THRESHOLD = 0.56   # 余弦阈值：实测真实命中0.58~0.72、无关问题0.50~0.54，取区分带下沿保召回（0.56 是拿数据喂出来的分界线，别乱动）
 
-# 容错解析：`N问：` 或 `N：` 开头为问题行（半/全角冒号都兼容），`答：`（含 `答·：`）开头为答案行
+# 容错解析：`N问：` 或 `N：` 开头为问题行（半/全角冒号都兼容），`答：`（含 `答·：`）开头为答案行——手动维护的 txt，格式永远比想象中野 (。•́︿•̀。)
 _Q_RE = re.compile(r"^(\d+)\s*问?\s*[：:]\s*(.+)$")
 _A_RE = re.compile(r"^答[·\s]*[：:]\s*")
 
@@ -48,6 +48,7 @@ def _get_db():
 
 
 def _rebuild(conn) -> int:
+    # 全量重建：先清空再插入——动静不小，祈祷此刻没别人在写库 (。•́︿•̀。)
     qa_list = _load_qa()
     if not qa_list:
         raise RuntimeError("Knowledge.txt 未解析出任何问答条目")
@@ -107,7 +108,7 @@ def knowledge_tool(utterance, user_id, **_):
     if not got["ok"]:
         return got
     hits = got["data"]["hits"]
-    # 阈值只挡"一条相关都没有"：top1 低于阈值说明整个知识库与问题无关
+    # 阈值只挡"一条相关都没有"：top1 低于阈值说明整个知识库与问题无关（硬闯也没意义 (´･ω･`)）
     if not hits or hits[0][0] < SIM_THRESHOLD:
         return {"ok": True, "data": {
             "answer": "知识库里暂时没有相关内容，可以换个说法问问，或让我联网搜索哦 ~",
@@ -121,7 +122,7 @@ def knowledge_tool(utterance, user_id, **_):
         ])
         answer = (msg.get("content") or "").strip()
     except Exception:
-        # 生成链全挂时把检索片段原样给用户，检索结果不丢
+        # 生成链全挂时把检索片段原样给用户，检索结果不丢（最后这点体面得保住）
         answer = block
     return {"ok": True, "data": {"answer": answer, "hits": [
         {"score": round(s, 3), "content": c} for s, c in hits]}}

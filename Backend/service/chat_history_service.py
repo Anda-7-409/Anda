@@ -1,6 +1,6 @@
 # chat_history_service.py — 聊天记录服务（app.db/chat_message 单一真相源）
 # 页面记录（跨设备同步）与模型记忆（最近12条窗口）都从这张表派生，
-# 替代原 AI/memory.py 的 chat_history 滑窗 + chat_sync 整包双写
+# 替代原 AI/memory.py 的 chat_history 滑窗 + chat_sync 整包双写（真相源只认一个，日子清净多了 (๑•̀ㅂ•́)و✧）
 from sqlalchemy.orm import Session
 
 from Backend.models.chat import ChatMessage

@@ -10,13 +10,13 @@ _MIME = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
          ".gif": "image/gif", ".webp": "image/webp", ".bmp": "image/bmp"}
 
 def _ref_name(ref) -> str:
-    # refs 条目兼容 dict（{file_name|name|filename}）与纯文件名两种形态
+    # refs 条目兼容 dict（{file_name|name|filename}）与纯文件名两种形态（历史遗留的两种姿势，都得伺候 (。•́︿•̀。)）
     if isinstance(ref, dict):
         return (ref.get("file_name") or ref.get("name") or ref.get("filename") or "").strip()
     return str(ref or "").strip()
 
 def image_understand_tool(utterance="", user_id=None, refs=None, **_) -> dict:
-    # 只认本次引用里的图片文件；没有图片直接拒绝（防模型幻觉"看到"了不存在的东西）
+    # 只认本次引用里的图片文件；没有图片直接拒绝（防模型幻觉"看到"了不存在的东西——它真能睁眼说瞎话 (＞﹏＜)）
     for n in (_ref_name(r) for r in (refs or [])):
         if not n:
             continue

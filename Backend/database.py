@@ -10,7 +10,7 @@ engine = create_engine(
 
 @event.listens_for(engine, "connect")
 def _sqlite_pragma(dbapi_conn, _):
-    # WAL 允许读写并发；busy_timeout 让写锁竞争时等待而非立刻抛 database is locked
+    # WAL 允许读写并发；busy_timeout 让写锁竞争时等待而非立刻抛 database is locked——SQLite 并发写锁库这事儿，别问我怎么知道的 (。•́︿•̀。)
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA synchronous=NORMAL")
@@ -28,7 +28,7 @@ def get_db():
         db.close()
 
 def _migrate_user_columns():
-    # 旧库升级：token_expires 已拆分为 verify_expires / reset_expires，缺列则补
+    # 旧库升级：token_expires 已拆分为 verify_expires / reset_expires，缺列则补（老库没这列，查询当场去世 (＞﹏＜)）
     with engine.connect() as conn:
         cols = {row[1] for row in conn.execute(text("PRAGMA table_info(user)"))}
         for col in ("verify_expires", "reset_expires"):

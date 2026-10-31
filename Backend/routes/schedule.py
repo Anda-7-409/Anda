@@ -39,7 +39,7 @@ def ics_token(user: User = Depends(auth_service.get_current_user)):
 
 @router.get("/ics.ics")
 def ics_feed(token: str = "", db: Session = Depends(get_db)):
-    # 课程表订阅源：日历 App 定期拉取（无法带 Authorization 头，只能用 ?token= 鉴权）
+    # 课程表订阅源：日历 App 定期拉取（无法带 Authorization 头，只能用 ?token= 鉴权——日历 App 不配合，只能惯着它 (。•́︿•̀。)）
     user = ics_service.user_by_calendar_token(db, token)
     if not user:
         return JSONResponse(status_code=401, content={"code": 1, "message": "订阅链接无效或已失效（改过密码需重新订阅）哦 (´•̥ω•̥`)"})

@@ -16,7 +16,7 @@ def _to_dict(m: Memo) -> dict:
     }
 
 def _list(db: Session, user_id: int) -> List[Memo]:
-    # 所有查询强制带 user_id 条件：只能看到自己的备忘（与 schedule/upload 同思路）
+    # 所有查询强制带 user_id 条件：只能看到自己的备忘（与 schedule/upload 同思路）——别人的小本本可不能偷看 (。•́︿•̀。)
     return db.query(Memo).filter(Memo.user_id == user_id).order_by(Memo.id.desc()).all()
 
 def list_memos(db: Session, user_id: int) -> dict:

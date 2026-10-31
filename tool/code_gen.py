@@ -12,7 +12,7 @@ _EXT = {"python": "py", "py": "py", "javascript": "js", "js": "js", "typescript"
         "json": "json"}
 
 def _extract(text: str) -> tuple:
-    # 从模型输出中取第一个 ```语言 围栏内的代码；无围栏时整体视为代码（默认 .py）
+    # 从模型输出中取第一个 ```语言 围栏内的代码；无围栏时整体视为代码（默认 .py）——指望模型乖乖用围栏？想得美 (。•́︿•̀。)
     start = text.find("```")
     if start == -1:
         return text.strip(), "py"
@@ -40,7 +40,7 @@ def code_gen_tool(utterance="", user_id=None, refs=None, **_) -> dict:
     up = upload_service.save_file(int(user_id or 0), name, "text/plain", code.encode("utf-8"))
     if not up.get("ok"):
         return {"ok": False, "error": "代码文件保存失败：" + str(up.get("message") or "")}
-    real = up["data"]["file_name"]   # save_file 重名时会加 (1) 后缀，用最终名拼链接
+    real = up["data"]["file_name"]   # save_file 重名时会加 (1) 后缀，必须用最终名拼链接（不然用户点开就是 404 (´･ω･`)）
     return {"ok": True, "file_name": real, "lines": code.count("\n") + 1,
             "download_url": f"{config.FRONTEND_BASE_URL}/upload/download/{real}",
             "code_preview": code[:200], "provider": provider,

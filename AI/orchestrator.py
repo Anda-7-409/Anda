@@ -3,11 +3,11 @@ from AI import model_router, prompts
 log = logging.getLogger("anda.orchestrator")
 TOOLS = {}
 
-_MAX_ROUNDS = 2   # function calling 最多轮数（契约 2.3：单轮≤4次工具调用，最多2轮）
+_MAX_ROUNDS = 2   # function calling 最多轮数（契约 2.3：单轮≤4次工具调用，最多2轮——模型话痨也得给它立规矩）
 _MAX_CALLS = 4
 
 def _match(utterance: str):
-    # 离线兜底：关键词匹配选工具（FC 不可用时才走这条路）
+    # 离线兜底：关键词匹配选工具（FC 不可用时才走这条老路，土是土了点但管用 (¬‿¬)）
     hit = []
     for name, cfg in TOOLS.items():
         if any(k in utterance for k in cfg.get("exclude", [])):
@@ -20,7 +20,7 @@ _PROMISE_WORDS = ("我来", "让我来", "我帮你", "为你生成", "为你画
                   "正在为你", "马上为你", "这就为你")
 
 def _is_promise(answer: str) -> bool:
-    # 模型口头承诺要执行却没调工具（FC 抖动）：有承诺词且没有给出任何真实链接/结果
+    # 模型口头承诺要执行却没调工具（FC 抖动的经典表演）：有承诺词且没有给出任何真实链接/结果
     a = (answer or "").strip()
     return bool(a) and any(w in a for w in _PROMISE_WORDS) and "http" not in a
 
@@ -35,7 +35,7 @@ def _fc_tools():
             for name, cfg in TOOLS.items()]
 
 def _exec(call: dict, utterance: str, user_id: int, refs) -> dict:
-    # 执行一次工具调用（FC 与关键词兜底共用）；模型提炼的 task 优先于用户原话，失败不抛出（ok 字段防幻觉）
+    # 执行一次工具调用（FC 与关键词兜底共用）；模型提炼的 task 优先于用户原话，失败不抛出（ok 字段防幻觉——模型一上头就开始编，信不得）
     name = (call.get("name") or "").strip()
     t0 = time.monotonic()
     task_brief = (utterance or "").replace("\n", " ")[:40]
@@ -64,7 +64,7 @@ def _exec(call: dict, utterance: str, user_id: int, refs) -> dict:
     return {"tool_name": name, "status": "ok" if ok else "fail", "result": result}
 
 def _normalize(ctx):
-    # 记忆窗口里的 role 是 "user"/"ai"，OpenAI 兼容接口只认 assistant
+    # 记忆窗口里的 role 是 "user"/"ai"，OpenAI 兼容接口只认 assistant——不转的话接口直接闹脾气 (。•́︿•̀。)
     return [{"role": "assistant" if m.get("role") == "ai" else m.get("role", "user"),
              "content": m.get("content", "")} for m in (ctx or [])]
 
@@ -100,17 +100,17 @@ def run(user_id, utterance, ctx=None, ref_block="", refs=None):
                          "content": json.dumps(e["result"], ensure_ascii=False)}
                         for c, e in zip(calls, executed))
 
-    # 无回答，或 FC 只口头承诺没执行（关键词命中时）→ 走兜底补工具结果
+    # 无回答，或 FC 只口头承诺没执行（关键词命中时）→ 走兜底补工具结果（光说不练的家伙，兜底来治 (。•́︿•̀。)）
     if not tool_calls and answer and _is_promise(answer) and _match(utterance):
         log.info("承诺检测触发 -> 模型口头承诺未执行工具，走兜底 (´･ω･`)")
     if not answer or (not tool_calls and _is_promise(answer) and _match(utterance)):
         if tool_calls:
             # FC 已执行过工具但轮数用尽还没有回答：让模型基于工具结果做最终总结
-            # （否则消息以 role:"tool" 结尾，无工具表的 general 调用会模仿出 <tool_call> 文本）
+            # （否则消息以 role:"tool" 结尾，无工具表的 general 调用会模仿出 <tool_call> 文本——被坑过才懂得设防）
             log.info("FC 总结 -> 工具已执行但无回答，让模型基于结果总结 (´･ω･`)")
             messages.append({"role": "user",
                              "content": prompts.P("orchestrator.fc_summary")})
-        else:   # FC 不可用/未执行才走关键词兜底；已执行过工具就不重复执行（防重复写库）
+        else:   # FC 不可用/未执行才走关键词兜底；已执行过工具就不重复执行（防重复写库，写重了数据就双倍快乐了）
             kw_names = _match(utterance)[:_MAX_CALLS]
             if kw_names:
                 log.info("关键词兜底 -> 命中: %s (¬‿¬)", kw_names)
@@ -127,7 +127,7 @@ def run(user_id, utterance, ctx=None, ref_block="", refs=None):
         except Exception as e:
             log.warning("%s 模型调用失败 (＞﹏＜)：%s", provider, e)
 
-    if not answer:   # 全部在线模型挂了：最后试本地离线模型（mimo9b，断网/断API也能答）
+    if not answer:   # 全部在线模型挂了：最后试本地离线模型（mimo9b，断网/断API也能答——压箱底的救命稻草 (´•̥ω•̥`)）
         log.info("离线降级 -> 在线链路无回答，尝试本地离线模型 (。•́︿•̀。)")
         try:
             msg, provider = model_router.chat("offline", messages)
@@ -191,7 +191,7 @@ def run_stream(user_id, utterance, ctx=None, ref_block="", refs=None):
             break   # 无调用：直接作答或 FC 不可用（无内容也无调用）→ 跳出走兜底
         # 注意：模型可能"引导文本 + 工具调用"同时输出（如先流式说"好的，帮你添加课表"
         # 再发起 image_understand）——此时 answer 非空但不能当直答跳出，工具必须执行；
-        # 已流出的引导文本保留展示，第 2 轮的正式回答接在其后
+        # 已流出的引导文本保留展示，第 2 轮的正式回答接在其后（被模型摆过一道换来的教训 (＞﹏＜)）
         executed = [_exec(c, utterance, user_id, refs) for c in calls]
         tool_calls.extend(executed)
         yield {"type": "tools", "tool_calls": executed}
@@ -203,7 +203,7 @@ def run_stream(user_id, utterance, ctx=None, ref_block="", refs=None):
                          "content": json.dumps(e["result"], ensure_ascii=False)}
                         for c, e in zip(calls, executed))
 
-    # 无回答，或 FC 只口头承诺没执行（关键词命中时）→ 走兜底补工具结果
+    # 无回答，或 FC 只口头承诺没执行（关键词命中时）→ 走兜底补工具结果（光说不练的家伙，兜底来治 (。•́︿•̀。)）
     if not tool_calls and answer.strip() and _is_promise(answer) and _match(utterance):
         log.info("承诺检测触发 -> 模型口头承诺未执行工具，走兜底 (´･ω･`)")
     if not answer.strip() or (not tool_calls and _is_promise(answer) and _match(utterance)):
@@ -212,7 +212,7 @@ def run_stream(user_id, utterance, ctx=None, ref_block="", refs=None):
             log.info("FC 总结 -> 工具已执行但无回答，让模型基于结果总结 (´･ω･`)")
             messages.append({"role": "user",
                              "content": prompts.P("orchestrator.fc_summary")})
-        else:   # FC 没执行过工具时才走关键词兜底（防重复写库）
+        else:   # FC 没执行过工具时才走关键词兜底（防重复写库，写重了数据就双倍快乐了）
             kw_calls = []
             kw_names = _match(utterance)[:_MAX_CALLS]
             if kw_names:
@@ -237,7 +237,7 @@ def run_stream(user_id, utterance, ctx=None, ref_block="", refs=None):
             elif ev["type"] == "reasoning":
                 yield ev
 
-    if not answer.strip():   # 全部在线模型挂了：最后试本地离线模型（mimo9b，断网/断API也能答）
+    if not answer.strip():   # 全部在线模型挂了：最后试本地离线模型（mimo9b，断网/断API也能答——压箱底的救命稻草 (´•̥ω•̥`)）
         log.info("离线降级 -> 在线链路无回答，尝试本地离线模型 (。•́︿•̀。)")
         try:
             for ev in model_router.chat_stream("offline", messages):

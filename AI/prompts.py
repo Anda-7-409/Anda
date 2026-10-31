@@ -1,5 +1,5 @@
 # prompts.py — 提示词集中管理加载器：prompt.json 是唯一来源，P() 点路径取用 + {变量} 插值
-# 设计：启动时加载一次进内存；文件/键/变量缺失只告警并返回可见占位符，绝不炸服务
+# 设计：启动时加载一次进内存；文件/键/变量缺失只告警并返回可见占位符，绝不炸服务（安答的铁律：文案可以缺，服务不能倒 ヾ(≧▽≦*)o）
 import json
 import logging
 from pathlib import Path
@@ -23,7 +23,7 @@ except Exception as e:
 
 def P(path: str, **kw) -> str:
     """取提示词并插值：P("translation.user", target="英文", q="hello")
-    路径/键缺失 → 返回 [缺少提示词 xxx]；插值变量缺失 → 按原样返回并告警。"""
+    路径/键缺失 → 返回 [缺少提示词 xxx]；插值变量缺失 → 按原样返回并告警（缺词就明说，装都不知道装 (¬‿¬)）。"""
     node = _data
     for k in path.split("."):
         if isinstance(node, dict) and k in node:
