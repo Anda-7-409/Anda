@@ -70,15 +70,15 @@ def _expires(ttl: int) -> datetime:
 
 def register_user(db: Session, username: str, password: str, email: str, client_ip: str = "") -> dict:
     if not _rate_limit(f"reg:ip:{client_ip}", *_REGISTER_LIMIT):
-        log.warning("限流拦截 -> register ip=%s", client_ip)
+        log.warning("限流拦截 -> register ip=%s (。•́︿•̀。)", client_ip)
         return {"ok": False, "message": "操作太频繁啦，让服务器缓一缓，一小时后再试吧 (。•́︿•̀。)"}
     existing = db.query(User).filter(User.email == email).first()
     if existing and existing.is_active:
-        log.info("注册拒绝 -> 邮箱已被激活账号占用（ip=%s）", client_ip)
+        log.info("注册拒绝 -> 邮箱已被激活账号占用（ip=%s）(´･ω･`)", client_ip)
         return {"ok": False, "message": "这个邮箱已经有主人啦，回忆一下直接去登录吧 (¬‿¬)"}
     name_owner = db.query(User).filter(User.username == username).first()
     if name_owner and (not existing or name_owner.id != existing.id):
-        log.info("注册拒绝 -> 用户名已被占用（ip=%s）", client_ip)
+        log.info("注册拒绝 -> 用户名已被占用（ip=%s）(´･ω･`)", client_ip)
         return {"ok": False, "message": "这个用户名已经被占啦，换一个试试 (¬‿¬)"}
     token = secrets.token_urlsafe(32)
     if existing:
@@ -97,7 +97,7 @@ def register_user(db: Session, username: str, password: str, email: str, client_
         )
         db.add(user)
     db.commit()
-    log.info("注册入库 -> user=%s（ip=%s）", username, client_ip)
+    log.info("注册入库 -> user=%s（ip=%s）(๑•̀ㅂ•́)و✧", username, client_ip)
     url = f"{FRONTEND_BASE_URL}/auth/verify?token={token}"
     sent = email_service.send_email(
         email, "[安答-Anda]账号激活",
@@ -113,36 +113,36 @@ def verify_user(db: Session, token: str) -> bool:
     # 只认激活链路自己的 verify_expires，与重置链路互不干扰
     user = db.query(User).filter(User.verify_token == token).first()
     if not user or not user.verify_expires or user.verify_expires < datetime.utcnow():
-        log.info("激活失败 -> token 无效或已过期")
+        log.info("激活失败 -> token 无效或已过期 (＞﹏＜)")
         return False
     user.is_active = True
     user.verify_token = ""
     user.verify_expires = None
     db.commit()
-    log.info("激活成功 -> user=%s", user.username)
+    log.info("激活成功 -> user=%s ヾ(≧▽≦*)o", user.username)
     return True
 
 
 def login(db: Session, username: str, password: str, client_ip: str = "") -> dict:
     if not _rate_limit(f"login:u:{client_ip}:{username}", *_LOGIN_LIMIT) \
             or not _rate_limit(f"login:ip:{client_ip}", *_LOGIN_IP_LIMIT):
-        log.warning("限流拦截 -> login user=%s（ip=%s）", username, client_ip)
+        log.warning("限流拦截 -> login user=%s（ip=%s）(。•́︿•̀。)", username, client_ip)
         return {"ok": False, "message": "尝试次数太多啦，先歇一歇，5 分钟后再试 (｡•́︿•̀｡)"}
     user = db.query(User).filter(User.username == username).first()
     if not user:
-        log.info("登录失败 -> 用户名不存在 user=%s（ip=%s）", username, client_ip)
+        log.info("登录失败 -> 用户名不存在 user=%s（ip=%s）(＞﹏＜)", username, client_ip)
         return {"ok": False, "message": "没有这个用户名哦，先去注册一个吧 (´･ω･`)"}
     if not user.is_active:
-        log.info("登录失败 -> 账号未激活 user=%s（ip=%s）", username, client_ip)
+        log.info("登录失败 -> 账号未激活 user=%s（ip=%s）(＞﹏＜)", username, client_ip)
         return {"ok": False, "message": "账号还没激活呢，去邮箱翻翻激活邮件吧 (´・ω・`) 没收到的话，用同一邮箱重新提交注册即可重发"}
     if not verify_password(password, user.password_hash):
-        log.info("登录失败 -> 密码错误 user=%s（ip=%s）", username, client_ip)
+        log.info("登录失败 -> 密码错误 user=%s（ip=%s）(＞﹏＜)", username, client_ip)
         return {"ok": False, "message": "密码不对哦，再回忆一下 (๑•́ ₃ •̀๑) 实在想不起来就走忘记密码通道~"}
     token = secrets.token_urlsafe(32)
     user.session_token = _token_digest(token)   # 库里只存哈希，明文仅返回给用户本人
     user.session_expires = _expires(SESSION_TTL_SECONDS)
     db.commit()
-    log.info("登录成功 -> user=%s（ip=%s）", username, client_ip)
+    log.info("登录成功 -> user=%s（ip=%s）ヾ(≧▽≦*)o", username, client_ip)
     return {"ok": True, "message": "登录成功啦！ヾ(≧▽≦*)o", "token": token, "expires_in": SESSION_TTL_SECONDS}
 
 
@@ -185,7 +185,7 @@ def update_profile(db: Session, user: User, username: Optional[str] = None, emai
     except Exception:
         # 异常细节只进日志，不给前端回传原文，避免泄露内部实现
         db.rollback()
-        log.exception("更新资料失败 user_id=%s", user.id)
+        log.exception("更新资料失败 user_id=%s (╯°□°）╯︵ ┻━┻", user.id)
         return {"ok": False, "message": "更新失败了 (╯°□°）╯︵ ┻━┻ 请稍后再试"}
     return {"ok": True, "message": "更新成功啦！(๑•̀ㅂ•́)و✧"}
 
@@ -194,11 +194,11 @@ def forgot_password(db: Session, email: str, client_ip: str = "") -> dict:
     # 防邮箱枚举：无论是否注册，对外统一文案；防轰炸：IP 与邮箱双重限流
     if not _rate_limit(f"fp:ip:{client_ip}", *_FORGOT_LIMIT) \
             or not _rate_limit(f"fp:email:{email}", *_FORGOT_EMAIL_LIMIT):
-        log.warning("限流拦截 -> forgot_password ip=%s", client_ip)
+        log.warning("限流拦截 -> forgot_password ip=%s (。•́︿•̀。)", client_ip)
         return {"ok": False, "message": "请求太频繁啦，一小时后再试吧 (。•́︿•̀。)"}
     user = db.query(User).filter(User.email == email).first()
     if not user:
-        log.info("忘记密码 -> 邮箱未注册，返回统一文案（ip=%s）", client_ip)
+        log.info("忘记密码 -> 邮箱未注册，返回统一文案（ip=%s）(´･ω･`)", client_ip)
         return {"ok": True, "message": _UNIFIED_FORGOT_MSG}
     token = secrets.token_urlsafe(32)
     user.reset_token = token
@@ -220,7 +220,7 @@ def reset_password(db: Session, token: str, new_password: str) -> dict:
     # 只认重置链路自己的 reset_expires；成功后清空全部会话，旧登录态立即失效
     user = db.query(User).filter(User.reset_token == token).first()
     if not user or not user.reset_expires or user.reset_expires < datetime.utcnow():
-        log.info("密码重置失败 -> token 无效或已过期")
+        log.info("密码重置失败 -> token 无效或已过期 (＞﹏＜)")
         return {"ok": False, "message": "链接无效或已过期啦 (´•̥ω•̥`) 是时候重新申请一次了呢"}
     user.password_hash = hash_password(new_password)
     user.reset_token = ""
@@ -228,5 +228,5 @@ def reset_password(db: Session, token: str, new_password: str) -> dict:
     user.session_token = ""
     user.session_expires = None
     db.commit()
-    log.info("密码重置成功 -> user=%s（旧会话已全部失效）", user.username)
+    log.info("密码重置成功 -> user=%s（旧会话已全部失效）ヾ(≧▽≦*)o", user.username)
     return {"ok": True, "message": "密码重置成功，用新密码登录吧 (๑•̀ㅂ•́)و✧"}

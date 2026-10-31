@@ -51,13 +51,13 @@
                 <div class="meta-item"><div class="label">创建时间</div><div class="value" id="task-time">-</div></div>
             </div>
             <div class="section-title">任务内容</div>
-            <div class="content-box" id="task-content">加载中…</div>
+            <div class="content-box" id="task-content">加载中，安答在翻资料…</div>
         </div>
 
         <!-- 工具调用链 -->
         <div class="card">
             <div class="section-title" style="margin-top:0">工具调用链</div>
-            <div id="tool-chain" class="empty">暂无工具调用记录</div>
+            <div id="tool-chain" class="empty">工具们还没出动呢 (´•̥ω•̥`)</div>
         </div>
     </div>
 
@@ -100,12 +100,12 @@
             $('task-type').textContent = t.type || t.task_type || '-';
             $('task-status').innerHTML = statusTag(t.status);
             $('task-time').textContent = t.created_at || t.time || '-';
-            $('task-content').textContent = t.content || t.question || t.utterance || '（无任务内容）';
+            $('task-content').textContent = t.content || t.question || t.utterance || '（任务内容空空的呢 (´･ω･`)）';
 
             // 工具调用链
             const chain = t.tool_calls || [];
             const box = $('tool-chain');
-            if (!chain.length) { box.className = 'empty'; box.textContent = '暂无工具调用记录'; return; }
+            if (!chain.length) { box.className = 'empty'; box.textContent = '工具们还没出动呢 (´•̥ω•̥`)'; return; }
             box.className = '';
             box.innerHTML = chain.map((c, i) => `
                 <div class="tool-step">

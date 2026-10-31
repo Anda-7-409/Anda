@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>安答：校园AI Agent助手</title>
+    <title>安答：校园AI Agent助手 ✧</title>
         <link rel="stylesheet" href="./assets/style.css">
     <!-- 手机端缩小看板娘：远程 waifu.css 是动态插入 head 的（晚于本标签），用 body 前缀抬高特异性确保覆盖；电脑端不受影响 -->
            <!-- 手机端看板娘适配：缩小尺寸；隐藏"坦克大战"按钮（触屏无法键盘操作，纯占位）；远程 waifu.css 动态插入 head（晚于本标签），用 body 前缀 + !important 确保覆盖；电脑端不受影响 -->
@@ -28,8 +28,8 @@
             <!-- 核心展示区 -->
             <div class="hero-section">
                 <div class="title">安答：校园AI Agent助手</div>
-                <div class="subtitle">从“被动问答”到“主动服务” —— 一句自然语言驱动课表、提醒与办事查询</div>
-                <div class="notice">原版官方功能请转移至 ->安徽工业大学->智慧校园->安工小智</div>
+                <div class="subtitle">从“被动问答”到“主动服务”～一句自然语言，搞定课表、提醒与办事查询</div>
+                <div class="notice">原版官方功能请转移至 ->安徽工业大学->智慧校园->安工小智 哦～</div>
             </div>
 
             <!-- 认证表单区：JS fetch 提交，token 存 localStorage -->
@@ -37,17 +37,17 @@
                 <form id="login-form" class="login-form">
                     <div class="form-group">
                         <label for="username">用户名</label>
-                        <input type="text" id="username" name="username" placeholder="请输入用户名" required>
+                        <input type="text" id="username" name="username" placeholder="用户名叫什么呀~" required>
                     </div>
                     <div class="form-group">
                         <label for="password">密码</label>
-                        <input type="password" id="password" name="password" placeholder="请输入密码" required>
+                        <input type="password" id="password" name="password" placeholder="密码悄悄告诉我~" required>
                     </div>
-                    <button type="submit" class="login-btn">登录</button>
+                    <button type="submit" class="login-btn">登录 ✧</button>
                     <div id="login-msg"></div>
                 </form>
                 <div class="auth-links">
-                    <a href="./pages/register.html">没有账号？立即注册</a>
+                    <a href="./pages/register.html">还没有账号？点这里加入安答～</a>
                     <!-- 忘记密码链接：先输入邮箱申请重置链接（QQ邮箱SMTP发送） -->
                     <a href="./pages/forgot_password.html">忘记密码？</a>
                 </div>
@@ -79,10 +79,10 @@
                     localStorage.setItem('token', data.data.token);
                     location.href = './pages/agent_ai.html'; // agent_ai.html 第 1 期实现
                 } else {
-                    msg.textContent = data.message || '登录失败';
+                    msg.textContent = data.message || '登录没成功呢 (＞﹏＜) 再核对一下嘛~';
                 }
             } catch (err) {
-                msg.textContent = '网络错误，请稍后重试';
+                msg.textContent = '网络开小差啦 (´･ω･`) 稍后再试一次嘛~';
             } finally {
                 btn.disabled = false;
             }

@@ -47,5 +47,5 @@ def image_gen_tool(utterance="", user_id=None, refs=None, **_) -> dict:
             return {"ok": True, "image_url": url, "provider": name,
                     "hint": "回答时必须原样输出 image_url 链接文本，方便用户点击查看；链接有时效性，提醒用户尽快保存"}
         except Exception as e:
-            log.warning("嗷！%s 画图服务挂啦 ：-： %s", name, e)
+            log.warning("%s 画图服务挂了 (＞﹏＜)： %s", name, e)
     return {"ok": False, "error": "画图服务暂时都不可用，请稍后再试"}

@@ -278,7 +278,7 @@ a { color:#1a73e8; text-decoration:none; }
         <!-- 对话区标题 -->
       <span class="title">安答 AI Agent</span>
         <!-- 对话区状态 -->
-      <span class="status">● 在线</span>
+      <span class="status">● 在线营业中～</span>
         <!-- 手机端：呼出右栏抽屉（日程+提醒） -->
       <button class="m-btn" id="btn-right" title="日程与提醒">📅</button>
     </div>
@@ -289,7 +289,7 @@ a { color:#1a73e8; text-decoration:none; }
         <!-- 引用文件卡片栏：引用到对话的文件在这里显示，✕ 一键移除 -->
         <div class="ref-bar" id="ref-bar"></div>
         <!-- 对话区输入文本框 -->
-      <textarea id="chat-input" placeholder="输入自然语言以与我们的安答对话~ （Ctrl+Enter 发送）"></textarea>
+      <textarea id="chat-input" placeholder="和安答说说话吧～自然语言就好（Ctrl+Enter 发送）"></textarea>
             <!-- 斜杠命令菜单（/ 呼出） -->
       <div class="slash-menu" id="slash-menu"></div>
         <!-- 对话区输入发送按钮 -->
@@ -298,7 +298,7 @@ a { color:#1a73e8; text-decoration:none; }
   <button class="upload-btn" id="mic-btn" title="语音输入：点一下开始说，说完再点一下">🎤</button>
   <button class="upload-btn" id="upload-btn" title="上传文件 / 照片">＋</button>
   <input type="file" id="file-input" multiple hidden>
-  <button class="send-btn" id="send-btn">发送</button>
+  <button class="send-btn" id="send-btn">发送 ✧</button>
 </div>
   </main>
 
@@ -310,7 +310,7 @@ a { color:#1a73e8; text-decoration:none; }
         <!-- 日程卡片标题 -->
       <div class="panel-header"><span>今日日程</span><span><span class="add-btn" id="ics-subscribe-btn" title="订阅课表到系统日历（ICS）">📅</span><span class="add-btn" id="add-memo-btn" title="添加日程">+</span></span></div>
       <div class="memo-box" id="memo-box">
-        <input id="memo-input" placeholder="输入备忘录，回车确认">
+        <input id="memo-input" placeholder="记点什么，回车收好~">
         <button id="memo-confirm">添加</button>
       </div>  
       <!-- 日程卡片内容 -->
@@ -320,7 +320,7 @@ a { color:#1a73e8; text-decoration:none; }
     <section class="panel reminders">
       <div class="panel-header"><span>提醒</span><span><span class="add-btn" id="reminder-ics-all" title="全部提醒打包导出为 ICS 日历文件">⬇</span><span class="add-btn" id="add-reminder-btn" title="添加提醒">+</span></span></div>
       <div class="reminder-box" id="reminder-box">
-        <input id="reminder-input" placeholder="提醒内容，如：交高数作业">
+        <input id="reminder-input" placeholder="提醒我做什么？比如：交高数作业">
         <input type="time" id="reminder-time">
         <button id="reminder-confirm">添加</button>
       </div>
@@ -430,7 +430,7 @@ function renderFm(files) {
   box.innerHTML = '';
   const fmt = n => n < 1024 ? n + ' B' : n < 1048576 ? (n/1024).toFixed(1) + ' KB' : (n/1048576).toFixed(1) + ' MB';
   if (!files.length) {
-    box.appendChild(fmMsg('还没有文件，点 ⇪ 或对话框 ＋ 上传一个吧 ~'));
+    box.appendChild(fmMsg('小抽屉空空如也 (´•̥ω•̥`) 点 ⇪ 或对话框 ＋ 传一个吧~'));
     return;
   }
   const groups = new Map();
@@ -506,18 +506,18 @@ async function loadFiles() {
   box.innerHTML = '';
   const { ok, status, data } = await api('/upload/');
   if (status === 401) {
-    box.appendChild(fmMsg('登录已过期，正在跳转登录页…', '#f14c4c'));
+    box.appendChild(fmMsg('登录过期啦 (´･ω･`) 正在送你去登录页…', '#f14c4c'));
     setTimeout(() => location.href = '../index.html', 1200);
     return;
   }
   if (status === 0 || status >= 500) {
     // 加载瞬间后端可能正在重启：自动重试直到拿到结果，不再一次性摆烂
-    box.appendChild(fmMsg(`${status === 0 ? '连不上后端(8000)' : '后端出错(HTTP ' + status + ')'}，5秒后自动重试…`, '#e2c08d'));
+    box.appendChild(fmMsg(`${status === 0 ? '后端(8000)叫不醒' : '后端闹脾气了(HTTP ' + status + ')'}，5秒后再试一次…`, '#e2c08d'));
     setTimeout(loadFiles, 5000);
     return;
   }
   if (!ok || !data || data.code !== 0) {
-    box.appendChild(fmMsg(`获取失败：${(data && (data.message || data.detail)) || 'HTTP ' + status}`, '#e2c08d'));
+    box.appendChild(fmMsg(`文件没取回来呢 (。•́︿•̀。) 原因：${(data && (data.message || data.detail)) || 'HTTP ' + status}`, '#e2c08d'));
     return;
   }
   renderFm(data.data || []);
@@ -571,9 +571,9 @@ async function downloadFile(fileName) {
     a.download = fileName;
     a.click();
     URL.revokeObjectURL(a.href);
-    toast('已开始下载：' + fileName);
+    toast('下载出发啦～' + fileName);
   } catch (err) {
-    toast('下载失败：' + err.message);
+    toast('下载失败 (＞﹏＜) ' + err.message);
   }
 }
 
@@ -581,7 +581,7 @@ const previewMask = $('preview-mask');
 
 // 删除文件：二次确认后调 DELETE 接口，成功刷新左栏树
 async function removeFile(fileName) {
-  if (!confirm(`确定删除「${fileName}」吗？删除后无法恢复哦`)) return;
+  if (!confirm(`确定删掉「${fileName}」吗？删了就找不回来啦 (。•́︿•̀。)`)) return;
   try {
     const res = await fetch('/upload/' + encodeURIComponent(fileName), {
       method: 'DELETE',
@@ -590,13 +590,13 @@ async function removeFile(fileName) {
     let data = {};
     try { data = await res.json(); } catch {}
     if (res.ok && data.code === 0) {
-      toast('已删除：' + fileName);
+      toast('删掉啦～' + fileName);
       loadFiles();
     } else {
-      toast('删除失败：' + (data.message || data.detail || 'HTTP ' + res.status));
+      toast('删除失败 (＞﹏＜) ' + (data.message || data.detail || 'HTTP ' + res.status));
     }
   } catch {
-    toast('删除失败：后端(8000)未启动或网络中断');
+    toast('删除失败 (＞﹏＜) 后端(8000)没醒或网络断了');
   }
 }
 
@@ -607,7 +607,7 @@ async function previewFile(fileName) {
   const canPreview = PREVIEW_IMG.includes(ext) || PREVIEW_TEXT.includes(ext) || ext === 'pdf';
   if (!canPreview) {
     downloadFile(fileName);
-    toast('该类型暂不支持预览，已直接下载');
+    toast('这种类型还不会预览呢 (´･ω･`) 先直接下载给你啦');
     return;
   }
   const body = $('preview-body');
@@ -638,7 +638,7 @@ async function previewFile(fileName) {
       body.innerHTML = ''; body.appendChild(pre);
     }
    } catch (err) {
-    body.innerHTML = '<div class="pv-error"><span class="pv-err-icon">⚠️</span>加载失败：' + err.message + '</div>';
+    body.innerHTML = '<div class="pv-error"><span class="pv-err-icon">⚠️</span>加载失败 (＞﹏＜) ' + err.message + '</div>';
   }
 }
 // 点遮罩空白处也能关掉预览
@@ -904,7 +904,7 @@ async function sendStream(text, refsList) {
                 const r = t.result || {};
                 if (r.ok && r.reminder?.id) {
                   downloadIcs('/reminder/' + r.reminder.id + '/ics', 'reminder-' + r.reminder.id + '.ics',
-                    '已自动下载提醒的日历文件，请用系统日历打开（双击文件或在日历App里导入），到点前至少5分钟会响铃');
+                    '日历文件自动下载好啦～用系统日历打开（双击文件或在日历App里导入），到点前至少5分钟会响铃哦');
                 }
               } catch {}
             }
@@ -921,24 +921,24 @@ async function sendStream(text, refsList) {
           answer += ev.delta; body.textContent = answer;
           box.scrollTop = box.scrollHeight;
         } else if (ev.type === 'error') {
-          answer += '\n\n⚠️ ' + (ev.message || '回复中途中断');
+          answer += '\n\n⚠️ ' + (ev.message || '回复到一半断线了 (＞﹏＜)');
           body.textContent = answer;
         } else if (ev.type === 'done') {
           if (ev.answer) { answer = ev.answer; body.textContent = answer; }
         }
       }
     }
-    if (!answer) body.textContent = '（无回复）';
+    if (!answer) body.textContent = '（安答这次沉默了 (´･ω･`)）';
     // 思考面板没收到任何内容时隐藏，避免留个空壳
     if (!sawThink) think.style.display = 'none';
     return { answer, reasoning };
   } catch {
     if (answer) {
       // 连接中断：已收到的内容照常保留并入历史，只追加中断提示（文章 5.3 的工程实践）
-      body.textContent = answer + '\n\n⚠️ 连接中断，回复可能不完整';
+      body.textContent = answer + '\n\n⚠️ 连接中断啦 (＞﹏＜) 回复可能不完整';
       return { answer, reasoning };
     }
-    body.textContent = '服务暂不可用，请稍后重试~';
+    body.textContent = '安答暂时够不着服务 (´･ω･`) 稍后再叫我一次~';
     think.style.display = 'none';
     return { answer: '', reasoning: '' };
   }
@@ -977,7 +977,7 @@ async function send() {
     }
   } catch (err) {
     console.error('send failed:', err);   // 前端异常至少可见，避免静默无反应
-    appendMessage('ai', '出错了：' + (err && err.message || '未知错误') + '，请按 F12 看控制台详情');
+    appendMessage('ai', '出小差错啦 (＞﹏＜) ' + (err && err.message || '未知错误') + '，按 F12 看看控制台嘛');
   } finally { sending = false; saveHistory(); btn.disabled = false; input.focus(); loadSchedule(); loadReminders(); }   // 对话里可能刚改了课表/备忘/提醒，右栏立即同步
 }
 $('send-btn').onclick = send;
@@ -1022,10 +1022,10 @@ function stopRec(send = true) {
         input.value = input.value ? input.value + ' ' + text : text;   // 回填输入框，用户确认修正后再发
         input.focus();
       } else {
-        alert((j && (j.message || j.detail)) || '语音识别失败，请直接打字 ~');
+        alert((j && (j.message || j.detail)) || '语音没听清 (´･ω･`) 直接打字告诉我吧~');
       }
     })
-    .catch(() => alert('语音服务不可用，请直接打字 ~'))
+    .catch(() => alert('语音服务打盹中 (´･ω･`) 直接打字告诉我吧~'))
     .finally(() => { $('mic-btn').textContent = '🎤'; });
 }
 
@@ -1033,7 +1033,7 @@ $('mic-btn').onclick = async () => {
   if (rec) { stopRec(true); return; }   // 再点一下 = 说完了，停止并转写
   let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch { alert('无法访问麦克风，请检查浏览器权限（地址栏左侧允许麦克风）'); return; }
+  catch { alert('麦克风够不着呢 (´･ω･`) 检查下浏览器权限（地址栏左侧允许麦克风）吧'); return; }
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   const src = ctx.createMediaStreamSource(stream);
   const node = ctx.createScriptProcessor(4096, 1, 1);
@@ -1082,9 +1082,9 @@ function uploadFile(file) {
     const ext = (file.name.split('.').pop() || '').toLowerCase();
     const head = `📎 ${file.name} (${fmtSize(file.size)})`;
     const fail = msg => { bubble.className = 'bubble err'; bubble.textContent = `${head}\n✕ ${msg}`; resolve(false); };
-    if (!OK_EXT.includes(ext)) return fail(`不支持 .${ext || '未知'} 格式的文件`);
-    if (file.size > MAX_SIZE) return fail('超过 10MB 上限，压缩一下再传吧~');
-    if (!file.size) return fail('文件内容为空');
+    if (!OK_EXT.includes(ext)) return fail(`.${ext || '未知'} 格式我还咽不下去呢 (。•́︿•̀。)`);
+    if (file.size > MAX_SIZE) return fail('营养过剩啦 (＞﹏＜) 超过 10MB 上限，压缩一下再喂我吧~');
+    if (!file.size) return fail('这文件空空的呢 (´･ω･`) 什么都没有呀');
     const send = () => {
       bubble.className = 'bubble';
       bubble.onclick = null;
@@ -1101,24 +1101,24 @@ function uploadFile(file) {
         if (xhr.status === 200 && res.code === 0) {
           bubble.className = 'bubble ok';
           const fid = (res.data && res.data.file_id) || '-';
-          bubble.textContent = `${head}\n✓ 上传成功 · file_id: ${fid}`;
-          pushToolHistory(`上传 ${file.name} 成功（file_id: ${fid}）`);
+          bubble.textContent = `${head}\n✓ 上传成功 (๑•̀ㅂ•́)و✧ file_id: ${fid}`;
+          pushToolHistory(`上传成功啦～${file.name}（file_id: ${fid}）`);
           if (typeof revealFile === 'function') revealFile(file.name); // 左栏资源管理器同步刷新并展开分组
           return resolve(true);
         }
         if (xhr.status === 401) {
-          fail((res.detail || res.message || '登录已过期') + '，即将返回登录页');
+          fail((res.detail || res.message || '登录已过期') + '，马上送你回登录页');
           localStorage.removeItem('token');
           return setTimeout(() => location.href = '../index.html', 1000);
         }
         bubble.className = 'bubble err';
-        bubble.textContent = `${head}\n✕ 上传失败：${res.message || res.detail || 'HTTP ' + xhr.status}\n（点击气泡重试）`;
+        bubble.textContent = `${head}\n✕ 上传失败 (＞﹏＜) ${res.message || res.detail || 'HTTP ' + xhr.status}\n（点一下气泡再试一次）`;
         bubble.onclick = send;
         resolve(false);
       };
       xhr.onerror = () => {
         bubble.className = 'bubble err';
-        bubble.textContent = `${head}\n✕ 上传失败：后端(8000)未启动或网络中断\n（点击气泡重试）`;
+        bubble.textContent = `${head}\n✕ 上传失败 (＞﹏＜) 后端(8000)没醒或网络断了\n（点一下气泡再试一次）`;
         bubble.onclick = send;
         resolve(false);
       };
@@ -1163,11 +1163,11 @@ function renderRefs() {
   });
 }
 function insertRef(fileName) {
-  if (refs.includes(fileName)) { toast('已引用过：' + fileName); return; }  // 避免重复引用同一文件
+  if (refs.includes(fileName)) { toast('已经在引用列表里啦 (¬‿¬) ' + fileName); return; }  // 避免重复引用同一文件
   refs.push(fileName);
   renderRefs();
   $('chat-input').focus();
-  toast('已引用：' + fileName);
+  toast('引用好啦 (｡•̀ᴗ-)✧ ' + fileName);
 }
 
 // ===== 拖文件到对话框：校验→上传→成功后自动插引用（复用 uploadFile 逻辑链） =====
@@ -1217,7 +1217,7 @@ async function loadSchedule() {
   box.innerHTML = courses.length ? courses.map(c=>`
     <div class="sch-item"><div class="t">${c.name}${c.id ? `<span class="sch-del" data-id="${c.id}" data-name="${String(c.name).replace(/"/g,'&quot;')}">×</span>` : ''}</div>
     <div class="meta">第${c.start_slot}-${c.end_slot}节 · ${c.classroom||''} ${c.teacher||''}</div></div>`).join('')
-    : '<div style="color:#999;text-align:center;padding:20px">今日无课程</div>';
+    : '<div style="color:#999;text-align:center;padding:20px">今天没课，安心躺平～</div>';
   // 删除按钮：悬停浮现（同文件管理器约定）；mock 兑底数据没有 id，不出按钮
   box.querySelectorAll('.sch-del').forEach(btn => {
     btn.onclick = e => { e.stopPropagation(); removeCourse(+btn.dataset.id, btn.dataset.name); };
@@ -1226,10 +1226,10 @@ async function loadSchedule() {
 }
 async function removeCourse(id, name) {
   // 二次确认（项目硬约束）：课程是每周循环的，删的是整行，不是只删今天这一次
-  if (!confirm(`确定删除「${name}」吗？课程是每周循环的，删除后所有星期都不再显示哦`)) return;
+  if (!confirm(`确定删掉「${name}」吗？课程每周循环，删了所有星期都不见啦 (。•́︿•̀。)`)) return;
   const {ok, data} = await api('/schedule/courses/' + id, { method:'DELETE' });
-  if (ok && data?.code === 0) { toast('已删除：' + name); loadSchedule(); }
-  else toast('删除失败：' + (data?.message || data?.detail || '后端未启动或登录过期'));
+  if (ok && data?.code === 0) { toast('删掉啦～' + name); loadSchedule(); }
+  else toast('删除失败 (＞﹏＜) ' + (data?.message || data?.detail || '后端未启动或登录过期'));
 }
 loadSchedule();
 // ===== 今日日程加号：自定义备忘录（落库 app.db/memo 表；接口失败降级 localStorage 不白屏） =====
@@ -1249,7 +1249,7 @@ function renderMemo(m) {
     if (memoLocal) { memoList = memoList.filter(x => x !== m); saveMemos(); div.remove(); return; }
     const {ok, data} = await api('/memo/' + m.id, { method:'DELETE' });
     if (ok && data?.code === 0) { memoList = memoList.filter(x => x.id !== m.id); div.remove(); }
-    else toast('删除失败：' + (data.message || '后端未启动或登录过期'));
+    else toast('删除失败 (＞﹏＜) ' + (data.message || '后端未启动或登录过期'));
   };
   t.appendChild(del);
   div.appendChild(t);
@@ -1281,7 +1281,7 @@ async function addMemo() {
   } else {
     const {ok, data} = await api('/memo/', { method:'POST', body: JSON.stringify({ content: text }) });
     if (ok && data?.code === 0) { memoList.push(data.data); renderMemo(data.data); }
-    else { toast('添加失败：' + (data.message || data.detail || '后端未启动')); return; }
+    else { toast('添加失败 (＞﹏＜) ' + (data.message || data.detail || '后端未启动')); return; }
   }
   input.value = ''; memoBox.classList.remove('show');
 }
@@ -1385,7 +1385,7 @@ function renderReminder(r) {
     if (reminderLocal) { reminderList = reminderList.filter(x => x !== r); saveReminders(); div.remove(); return; }
     const {ok, data} = await api('/reminder/' + r.id, { method:'DELETE' });
     if (ok && data?.code === 0) { reminderList = reminderList.filter(x => x.id !== r.id); div.remove(); }
-    else toast('删除失败：' + (data.message || '后端未启动或登录过期'));
+    else toast('删除失败 (＞﹏＜) ' + (data.message || '后端未启动或登录过期'));
   };
   t.appendChild(del);
   div.appendChild(t);
@@ -1422,9 +1422,9 @@ async function addReminder() {
       reminderList.push(data.data); renderReminder(data.data);
       // 带时间的提醒落库成功 → 自动下载 ICS 日历文件（没设时间导不了事件，静默跳过）
       if (time && data.data?.id) downloadIcs('/reminder/' + data.data.id + '/ics', 'reminder-' + data.data.id + '.ics',
-        '已自动下载提醒的日历文件，请用系统日历打开（双击文件或在日历App里导入），到点前至少5分钟会响铃');
+        '日历文件自动下载好啦～用系统日历打开（双击文件或在日历App里导入），到点前至少5分钟会响铃哦');
     }
-    else { toast('添加失败：' + (data.message || data.detail || '后端未启动')); return; }
+    else { toast('添加失败 (＞﹏＜) ' + (data.message || data.detail || '后端未启动')); return; }
   }
   input.value = ''; $('reminder-time').value = '';
   reminderBox.classList.remove('show');
@@ -1439,15 +1439,15 @@ loadReminders();
 async function downloadIcs(path, filename, tip) {
   try {
     const res = await fetch(path, { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } });
-    if (!res.ok) { toast('导出失败：' + (res.status === 401 ? '登录过期' : 'HTTP ' + res.status)); return; }
+    if (!res.ok) { toast('导出失败 (＞﹏＜) ' + (res.status === 401 ? '登录过期' : 'HTTP ' + res.status)); return; }
     const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = filename;
     a.click();
     URL.revokeObjectURL(a.href);
-    toast(tip || ('已下载 ' + filename + '，打开即可导入系统日历（会提前至少5分钟提醒）'));
-  } catch { toast('导出失败：后端未启动或网络异常'); }
+    toast(tip || ('日历文件到手啦～' + filename + '，打开导入系统日历就行（会提前至少5分钟提醒哦）'));
+  } catch { toast('导出失败 (＞﹏＜) 后端没醒或网络异常'); }
 }
 $('reminder-ics-all').onclick = () => downloadIcs('/reminder/all/ics', 'anda-reminders.ics');
 
@@ -1455,12 +1455,12 @@ $('ics-subscribe-btn').onclick = async () => {
   // 课表订阅：webcal 链接交给系统唤起日历 App；https 链接复制兜底（手动"添加订阅日历"粘贴）
   const {ok, data} = await api('/schedule/ics/token');
   const info = ok && data?.code === 0 ? data.data : null;
-  if (!info) { toast('获取订阅链接失败：' + (data?.message || data?.detail || '后端未启动')); return; }
+  if (!info) { toast('订阅链接没拿到 (＞﹏＜) ' + (data?.message || data?.detail || '后端未启动')); return; }
   try { await navigator.clipboard.writeText(info.https_url); } catch {}
   const go = confirm('课程表订阅（每周自动同步）\n\n'
     + 'webcal 链接（点击确定自动唤起日历App）：\n' + info.webcal_url + '\n\n'
     + 'https 链接（已复制到剪贴板，可在日历App"添加订阅日历"手动粘贴）：\n' + info.https_url + '\n\n'
-    + '提示：改密码后订阅链接会失效，需重新订阅。确定=用 webcal 链接唤起日历App');
+    + '提示：改密码后订阅链接会失效，得重新订阅哦。确定=用 webcal 链接唤起日历App');
   if (go) location.href = info.webcal_url;
 };
 
@@ -1500,7 +1500,7 @@ function notifySystem(r) {
     if (Notification.permission === 'denied') {
       if (!notifyHintShown) {
         notifyHintShown = true;
-        toast('系统通知未授权：点地址栏右侧的图标允许"通知"，才能在浏览器最小化时弹 Windows 提醒', 6000);
+        toast('系统通知还没授权呢 (´･ω･`) 点地址栏右侧的图标允许"通知"，浏览器最小化也能弹 Windows 提醒', 6000);
       }
       return;
     }
@@ -1533,7 +1533,7 @@ async function pollDue() {
     firedReminders.add(r.id);
     playDing();   // 先出声：toast 只有几秒，没声音很容易错过
     notifySystem(r);   // 系统级通知：窗口不在前台时靠它到点弹
-    toast((isLesson ? '📚 课前提醒（还有10分钟上课）：' : '⏰ 到点提醒：') + r.reminder_type
+    toast((isLesson ? '📚 课前提醒（还有10分钟上课）：' : '⏰ 时间到啦：') + r.reminder_type
       + (r.reminder_time ? '（' + r.reminder_time + '）' : ''), 8000);
   });
 }

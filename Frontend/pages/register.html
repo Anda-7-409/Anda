@@ -40,22 +40,22 @@
         <div class="main">
             <div class="auth-section">
                 <div class="title">注册账号</div>
-                <div class="subtitle">填写以下信息完成注册，激活邮件将发送至您的邮箱</div>
+                <div class="subtitle">填好下面的小信息，激活邮件马上飞进你的邮箱～</div>
                 <!-- JS fetch 提交到 /auth/register，成功后提示查收激活邮件（QQ邮箱SMTP发送激活链接，点击后账号才激活） -->
                 <form id="register-form" class="register-form">
                     <div class="form-group">
                         <label for="username">用户名</label>
-                        <input type="text" id="username" name="username" placeholder="请输入用户名" required>
+                        <input type="text" id="username" name="username" placeholder="用户名叫什么呀~" required>
                     </div>
                     <div class="form-group">
                         <label for="password">密码</label>
-                        <input type="password" id="password" name="password" placeholder="请输入密码（至少6位）" minlength="6" required>
+                        <input type="password" id="password" name="password" placeholder="密码至少 6 位，悄悄告诉我~" minlength="6" required>
                     </div>
                     <div class="form-group">
                         <label for="email">邮箱</label>
-                        <input type="email" id="email" name="email" placeholder="请输入邮箱" required>
+                        <input type="email" id="email" name="email" placeholder="邮箱填这里哦~" required>
                     </div>
-                    <button type="submit" class="submit-btn">注册</button>
+                    <button type="submit" class="submit-btn">注册 ✧</button>
                     <div id="register-msg"></div>
                 </form>
                 <div class="auth-links">
@@ -89,12 +89,12 @@
                 if (res.ok) {
                     msg.style.color = '#43a047';
                     // 注册成功不再跳转：账号此时未激活，需点击QQ邮箱中的激活链接（GET /auth/verify?token=xxx）后才能登录
-                    msg.textContent = '注册成功！激活邮件已发送到您的邮箱，请查收并点击链接完成激活（如未收到请检查垃圾箱）';
+                    msg.textContent = '注册成功！ヾ(≧▽≦*)o 激活邮件已飞向你的邮箱，查收并点链接完成激活（没收到记得翻翻垃圾箱哦~）';
                 } else {
-                    msg.textContent = data.message || '注册失败';
+                    msg.textContent = data.message || '注册没成功呢 (＞﹏＜) 再检查一下信息嘛~';
                 }
             } catch (err) {
-                msg.textContent = '网络错误，请稍后重试';
+                msg.textContent = '网络开小差啦 (´･ω･`) 稍后再试一次嘛~';
             } finally {
                 btn.disabled = false;
             }

@@ -30,7 +30,7 @@ def geocode(addr: str, city: str = "") -> dict:
             return {"ok": False, "error": f"没有找到「{addr}」的位置"}
         return {"ok": True, "location": geo["location"], "name": geo.get("formatted_address") or addr}
     except Exception as e:
-        log.warning("嗷！高德地理编码服务挂啦 ：-： %s", e)
+        log.warning("高德地理编码服务挂了 (＞﹏＜)： %s", e)
         return {"ok": False, "error": "地理编码服务异常，请稍后再试"}
 
 def search_poi(q: str, city: str = "") -> dict:
@@ -48,7 +48,7 @@ def search_poi(q: str, city: str = "") -> dict:
         return {"ok": True, "pois": [{"name": p.get("name", ""), "address": p.get("address") or "",
                                       "location": p.get("location", "")} for p in pois]}
     except Exception as e:
-        log.warning("嗷！高德地点搜索服务挂啦 ：-： %s", e)
+        log.warning("高德地点搜索服务挂了 (＞﹏＜)： %s", e)
         return {"ok": False, "error": "地点搜索服务异常，请稍后再试"}
 
 def _route_steps(steps: list, *fields: str) -> list:
@@ -119,5 +119,5 @@ def route(origin: str, dest: str, mode: str = "walk", city: str = "") -> dict:
         return {"ok": True, "distance": path.get("distance"), "duration": path.get("duration"),
                 "steps": _route_steps(path.get("steps") or [], "instruction", "html")}
     except Exception as e:
-        log.warning("嗷！高德路线规划服务挂啦 ：-： %s", e)
+        log.warning("高德路线规划服务挂了 (＞﹏＜)： %s", e)
         return {"ok": False, "error": "路线规划服务异常，请稍后再试"}
