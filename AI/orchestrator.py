@@ -7,7 +7,7 @@ _MAX_ROUNDS = 2   # function calling 最多轮数（契约 2.3：单轮≤4次�
 _MAX_CALLS = 4
 
 def _match(utterance: str):
-    # 离线兜底：关键词匹配选工具（FC 不可用时才走这条老路，土是土了点但管用 (¬‿¬)）
+    # 离线兜底：关键词匹配选工具（FC 不可用时才走这条老路，大保底 (¬‿¬)）
     hit = []
     for name, cfg in TOOLS.items():
         if any(k in utterance for k in cfg.get("exclude", [])):
