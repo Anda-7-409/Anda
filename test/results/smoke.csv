@@ -1,0 +1,4 @@
+﻿case_id,ability,model_id,round,provider,ok,score,judge_result,error_type,ttft_s,latency_s,resp_preview
+chat_001,chat,glm-4-flash,1,zhipu:glm-4-flash,True,1.0,True,none,1.063,1.766,人工智能是指使计算机系统能够模拟人类智能行为的技术和科学。
+tool_001,tool_use,glm-4.7-flash,1,zhipu:glm-4.7-flash,True,1.0,True,none,1.453,1.484,"[{'name': 'schedule_query', 'arguments': '{""task"":""查询明天的课程安排""}'}]"
+tool_002,tool_use,glm-4.7-flash,1,zhipu:glm-4.7-flash,False,0.0,False,http_429,,,
