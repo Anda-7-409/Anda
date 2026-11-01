@@ -9,13 +9,25 @@ AI_DIR = Path(__file__).parent
 _MODELS = {m["model_id"]: m for m in json.loads(
     (AI_DIR / "models.json").read_text("utf-8"))["models"]}
 
+# 综合权重系数：最终得分 = QUALITY_W * 质量分 + SPEED_W * 等待评分
+# Calling_time 是"等待评分"：等待越久给分越低（值越大=越快=越好），与 ability_weights 同为正向分，直接相加；
+# 即调用方原始公式 model_weights = Calling_time * X + ability_weights * Y。
+# 两项各调 0~1 之间的比重，如更看重速度改 0.5/0.5
+QUALITY_W = 0.7
+SPEED_W = 0.3
+_DEFAULT_CALLING_TIME = 8   # 首轮探活前（及探活不覆盖的非 chat 能力）的等待评分兜底值
+
 def _chain(ability: str):
-    # 按能力权重给模型排队，过滤掉权重为 0、没配 API Key、或压根没这能力的候选——安答的候选链，本质是场层层淘汰赛 (๑•̀ㅂ•́)و✧
-    ids = [m["model_id"] for m in sorted(
-        _MODELS.values(), key=lambda m: -m["ability_weights"].get(ability, 0))]
-    return [mid for mid in ids
-            if (m := _MODELS[mid])["ability_weights"].get(ability, 0) > 0
-            and (not m.get("api_key_env") or os.getenv(m["api_key_env"]))]
+    # 按综合权重给模型排队，过滤掉权重为 0、没配 API Key、或压根没这能力的候选——安答的候选链，本质是场层层淘汰赛 (๑•̀ㅂ•́)و✧
+    cands = [m for m in _MODELS.values()
+             if m["ability_weights"].get(ability, 0) > 0
+             and (not m.get("api_key_env") or os.getenv(m["api_key_env"]))]
+    if not cands:
+        return []
+    def score(m):
+        return QUALITY_W * m["ability_weights"][ability] \
+             + SPEED_W * m.get("Calling_time", _DEFAULT_CALLING_TIME)
+    return [m["model_id"] for m in sorted(cands, key=score, reverse=True)]
 
 def chat(ability: str, messages: list, tools=None):
     # 返回 (message, provider)，全部失败时抛 NoModelError(路由层转错误码 11)——模型链全灭这种惨案，最好一辈子别摊上 (╯°□°）╯︵ ┻━┻
@@ -128,6 +140,7 @@ def probe_down():
         if m["ability_weights"].get("chat", 0) <= 0:
             continue
         ok, err = False, ""
+        t0 = time.monotonic()
         try:
             r = httpx.post(m["endpoint"],
                            headers={"Authorization": f"Bearer {os.environ[m['api_key_env']]}"},
@@ -140,9 +153,20 @@ def probe_down():
                 err = f"HTTP {r.status_code}"
         except Exception as e:
             err = str(e)[:120]
-        _probe_state[mid] = {"ok": ok, "checked_at": time.strftime("%H:%M:%S"), "error": err}
-        if not ok:
-            log.warning("探活失败 -> %s：%s (＞﹏＜)", mid, err or "HTTP错误")
+        elapsed = time.monotonic() - t0
+        _probe_state[mid] = {"ok": ok, "checked_at": time.strftime("%H:%M:%S"),
+                             "error": err, "elapsed": round(elapsed, 2)}
+        if ok:
+            # 用实测返回时间量化等待评分：score = 10 - 秒数，钳制 1~10（越快分越高），
+            # 写回 Calling_time 供 _chain() 综合排序——该字段为纯运行期字段，models.json 无需配置
+            score = max(1, min(10, round(10 - elapsed)))
+            m["Calling_time"] = score
+            log.info("探活量化 -> %s 返回 %.2fs，等待评分更新为 %d", mid, elapsed, score)
+        else:
+            # 探活失败 = 模型当下不可用（限流/超时/宕机）：等待评分清零，沉到候选链底当备胎；
+            # 下轮探活恢复后自动按实测耗时重新打分
+            m["Calling_time"] = 0
+            log.warning("探活失败 -> %s：%s，等待评分更新为 0 (＞﹏＜)", mid, err or "HTTP错误")
 
 class NoModelError(Exception): pass
 

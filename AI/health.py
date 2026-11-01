@@ -13,7 +13,7 @@ def start():
 
 def _loop():
     while _started:
-        time.sleep(300)
+        # 先探活再休息：启动即完成首轮探活与等待评分校准，不必空等 5 分钟
         log.info("安答模型低频探活开始#:# (๑•̀ㅂ•́)و✧")
         # 对已配置密钥的 chat 模型发 1-token 探活请求，结果供 /health 展示（免费额度省着花，1-token 已是探活界的极限压缩）
         try:
@@ -22,3 +22,4 @@ def _loop():
             log.info("安答模型低频探活完成#:# ヾ(≧▽≦*)o")
         except Exception as e:
             log.warning("安答模型低频探活失败#:# (＞﹏＜) %s", e)
+        time.sleep(300)
