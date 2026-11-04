@@ -74,13 +74,17 @@ npm run dev                   # http://localhost:5173，/api 已反向代理到�
 └── Data/          # 运行期数据：SQLite 业务库、向量库、上传文件、日志
 ```
 
-## 致谢
+## 参考文献
 
-项目的多模型路由、Agent 编排与 RAG 实现参考了以下工作：
+项目的多模型路由、Agent 编排与 RAG 实现参考了以下工作（与《研究报告》参考文献一致）：
 
-- RouteLLM: Learning to Route LLMs with Preference Data — https://arxiv.org/abs/2406.18665
-- FrugalGPT: How to Use Large Language Models While Lowering Cost and Improving Performance — https://arxiv.org/abs/2305.05176
-- ReAct: Synergizing Reasoning and Acting in Language Models — https://arxiv.org/abs/2210.03629
-- Toolformer: Language Models Can Teach Themselves to Use Tools — https://arxiv.org/abs/2302.04761
-- M3-Embedding (BGE-M3) — https://arxiv.org/abs/2402.03216
-- Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks — https://arxiv.org/abs/2005.11401
+1. Chen Jianlv, et al. M3-Embedding: Multi-Linguality, Multi-Functionality, Multi-Granularity Text Embeddings Through Self-Knowledge Distillation. 2024. https://arxiv.org/abs/2402.03216
+2. Lewis P, et al. Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. NeurIPS 2020. https://arxiv.org/abs/2005.11401
+3. Isaac Ong, et al. RouteLLM: Learning to Route LLMs with Preference Data. ICLR 2025. https://arxiv.org/abs/2406.18665
+4. Timo Schick, et al. Toolformer: Language Models Can Teach Themselves to Use Tools. NeurIPS 2023. https://arxiv.org/abs/2302.04761
+5. Shunyu Yao, et al. ReAct: Synergizing Reasoning and Acting in Language Models. ICLR 2023. https://arxiv.org/abs/2210.03629
+6. Lingjiao Chen, et al. FrugalGPT: How to Use Large Language Models While Lowering Cost and Improving Performance. 2023. https://arxiv.org/abs/2305.05176
+7. Ziwei Ji, et al. Survey of Hallucination in Natural Language Generation. ACM Computing Surveys, 2023. https://arxiv.org/abs/2202.03629
+8. Shishir G. Patil, et al. Gorilla: Large Language Model Connected with Massive APIs. NeurIPS 2024. https://arxiv.org/abs/2305.15334
+9. Charles Packer, et al. MemGPT: Towards LLMs as Operating Systems. 2023. https://arxiv.org/abs/2310.08560
+10. Percy Liang, et al. Holistic Evaluation of Language Models. TMLR 2023. https://arxiv.org/abs/2211.09110
