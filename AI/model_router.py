@@ -86,33 +86,6 @@ def embed(texts: list):
     log.warning("模型链全灭 -> 能力=embedding (╯°□°）╯︵ ┻━┻")
     raise NoModelError("embedding")
 
-def transcribe(audio: bytes, filename="audio.wav"):
-    # 语音转文字：audio/transcriptions 端点（multipart 上传，OpenAI whisper 兼容格式），
-    # 按 asr 权重滑链，返回转写文本；全部失败抛 NoModelError
-    for mid in _chain("asr"):
-        m = _MODELS[mid]
-        if not m["endpoint"].rstrip("/").endswith("transcriptions"):
-            continue
-        headers = {"Authorization": f"Bearer {os.environ[m['api_key_env']]}"
-                   } if m.get("api_key_env") else {}
-        t0 = time.monotonic()
-        try:
-            r = httpx.post(m["endpoint"], headers=headers,
-                           data={"model": m["model_name"]},
-                           files={"file": (filename, audio)},
-                           timeout=m.get("timeout", 100))
-            r.raise_for_status()
-            text = (r.json().get("text") or "").strip()
-            if text:
-                log.info("模型命中 -> %s（asr，转写 %d 字，耗时 %.1fs）ヾ(≧▽≦*)o",
-                         mid, len(text), time.monotonic() - t0)
-                return text
-            log.warning("模型空响应 -> %s（asr 转写结果为空），换下一个候选 (。•́︿•̀。)", mid)
-        except Exception as e:
-            log.warning("模型失败 -> %s（asr）：%s（耗时 %.1fs）(＞﹏＜)", mid, e, time.monotonic() - t0)
-    log.warning("模型链全灭 -> 能力=asr (╯°□°）╯︵ ┻━┻")
-    raise NoModelError("asr")
-
 _probe_state = {}   # model_id -> {"ok": bool, "checked_at": "HH:MM:SS", "error": str}
 
 def status():

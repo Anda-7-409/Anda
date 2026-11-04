@@ -144,9 +144,6 @@ a { color:#1a73e8; text-decoration:none; }
 .upload-btn { width:34px; height:34px; border:none; border-radius:50%; background:#f0f4ff;color:#1a73e8; font-size:18px; cursor:pointer; line-height:1; user-select:none; transition:all .15s; }
 /* 模型选择已改为后端自动路由，前端的手动切换光荣下岗 (。•́︿•̀。) */
 .upload-btn:hover { background:#1a73e8; color:#fff; transform:scale(1.1); }
-/* 麦克风录音中：红光一闪一闪，表示在认真听 */
-.mic-rec { background:#ff4d4f !important; color:#fff !important; animation:mic-pulse 1.2s ease-in-out infinite; }
-@keyframes mic-pulse { 0%,100%{ box-shadow:0 0 0 0 rgba(255,77,79,.45);} 50%{ box-shadow:0 0 0 7px rgba(255,77,79,0);} }
 .send-btn { padding:8px 24px; height:34px;background:linear-gradient(180deg,#69b1ff 0%,#5048e5 45%,#722ed1 100%); color:#fff; border:none; border-radius:20px; cursor:pointer; font-size:14px;font-weight:600;box-shadow:0 2px 0 #1557b0,0 4px 12px rgba(26,115,232,.35);transition:all .2s ease; }
 .send-btn:disabled { background:#9dc3f5; cursor:not-allowed; }
 .send-btn:hover:not(:disabled) { transform:translateY(-1px);box-shadow:0 2px 0 #1557b0,0 6px 18px rgba(26,115,232,.5); }
@@ -295,7 +292,6 @@ a { color:#1a73e8; text-decoration:none; }
         <!-- 对话区输入发送按钮：最后一公里 -->
       <div class="chat-input-row">
   <button class="upload-btn" id="loc-btn" title="上报当前位置（问“怎么去XX”前先点我）">📍</button>
-  <button class="upload-btn" id="mic-btn" title="语音输入：点一下开始说，说完再点一下">🎤</button>
   <button class="upload-btn" id="upload-btn" title="上传文件 / 照片">＋</button>
   <input type="file" id="file-input" multiple hidden>
   <button class="send-btn" id="send-btn">发送 ✧</button>
@@ -981,76 +977,6 @@ async function send() {
   } finally { sending = false; saveHistory(); btn.disabled = false; input.focus(); loadSchedule(); loadReminders(); }   // 对话里可能刚改了课表/备忘/提醒，右栏立即同步
 }
 $('send-btn').onclick = send;
-// ===== 输入区：语音输入 —— WebAudio 采 PCM 编码 WAV → /asr 转写 → 文字回填输入框 =====
-// 为什么用 WAV：所有 ASR 服务都吃 WAV，不赌浏览器 MediaRecorder 的 webm/opus 兼容性——赌过，输了 (´•̥ω•̥`)
-let rec = null;   // 录音会话 {stream, ctx, node, chunks, start, timer}
-const MAX_REC_MS = 60 * 1000;
-
-function encodeWav(chunks, sampleRate) {
-  const len = chunks.reduce((a, c) => a + c.length, 0);
-  const buf = new ArrayBuffer(44 + len * 2); const v = new DataView(buf);
-  const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-  ws(0,'RIFF'); v.setUint32(4, 36 + len*2, true); ws(8,'WAVE'); ws(12,'fmt ');
-  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
-  v.setUint32(24,sampleRate,true); v.setUint32(28,sampleRate*2,true);
-  v.setUint16(32,2,true); v.setUint16(34,16,true); ws(36,'data'); v.setUint32(40,len*2,true);
-  let off = 44;
-  for (const c of chunks) for (let i = 0; i < c.length; i++, off += 2) {
-    const s = Math.max(-1, Math.min(1, c[i]));
-    v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-  }
-  return new Blob([buf], { type: 'audio/wav' });
-}
-
-function stopRec(send = true) {
-  if (!rec) return;
-  const { stream, ctx, node, chunks, timer, start } = rec; rec = null;
-  clearInterval(timer);
-  try { node.disconnect(); stream.getTracks().forEach(t => t.stop()); ctx.close(); } catch {}
-  const mic = $('mic-btn');
-  mic.classList.remove('mic-rec'); mic.textContent = '…';
-  if (!send) { mic.textContent = '🎤'; return; }
-  const blob = encodeWav(chunks, ctx.sampleRate);
-  if (blob.size < 2000) { mic.textContent = '🎤'; alert('没录到声音，再试一次吧 ~'); return; }
-  const fd = new FormData(); fd.append('audio', blob, 'voice.wav');
-  fetch('/asr', { method:'POST', headers:{ 'Authorization':'Bearer '+token }, body: fd })
-    .then(r => r.json().then(j => ({ ok: r.ok, j })).catch(() => ({ ok: r.ok, j: {} })))
-    .then(({ ok, j }) => {
-      const text = ok && j.code === 0 ? ((j.data && j.data.text) || '') : '';
-      if (text) {
-        const input = $('chat-input');
-        input.value = input.value ? input.value + ' ' + text : text;   // 回填输入框，让用户过目修正后再发
-        input.focus();
-      } else {
-        alert((j && (j.message || j.detail)) || '语音没听清 (´･ω･`) 直接打字告诉我吧~');
-      }
-    })
-    .catch(() => alert('语音服务打盹中 (´･ω･`) 直接打字告诉我吧~'))
-    .finally(() => { $('mic-btn').textContent = '🎤'; });
-}
-
-$('mic-btn').onclick = async () => {
-  if (rec) { stopRec(true); return; }   // 再点一下 = 说完了，停止并转写
-  let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch { alert('麦克风够不着呢 (´･ω･`) 检查下浏览器权限（地址栏左侧允许麦克风）吧'); return; }
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const src = ctx.createMediaStreamSource(stream);
-  const node = ctx.createScriptProcessor(4096, 1, 1);
-  const mute = ctx.createGain(); mute.gain.value = 0;   // ScriptProcessor 须连到 destination 才出数据，静音防回声
-  const chunks = [];
-  node.onaudioprocess = e => { if (rec) chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
-  src.connect(node); node.connect(mute); mute.connect(ctx.destination);
-  rec = { stream, ctx, node, chunks, start: Date.now(), timer: null };
-  const mic = $('mic-btn');
-  mic.classList.add('mic-rec'); mic.textContent = '⏹ 0s';
-  rec.timer = setInterval(() => {
-    if (!rec) return;
-    const sec = Math.round((Date.now() - rec.start) / 1000);
-    mic.textContent = '⏹ ' + sec + 's';
-    if (Date.now() - rec.start >= MAX_REC_MS) stopRec(true);   // 60s 到点自动停并转写，说太久也不惯着
-  }, 250);
-};
 // ===== 输入区左下角：上传文件 —— 逻辑链：选择→校验→上传→进度→结果→失败可重试 =====
 const MAX_SIZE = 10 * 1024 * 1024;
 const MAX_FILES = 5;

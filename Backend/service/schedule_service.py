@@ -31,7 +31,7 @@ def _list(db: Session, user_id: int, weekday: Optional[int] = None) -> List[Cour
     return q.order_by(Course.weekday, Course.start_slot).all()
 
 def today_courses(db: Session, user_id: int) -> dict:
-    today = datetime.now().isoweekday() % 7 + 1  
+    today = datetime.now().isoweekday()
     return {"ok": True, "data": [_to_dict(c) for c in _list(db, user_id, today)]}
 
 def week_courses(db: Session, user_id: int) -> dict:

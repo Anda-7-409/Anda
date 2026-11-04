@@ -73,6 +73,38 @@ def rank_map(stats: dict, ability: str, value_key: str, reverse=True) -> list:
     return [mid for mid, _ in items]
 
 
+def _avg_ranks(vals: list) -> list:
+    """把一列数值转为名次（1 起，最大值排第 1），并列值取平均名次"""
+    order = sorted(range(len(vals)), key=lambda i: -vals[i])
+    ranks = [0.0] * len(vals)
+    i = 0
+    while i < len(order):
+        j = i
+        while j + 1 < len(order) and vals[order[j + 1]] == vals[order[i]]:
+            j += 1
+        avg = (i + 1 + j + 1) / 2  # 并列名次取平均
+        for k in range(i, j + 1):
+            ranks[order[k]] = avg
+        i = j + 1
+    return ranks
+
+
+def spearman_rho(weight_sorted: list, acc_sorted: list, stats: dict, ab: str) -> float:
+    """Spearman 等级相关系数：现行权重名次 vs 实验准确率名次。
+    仅对实验中已测出数据的模型计算；并列名次取平均；n<2 或零方差返回 NaN。"""
+    common = [mid for mid in acc_sorted if mid in weight_sorted]
+    if len(common) < 2:
+        return float("nan")
+    w_pos = [weight_sorted.index(mid) + 1 for mid in common]
+    a_val = [stats[(mid, ab)]["acc"] for mid in common]
+    wr, ar = _avg_ranks(w_pos), _avg_ranks(a_val)
+    n = len(common)
+    mw, ma = sum(wr) / n, sum(ar) / n
+    num = sum((x - mw) * (y - ma) for x, y in zip(wr, ar))
+    den = (sum((x - mw) ** 2 for x in wr) * sum((y - ma) ** 2 for y in ar)) ** 0.5
+    return num / den if den else float("nan")
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser(description="实验一数据汇总")
@@ -121,27 +153,30 @@ def main():
 
     # 表 C：权重序 vs 质量序（H1 检验）
     lines += ["## 表 C：现行权重序 vs 实验质量序（H1 检验）", ""]
-    lines += ["| 能力 | 现行权重序 | 实验质量序 | 秩差 | 结论 |",
-              "|---|---|---|---|---|"]
+    lines += ["| 能力 | 现行权重序 | 实验质量序 | 秩差 | Spearman ρ | 结论 |",
+              "|---|---|---|---|---|---|"]
     for ab in ABILITIES:
-        w_rank = rank_map({}, ab, "_")  # 占位，下面单独算
         weight_sorted = sorted(
             [mid for mid in registry if registry[mid]["ability_weights"].get(ab, 0) > 0],
             key=lambda mid: -registry[mid]["ability_weights"][ab])
         acc_sorted = rank_map(stats, ab, "acc")
         if not acc_sorted:
-            lines.append(f"| {ab} | {' > '.join(weight_sorted) or '—'} | 无数据 | — | 待评测 |")
+            lines.append(f"| {ab} | {' > '.join(weight_sorted) or '—'} | 无数据 | — | — | 待评测 |")
             continue
         diffs = []
         for i, mid in enumerate(weight_sorted):
             if mid in acc_sorted:
                 diffs.append(abs(i - acc_sorted.index(mid)))
         avg_diff = sum(diffs) / len(diffs) if diffs else float("nan")
+        rho = spearman_rho(weight_sorted, acc_sorted, stats, ab)
+        rho_str = f"{rho:.3f}" if rho == rho else "—"
         concl = "基本一致" if (avg_diff == avg_diff and avg_diff <= 1.0) else "需调整"
         lines.append(f"| {ab} | {' > '.join(weight_sorted)} | {' > '.join(acc_sorted)} "
-                     f"| {avg_diff:.2f} | {concl} |")
+                     f"| {avg_diff:.2f} | {rho_str} | {concl} |")
     lines.append("")
-    lines += ["> 秩差 = 同一模型在权重序与质量序中位次的平均差；≤1 视为 H1 成立（排序基本一致）。", ""]
+    lines += ["> 秩差 = 同一模型在权重序与质量序中位次的平均差；≤1 视为 H1 成立（排序基本一致）。",
+              "> Spearman ρ = 权重名次与准确率名次的等级相关系数（−1~+1，越接近 1 越一致，并列名次取平均）；",
+              "> 一般 |ρ| ≥ 0.8 视为高度一致，与秩差口径互为印证。仅对已测模型计算，模型数 <2 时为“—”。", ""]
 
     report = "\n".join(lines)
     stem = "summary" if csv_path.stem == "raw" else f"summary_{csv_path.stem}"
