@@ -74,9 +74,8 @@ npm run dev                   # http://localhost:5173，/api 已反向代理到�
 └── Data/          # 运行期数据：SQLite 业务库、向量库、上传文件、日志
 ```
 
-## 参考文献
-
-项目的多模型路由、Agent 编排与 RAG 实现参考了以下工作（与《研究报告》参考文献一致）：
+## 参考文献·鸣谢
+项目的多模型路由、Agent 编排与 RAG 实现参考了以下工作：
 
 1. Chen Jianlv, et al. M3-Embedding: Multi-Linguality, Multi-Functionality, Multi-Granularity Text Embeddings Through Self-Knowledge Distillation. 2024. https://arxiv.org/abs/2402.03216
 2. Lewis P, et al. Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. NeurIPS 2020. https://arxiv.org/abs/2005.11401
