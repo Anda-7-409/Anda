@@ -56,11 +56,11 @@ npm run dev                   # http://localhost:5173，/api 已反向代理到�
 
 **实验一 · 能力权重评测**：7 个模型 × chat/tool_use/code/reasoning 四能力 × 各 30 轮。发现手动填写的权重顺序与实测质量序秩差明显（chat 维度 Spearman ρ = −0.750），已按「实验准确率 ÷ 10」回写 models.json。
 
-![实验一：质量与性能全景](test/results/实验一_质量性能全景图.png)
+![实验一：质量与性能全景](test/results/exp1_quality_overview.png)
 
 **实验二 · 降级链故障演练**：40 次故障注入。云端密钥全部失效后本地模型平均 2.96s 接管，断网场景平均 12.28s，四类场景最终成功率 100%。
 
-![实验二：故障演练恢复耗时](test/Test2/results/实验二_故障演练恢复耗时图.png)
+![实验二：故障演练恢复耗时](test/Test2/results/exp2_recovery_time.png)
 
 ## 目录结构
 
