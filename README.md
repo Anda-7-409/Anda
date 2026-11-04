@@ -69,7 +69,7 @@ npm run dev                   # http://localhost:5173，/api 已反向代理到�
 ├── Backend/       # FastAPI 主体（routes / service / models）
 ├── Frontend/      # 静态页面 + Vite
 ├── tool/          # Agent 工具集（14 个）
-├── test/          # 三个实验的评测脚本、用例与结果数据
+├── test/          # 两个实验的评测脚本、用例与结果数据
 ├── docs/          # 项目文档（不入库）
 └── Data/          # 运行期数据：SQLite 业务库、向量库、上传文件、日志
 ```
