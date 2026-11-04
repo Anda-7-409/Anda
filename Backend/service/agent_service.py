@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from AI import orchestrator, prompts
 from sqlalchemy.orm import Session
@@ -176,10 +177,44 @@ def _build_ref_block(user: User, refs) -> str:
     return "\n\n".join(parts)
 
 
+def _build_user_block(db: Session, user_id: int) -> str:
+    # 用户实时数据快照：今日课表 + 未完成提醒，随每条消息注入上下文。
+    # 为什么：模型不发起工具调用也能答"今天有什么课/下午有空吗"，省一轮 FC 延迟，
+    # 离线兜底（关键词链）时模型同样能看到数据；写操作仍走工具，读快照只是参考。
+    # 失败兜底：查库异常只降级为不注入，绝不阻断对话（白屏比缺数据可怕得多）。
+    try:
+        courses = schedule_service.today_courses(db, user_id).get("data") or []
+    except Exception:
+        courses = []
+    try:
+        reminders = [r for r in (reminder_service.get_reminders(db, user_id)
+                                 .get("data") or {}).get("reminders", []) if not r["is_done"]]
+    except Exception:
+        reminders = []
+    lines = []
+    if courses:
+        weekday = datetime.now().isoweekday()
+        rows = [f"第{c['start_slot']}-{c['end_slot']}节 {c['name']}"
+                + (f" @{c['classroom']}" if c['classroom'] else "")
+                + (f"（{c['teacher']}）" if c['teacher'] else "")
+                for c in courses]
+        lines.append(f"【今日课表（{schedule_service.WEEK_CN[weekday]}）】\n" + "\n".join(rows))
+    if reminders:
+        rows = [f"- {r['reminder_time'] or '未定时间'} {r['reminder_type']}" for r in reminders[:15]]
+        lines.append("【未完成提醒】\n" + "\n".join(rows))
+    if not lines:
+        return ""
+    return ("以下是该用户当前的个人数据快照（只读参考，可直接引用回答；"
+            "增删改仍需调用对应工具）：\n" + "\n\n".join(lines))
+
+
 def chat(db: Session, user: User, utterance: str, context=None, refs=None, chat_id=None) -> dict:
     if not utterance or not utterance.strip():
         return {"ok": False, "message": "内容不能为空哦 (。•́︿•̀。) 想聊点什么呀？"}
+    user_block = _build_user_block(db, user.id)
     ref_block = _build_ref_block(user, refs)
+    if user_block:
+        ref_block = f"{user_block}\n\n{ref_block}" if ref_block else user_block
     ctx = list(context) if context else chat_history_service.recall_window(db, user.id)
     result = orchestrator.run(user.id, utterance.strip(), ctx, ref_block=ref_block, refs=list(refs or []))
     if chat_id:
@@ -190,7 +225,10 @@ def chat(db: Session, user: User, utterance: str, context=None, refs=None, chat_
 
 def chat_stream(db: Session, user: User, utterance: str, refs=None, chat_id=None):
     # 流式对话：与 chat() 同一套 ref_block/记忆逻辑；消息实时落库 app.db/chat_message
+    user_block = _build_user_block(db, user.id)
     ref_block = _build_ref_block(user, refs)
+    if user_block:
+        ref_block = f"{user_block}\n\n{ref_block}" if ref_block else user_block
     ctx = chat_history_service.recall_window(db, user.id)   # 先取旧上下文再存本轮提问，模型不会重复看到当前问题
     if chat_id:
         chat_history_service.save_message(db, user.id, chat_id, "user", utterance.strip())

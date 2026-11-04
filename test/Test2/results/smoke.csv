@@ -1,0 +1,5 @@
+﻿﻿scenario,run,total_s,ok,provider,demo_fallback,offline_takeover,answer_len,error_note
+baseline,1,7.793,True,siliconflow:XingChenAGI/Xing4.0-29B,False,False,42,
+fault_401,1,7.393,True,ollama:mimo9b:latest,False,True,45,
+fault_net,1,12.154,True,ollama:mimo9b:latest,False,True,54,
+fault_demo,1,8.141,True,ollama:mimo9b:latest,False,True,66,

@@ -9,3 +9,8 @@ dist/
 node_modules/
 package-lock.json
 .trae/
+.tmp_docx_unpacked/
+.venv/
+./cloudflared_tunnel/
+./docs/
+./src/

@@ -1,0 +1,1438 @@
+{
+  "tt01.jpg": {
+    "tag": "高清扫描_横版_无畸变",
+    "courses": [
+      {
+        "name": "高等数学",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "大学英语",
+        "weekday": 2,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "外语楼204",
+        "teacher": "李华"
+      },
+      {
+        "name": "数据结构",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼302",
+        "teacher": "张伟"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 4,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教C303",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "高等数学",
+        "weekday": 3,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "体育",
+        "weekday": 5,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "操场",
+        "teacher": "刘强"
+      },
+      {
+        "name": "操作系统",
+        "weekday": 1,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼405",
+        "teacher": "赵强"
+      },
+      {
+        "name": "概率统计",
+        "weekday": 4,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教B202",
+        "teacher": "孙丽"
+      }
+    ]
+  },
+  "tt02.jpg": {
+    "tag": "高清扫描_竖版_含教师地点列",
+    "courses": [
+      {
+        "name": "线性代数",
+        "weekday": 1,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教D105",
+        "teacher": "周杰"
+      },
+      {
+        "name": "计算机网络",
+        "weekday": 2,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "实验楼501",
+        "teacher": "吴敏"
+      },
+      {
+        "name": "线性代数",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教D105",
+        "teacher": "周杰"
+      },
+      {
+        "name": "软件工程",
+        "weekday": 3,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "教A302",
+        "teacher": "郑涛"
+      },
+      {
+        "name": "数据库原理",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼303",
+        "teacher": "冯雪"
+      },
+      {
+        "name": "大学语文",
+        "weekday": 5,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教E201",
+        "teacher": "许晴"
+      },
+      {
+        "name": "电路分析",
+        "weekday": 2,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼102",
+        "teacher": "何军"
+      },
+      {
+        "name": "体育",
+        "weekday": 4,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "体育馆",
+        "teacher": "马涛"
+      },
+      {
+        "name": "汇编语言",
+        "weekday": 5,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼206",
+        "teacher": "高峰"
+      }
+    ]
+  },
+  "tt03.jpg": {
+    "tag": "高清截图_教务系统导出_合并单元格",
+    "courses": [
+      {
+        "name": "算法设计",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 4,
+        "classroom": "教B101",
+        "teacher": "钱进"
+      },
+      {
+        "name": "算法设计",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教B101",
+        "teacher": "钱进"
+      },
+      {
+        "name": "大学英语",
+        "weekday": 2,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "外语楼308",
+        "teacher": "林芳"
+      },
+      {
+        "name": "计算机组成",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼402",
+        "teacher": "罗成"
+      },
+      {
+        "name": "毛概",
+        "weekday": 2,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "教A201",
+        "teacher": "蒋红"
+      },
+      {
+        "name": "数据结构",
+        "weekday": 5,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "实验楼301",
+        "teacher": "张伟"
+      },
+      {
+        "name": "编译原理",
+        "weekday": 3,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教C103",
+        "teacher": "沈艳"
+      },
+      {
+        "name": "离散数学",
+        "weekday": 1,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教B203",
+        "teacher": "韩梅"
+      }
+    ]
+  },
+  "tt04.jpg": {
+    "tag": "高清截图_PDF转图片_含跨节课程",
+    "courses": [
+      {
+        "name": "深度学习",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 4,
+        "classroom": "实验楼502",
+        "teacher": "严智"
+      },
+      {
+        "name": "机器学习",
+        "weekday": 2,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼502",
+        "teacher": "严智"
+      },
+      {
+        "name": "计算机视觉",
+        "weekday": 3,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "实验楼505",
+        "teacher": "康维"
+      },
+      {
+        "name": "自然语言处理",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼505",
+        "teacher": "康维"
+      },
+      {
+        "name": "机器学习",
+        "weekday": 4,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼502",
+        "teacher": "严智"
+      },
+      {
+        "name": "数据挖掘",
+        "weekday": 5,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼508",
+        "teacher": "金矿"
+      },
+      {
+        "name": "深度学习",
+        "weekday": 3,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼502",
+        "teacher": "严智"
+      },
+      {
+        "name": "论文写作",
+        "weekday": 5,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教B302",
+        "teacher": "温书"
+      },
+      {
+        "name": "大数据平台",
+        "weekday": 2,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼506",
+        "teacher": "涂数"
+      }
+    ]
+  },
+  "tt05.jpg": {
+    "tag": "正常拍照_竖版_光线好",
+    "courses": [
+      {
+        "name": "微机原理",
+        "weekday": 1,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼205",
+        "teacher": "杜鹏"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 2,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教C302",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教C302",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "体育",
+        "weekday": 3,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "操场",
+        "teacher": "刘强"
+      },
+      {
+        "name": "英语听力",
+        "weekday": 4,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "外语楼401",
+        "teacher": "白雪"
+      },
+      {
+        "name": "C++程序设计",
+        "weekday": 5,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼303",
+        "teacher": "谭浩"
+      },
+      {
+        "name": "电工电子",
+        "weekday": 2,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼108",
+        "teacher": "田甜"
+      },
+      {
+        "name": "形势政策",
+        "weekday": 5,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教A101",
+        "teacher": "国强"
+      }
+    ]
+  },
+  "tt06.jpg": {
+    "tag": "正常拍照_横版_光线好",
+    "courses": [
+      {
+        "name": "高等数学",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "大学英语",
+        "weekday": 2,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "外语楼204",
+        "teacher": "李华"
+      },
+      {
+        "name": "数据结构",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼302",
+        "teacher": "张伟"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 4,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教C303",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "高等数学",
+        "weekday": 3,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "体育",
+        "weekday": 5,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "操场",
+        "teacher": "刘强"
+      },
+      {
+        "name": "操作系统",
+        "weekday": 1,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼405",
+        "teacher": "赵强"
+      },
+      {
+        "name": "概率统计",
+        "weekday": 4,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教B202",
+        "teacher": "孙丽"
+      }
+    ]
+  },
+  "tt07.jpg": {
+    "tag": "正常拍照_竖版_纸张略皱",
+    "courses": [
+      {
+        "name": "线性代数",
+        "weekday": 1,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教D105",
+        "teacher": "周杰"
+      },
+      {
+        "name": "计算机网络",
+        "weekday": 2,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "实验楼501",
+        "teacher": "吴敏"
+      },
+      {
+        "name": "线性代数",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教D105",
+        "teacher": "周杰"
+      },
+      {
+        "name": "软件工程",
+        "weekday": 3,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "教A302",
+        "teacher": "郑涛"
+      },
+      {
+        "name": "数据库原理",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼303",
+        "teacher": "冯雪"
+      },
+      {
+        "name": "大学语文",
+        "weekday": 5,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教E201",
+        "teacher": "许晴"
+      },
+      {
+        "name": "电路分析",
+        "weekday": 2,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼102",
+        "teacher": "何军"
+      },
+      {
+        "name": "体育",
+        "weekday": 4,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "体育馆",
+        "teacher": "马涛"
+      },
+      {
+        "name": "汇编语言",
+        "weekday": 5,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼206",
+        "teacher": "高峰"
+      }
+    ]
+  },
+  "tt08.jpg": {
+    "tag": "正常拍照_含手写批注",
+    "courses": [
+      {
+        "name": "微机原理",
+        "weekday": 1,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼205",
+        "teacher": "杜鹏"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 2,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教C302",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教C302",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "体育",
+        "weekday": 3,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "操场",
+        "teacher": "刘强"
+      },
+      {
+        "name": "英语听力",
+        "weekday": 4,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "外语楼401",
+        "teacher": "白雪"
+      },
+      {
+        "name": "C++程序设计",
+        "weekday": 5,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼303",
+        "teacher": "谭浩"
+      },
+      {
+        "name": "电工电子",
+        "weekday": 2,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼108",
+        "teacher": "田甜"
+      },
+      {
+        "name": "形势政策",
+        "weekday": 5,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教A101",
+        "teacher": "国强"
+      }
+    ]
+  },
+  "tt09.jpg": {
+    "tag": "斜拍_竖版_明显透视",
+    "courses": [
+      {
+        "name": "高等数学",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "大学英语",
+        "weekday": 2,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "外语楼204",
+        "teacher": "李华"
+      },
+      {
+        "name": "数据结构",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼302",
+        "teacher": "张伟"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 4,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教C303",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "高等数学",
+        "weekday": 3,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "体育",
+        "weekday": 5,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "操场",
+        "teacher": "刘强"
+      },
+      {
+        "name": "操作系统",
+        "weekday": 1,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼405",
+        "teacher": "赵强"
+      },
+      {
+        "name": "概率统计",
+        "weekday": 4,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教B202",
+        "teacher": "孙丽"
+      }
+    ]
+  },
+  "tt10.jpg": {
+    "tag": "斜拍_横版_角度大",
+    "courses": [
+      {
+        "name": "线性代数",
+        "weekday": 1,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教D105",
+        "teacher": "周杰"
+      },
+      {
+        "name": "计算机网络",
+        "weekday": 2,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "实验楼501",
+        "teacher": "吴敏"
+      },
+      {
+        "name": "线性代数",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教D105",
+        "teacher": "周杰"
+      },
+      {
+        "name": "软件工程",
+        "weekday": 3,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "教A302",
+        "teacher": "郑涛"
+      },
+      {
+        "name": "数据库原理",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼303",
+        "teacher": "冯雪"
+      },
+      {
+        "name": "大学语文",
+        "weekday": 5,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教E201",
+        "teacher": "许晴"
+      },
+      {
+        "name": "电路分析",
+        "weekday": 2,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼102",
+        "teacher": "何军"
+      },
+      {
+        "name": "体育",
+        "weekday": 4,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "体育馆",
+        "teacher": "马涛"
+      },
+      {
+        "name": "汇编语言",
+        "weekday": 5,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼206",
+        "teacher": "高峰"
+      }
+    ]
+  },
+  "tt11.jpg": {
+    "tag": "斜拍_竖版_部分反光",
+    "courses": [
+      {
+        "name": "算法设计",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 4,
+        "classroom": "教B101",
+        "teacher": "钱进"
+      },
+      {
+        "name": "算法设计",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教B101",
+        "teacher": "钱进"
+      },
+      {
+        "name": "大学英语",
+        "weekday": 2,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "外语楼308",
+        "teacher": "林芳"
+      },
+      {
+        "name": "计算机组成",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼402",
+        "teacher": "罗成"
+      },
+      {
+        "name": "毛概",
+        "weekday": 2,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "教A201",
+        "teacher": "蒋红"
+      },
+      {
+        "name": "数据结构",
+        "weekday": 5,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "实验楼301",
+        "teacher": "张伟"
+      },
+      {
+        "name": "编译原理",
+        "weekday": 3,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教C103",
+        "teacher": "沈艳"
+      },
+      {
+        "name": "离散数学",
+        "weekday": 1,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教B203",
+        "teacher": "韩梅"
+      }
+    ]
+  },
+  "tt12.jpg": {
+    "tag": "斜拍_贴墙课表_远距拍摄",
+    "courses": [
+      {
+        "name": "微机原理",
+        "weekday": 1,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼205",
+        "teacher": "杜鹏"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 2,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教C302",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教C302",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "体育",
+        "weekday": 3,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "操场",
+        "teacher": "刘强"
+      },
+      {
+        "name": "英语听力",
+        "weekday": 4,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "外语楼401",
+        "teacher": "白雪"
+      },
+      {
+        "name": "C++程序设计",
+        "weekday": 5,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼303",
+        "teacher": "谭浩"
+      },
+      {
+        "name": "电工电子",
+        "weekday": 2,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼108",
+        "teacher": "田甜"
+      },
+      {
+        "name": "形势政策",
+        "weekday": 5,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教A101",
+        "teacher": "国强"
+      }
+    ]
+  },
+  "tt13.jpg": {
+    "tag": "弱光_室内夜晚_噪点明显",
+    "courses": [
+      {
+        "name": "高等数学",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "大学英语",
+        "weekday": 2,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "外语楼204",
+        "teacher": "李华"
+      },
+      {
+        "name": "数据结构",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼302",
+        "teacher": "张伟"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 4,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教C303",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "高等数学",
+        "weekday": 3,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "体育",
+        "weekday": 5,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "操场",
+        "teacher": "刘强"
+      },
+      {
+        "name": "操作系统",
+        "weekday": 1,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼405",
+        "teacher": "赵强"
+      },
+      {
+        "name": "概率统计",
+        "weekday": 4,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教B202",
+        "teacher": "孙丽"
+      }
+    ]
+  },
+  "tt14.jpg": {
+    "tag": "弱光_阴影遮挡_边缘发暗",
+    "courses": [
+      {
+        "name": "线性代数",
+        "weekday": 1,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教D105",
+        "teacher": "周杰"
+      },
+      {
+        "name": "计算机网络",
+        "weekday": 2,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "实验楼501",
+        "teacher": "吴敏"
+      },
+      {
+        "name": "线性代数",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教D105",
+        "teacher": "周杰"
+      },
+      {
+        "name": "软件工程",
+        "weekday": 3,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "教A302",
+        "teacher": "郑涛"
+      },
+      {
+        "name": "数据库原理",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼303",
+        "teacher": "冯雪"
+      },
+      {
+        "name": "大学语文",
+        "weekday": 5,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教E201",
+        "teacher": "许晴"
+      },
+      {
+        "name": "电路分析",
+        "weekday": 2,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼102",
+        "teacher": "何军"
+      },
+      {
+        "name": "体育",
+        "weekday": 4,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "体育馆",
+        "teacher": "马涛"
+      },
+      {
+        "name": "汇编语言",
+        "weekday": 5,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼206",
+        "teacher": "高峰"
+      }
+    ]
+  },
+  "tt15.jpg": {
+    "tag": "弱光_灯光偏黄_色偏",
+    "courses": [
+      {
+        "name": "算法设计",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 4,
+        "classroom": "教B101",
+        "teacher": "钱进"
+      },
+      {
+        "name": "算法设计",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教B101",
+        "teacher": "钱进"
+      },
+      {
+        "name": "大学英语",
+        "weekday": 2,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "外语楼308",
+        "teacher": "林芳"
+      },
+      {
+        "name": "计算机组成",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼402",
+        "teacher": "罗成"
+      },
+      {
+        "name": "毛概",
+        "weekday": 2,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "教A201",
+        "teacher": "蒋红"
+      },
+      {
+        "name": "数据结构",
+        "weekday": 5,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "实验楼301",
+        "teacher": "张伟"
+      },
+      {
+        "name": "编译原理",
+        "weekday": 3,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教C103",
+        "teacher": "沈艳"
+      },
+      {
+        "name": "离散数学",
+        "weekday": 1,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教B203",
+        "teacher": "韩梅"
+      }
+    ]
+  },
+  "tt16.jpg": {
+    "tag": "屏幕翻拍_电脑屏_摩尔纹",
+    "courses": [
+      {
+        "name": "微机原理",
+        "weekday": 1,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼205",
+        "teacher": "杜鹏"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 2,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教C302",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教C302",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "体育",
+        "weekday": 3,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "操场",
+        "teacher": "刘强"
+      },
+      {
+        "name": "英语听力",
+        "weekday": 4,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "外语楼401",
+        "teacher": "白雪"
+      },
+      {
+        "name": "C++程序设计",
+        "weekday": 5,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼303",
+        "teacher": "谭浩"
+      },
+      {
+        "name": "电工电子",
+        "weekday": 2,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼108",
+        "teacher": "田甜"
+      },
+      {
+        "name": "形势政策",
+        "weekday": 5,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教A101",
+        "teacher": "国强"
+      }
+    ]
+  },
+  "tt17.jpg": {
+    "tag": "屏幕翻拍_手机屏_反光",
+    "courses": [
+      {
+        "name": "线性代数",
+        "weekday": 1,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教D105",
+        "teacher": "周杰"
+      },
+      {
+        "name": "计算机网络",
+        "weekday": 2,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "实验楼501",
+        "teacher": "吴敏"
+      },
+      {
+        "name": "线性代数",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教D105",
+        "teacher": "周杰"
+      },
+      {
+        "name": "软件工程",
+        "weekday": 3,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "教A302",
+        "teacher": "郑涛"
+      },
+      {
+        "name": "数据库原理",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼303",
+        "teacher": "冯雪"
+      },
+      {
+        "name": "大学语文",
+        "weekday": 5,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教E201",
+        "teacher": "许晴"
+      },
+      {
+        "name": "电路分析",
+        "weekday": 2,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼102",
+        "teacher": "何军"
+      },
+      {
+        "name": "体育",
+        "weekday": 4,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "体育馆",
+        "teacher": "马涛"
+      },
+      {
+        "name": "汇编语言",
+        "weekday": 5,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼206",
+        "teacher": "高峰"
+      }
+    ]
+  },
+  "tt18.jpg": {
+    "tag": "复杂样式_合并单元格_单双周标注",
+    "courses": [
+      {
+        "name": "算法设计",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 4,
+        "classroom": "教B101",
+        "teacher": "钱进"
+      },
+      {
+        "name": "算法设计",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教B101",
+        "teacher": "钱进"
+      },
+      {
+        "name": "大学英语",
+        "weekday": 2,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "外语楼308",
+        "teacher": "林芳"
+      },
+      {
+        "name": "计算机组成",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼402",
+        "teacher": "罗成"
+      },
+      {
+        "name": "毛概",
+        "weekday": 2,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "教A201",
+        "teacher": "蒋红"
+      },
+      {
+        "name": "数据结构",
+        "weekday": 5,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "实验楼301",
+        "teacher": "张伟"
+      },
+      {
+        "name": "编译原理",
+        "weekday": 3,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教C103",
+        "teacher": "沈艳"
+      },
+      {
+        "name": "离散数学",
+        "weekday": 1,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教B203",
+        "teacher": "韩梅"
+      }
+    ]
+  },
+  "tt19.jpg": {
+    "tag": "复杂样式_跨节连堂_教师地点齐全",
+    "courses": [
+      {
+        "name": "深度学习",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 4,
+        "classroom": "实验楼502",
+        "teacher": "严智"
+      },
+      {
+        "name": "机器学习",
+        "weekday": 2,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼502",
+        "teacher": "严智"
+      },
+      {
+        "name": "计算机视觉",
+        "weekday": 3,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "实验楼505",
+        "teacher": "康维"
+      },
+      {
+        "name": "自然语言处理",
+        "weekday": 4,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼505",
+        "teacher": "康维"
+      },
+      {
+        "name": "机器学习",
+        "weekday": 4,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼502",
+        "teacher": "严智"
+      },
+      {
+        "name": "数据挖掘",
+        "weekday": 5,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼508",
+        "teacher": "金矿"
+      },
+      {
+        "name": "深度学习",
+        "weekday": 3,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼502",
+        "teacher": "严智"
+      },
+      {
+        "name": "论文写作",
+        "weekday": 5,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教B302",
+        "teacher": "温书"
+      },
+      {
+        "name": "大数据平台",
+        "weekday": 2,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "实验楼506",
+        "teacher": "涂数"
+      }
+    ]
+  },
+  "tt20.jpg": {
+    "tag": "手写课表_白板或纸手写",
+    "courses": [
+      {
+        "name": "高等数学",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "大学英语",
+        "weekday": 2,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "外语楼204",
+        "teacher": "李华"
+      },
+      {
+        "name": "数据结构",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "实验楼302",
+        "teacher": "张伟"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 4,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教C303",
+        "teacher": "陈芳"
+      },
+      {
+        "name": "高等数学",
+        "weekday": 3,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "体育",
+        "weekday": 5,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "操场",
+        "teacher": "刘强"
+      },
+      {
+        "name": "操作系统",
+        "weekday": 1,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼405",
+        "teacher": "赵强"
+      },
+      {
+        "name": "概率统计",
+        "weekday": 4,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "教B202",
+        "teacher": "孙丽"
+      }
+    ]
+  }
+}

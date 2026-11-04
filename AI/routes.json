@@ -8,7 +8,6 @@
         {"match": {"ability": "long_context"},"target": "XingChenAGI/Xing4.0-29B"},
         {"match": {"ability": "vision"},      "target": "glm-4.6V-Flash", "fallback": ["deepseek-ai/DeepSeek-OCR"]},
         {"match": {"ability": "ocr"},         "target": "PaddlePaddle/PaddleOCR-VL-1.54", "fallback": ["deepseek-ai/DeepSeek-OCR"]},
-        {"match": {"ability": "asr"},         "target": "XingChenAGI/XingChenASR-V3.2-Ultra", "fallback": ["XingChenAGI/XingChenASR-V3.2"]},
         {"match": {"ability": "text_to_image"},"target": "Kwai-Kolors/Kolors", "fallback": ["CogView-3-Flash"]},
         {"match": {"ability": "embedding"},   "target": "BAAI/bge-m3"},
         {"match": {"ability": "offline"},     "target": "mimo9b:latest"},

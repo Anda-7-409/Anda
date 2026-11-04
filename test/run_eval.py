@@ -206,13 +206,24 @@ def call_with_retry(model, messages, tools, sys_fc):
 
 # ---------- 评测主流程 ----------
 def run(ability: str, model: dict, cases: list, rounds: int, out_csv: Path,
-        sys_fc: str, fc_tools):
+        sys_fc: str, fc_tools, done: set = frozenset()):
     ok = 0
+    planned = sum(rounds for _ in cases)
+    todo = [1 for c in cases for r in range(1, rounds + 1)
+            if (ability, model["model_id"], c["id"], r) not in done]
+    if not todo:
+        print(f"  [{model['model_id']}|{ability}] 续跑：全部 {planned} 条已完成，跳过")
+        return 0
+    if len(todo) < planned:
+        print(f"  [{model['model_id']}|{ability}] 续跑：已完成 {planned - len(todo)} 条，"
+              f"补测 {len(todo)} 条")
     for case in cases:
         messages = [{"role": "system", "content": sys_fc}] if ability == "tool_use" else []
         messages.append({"role": "user", "content": case["utterance"]})
         tools = fc_tools if ability == "tool_use" else None
         for rnd in range(1, rounds + 1):
+            if (ability, model["model_id"], case["id"], rnd) in done:
+                continue
             result = call_with_retry(model, messages, tools, sys_fc)
             state = {"content": result.get("content", ""),
                      "tool_calls": result.get("tool_calls", [])}
@@ -246,6 +257,46 @@ def append_row(out_csv: Path, row: dict):
         w.writerow(row)
 
 
+def load_done_keys(out_csv: Path) -> set:
+    """读取已有 CSV，返回已完成组合的 (ability, model_id, case_id, round) 集合，用于断点续跑。"""
+    done = set()
+    if not out_csv.exists():
+        return done
+    with out_csv.open("r", newline="", encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            try:
+                done.add((row["ability"], row["model_id"],
+                          row["case_id"], int(row["round"])))
+            except (KeyError, TypeError, ValueError):
+                continue  # 表头损坏或字段缺失的行不参与续跑判断
+    return done
+
+
+def purge_rows(out_csv: Path, abilities: set, model_ids) -> int:
+    """重测前清理：删除 CSV 中 (ability, model_id) 命中的旧行并备份原文件。
+    model_ids 为 None 时删除该能力下所有模型的行（--model all 场景）。返回删除数。"""
+    if not out_csv.exists():
+        return 0
+    bak = out_csv.with_name(
+        f"{out_csv.stem}_backup_{time.strftime('%Y%m%d_%H%M%S')}.csv")
+    bak.write_bytes(out_csv.read_bytes())
+    kept, removed, fields = [], 0, None
+    with out_csv.open("r", newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        fields = reader.fieldnames
+        for row in reader:
+            if (row.get("ability") in abilities
+                    and (model_ids is None or row.get("model_id") in model_ids)):
+                removed += 1
+            else:
+                kept.append(row)
+    with out_csv.open("w", newline="", encoding="utf-8-sig") as f:
+        w = csv.DictWriter(f, fieldnames=fields)
+        w.writeheader()
+        w.writerows(kept)
+    return removed
+
+
 def main():
     ap = argparse.ArgumentParser(description="实验一：能力权重路由评测（单模型直连）")
     ap.add_argument("--ability", required=True,
@@ -256,6 +307,8 @@ def main():
     ap.add_argument("--limit", type=int, default=0, help="冒烟模式：仅取前 N 条用例")
     ap.add_argument("--out", default="", help="输出 CSV 路径，默认 test/results/raw.csv")
     ap.add_argument("--dry-run", action="store_true", help="只打印执行计划，不发请求")
+    ap.add_argument("--re", action="store_true",
+                    help="重测：先删除该能力×模型组合的已有数据（自动备份原 CSV）再重新评测")
     args = ap.parse_args()
 
     load_env()
@@ -273,12 +326,35 @@ def main():
     print(f"评测计划：ability={args.ability} model={args.model} rounds={args.rounds} "
           f"limit={args.limit or '全部'} out={out_csv}")
 
+    if args.re and not args.dry_run and out_csv.exists():
+        if args.model == "all":
+            model_ids = None  # 删除该能力下所有模型的旧行
+        else:
+            wanted = [x.strip() for x in args.model.split(",") if x.strip()]
+            unknown = [x for x in wanted if x not in registry]
+            if unknown:
+                raise KeyError(f"--model 含未注册的 model_id：{unknown}；"
+                               f"可选：{list(registry)[:5]} ... 或 all")
+            model_ids = set(wanted)
+        n = purge_rows(out_csv, set(abilities), model_ids)
+        print(f"[重测] 已删除 {n} 条旧记录（能力={args.ability}，模型={args.model}），"
+              f"原文件已备份。")
+
+    done = load_done_keys(out_csv)
+    if done:
+        print(f"[续跑] {out_csv} 已有 {len(done)} 条记录，"
+              f"已完成组合（能力+模型+用例+轮次）将自动跳过。")
+
     if args.dry_run:
         total = 0
         for ab in abilities:
             cases = json.loads((TEST_DIR / "cases" / f"{ab}.json").read_text("utf-8"))
-            models = ([registry[args.model]] if args.model != "all"
-                      else [m for m in registry.values() if m["ability_weights"].get(ab, 0) > 0])
+            if args.model != "all":
+                wanted = [x.strip() for x in args.model.split(",") if x.strip()]
+                models = [registry[x] for x in wanted]
+                models = [m for m in models if m["ability_weights"].get(ab, 0) > 0]
+            else:
+                models = [m for m in registry.values() if m["ability_weights"].get(ab, 0) > 0]
             n = len(cases[:args.limit] if args.limit else cases)
             total += n * len(models) * args.rounds
             print(f"  {ab}: {n} 用例 × {len(models)} 模型 × {args.rounds} 轮")
@@ -291,18 +367,25 @@ def main():
         if args.limit:
             cases = cases[:args.limit]
         if args.model != "all":
-            models = [registry[args.model]]
-            if models[0]["ability_weights"].get(ab, 0) <= 0:
-                print(f"[跳过] {args.model} 无 {ab} 能力权重")
-                continue
+            wanted = [x.strip() for x in args.model.split(",") if x.strip()]
+            unknown = [x for x in wanted if x not in registry]
+            if unknown:
+                raise KeyError(f"--model 含未注册的 model_id：{unknown}；"
+                               f"可选：{list(registry)[:5]} ... 或 all")
+            models = [registry[x] for x in wanted]
+            models = [m for m in models if m["ability_weights"].get(ab, 0) > 0
+                      or print(f"[跳过] {m['model_id']} 无 {ab} 能力权重")]
         else:
             models = [m for m in registry.values() if m["ability_weights"].get(ab, 0) > 0]
+        if not models:
+            print(f"[跳过] {ab}：没有可测模型")
+            continue
         print(f"=== 能力 {ab}：{len(cases)} 用例 × {len(models)} 模型 ===")
         for m in models:
             if m.get("api_key_env") and not os.environ.get(m["api_key_env"]):
                 print(f"[跳过] {m['model_id']}：环境变量 {m['api_key_env']} 未配置")
                 continue
-            run(ab, m, cases, args.rounds, out_csv, sys_fc, fc_tools)
+            run(ab, m, cases, args.rounds, out_csv, sys_fc, fc_tools, done)
     print(f"完成。原始数据：{out_csv}\n下一步：python {TEST_DIR / 'summarize.py'}")
 
 

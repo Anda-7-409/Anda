@@ -1,0 +1,22 @@
+{
+  "rem01": { "kind": "clock", "utterance": "提醒我下午5点交实验报告", "kp": ["实验报告"], "clock": "17:00" },
+  "rem02": { "kind": "relative", "utterance": "明早8点提醒我背单词", "kp": ["背单词", "单词"], "days": 1, "clock": "08:00" },
+  "rem03": { "kind": "relative", "utterance": "后天下午2点半提醒我去取快递", "kp": ["快递"], "days": 2, "clock": "14:30" },
+  "rem04": { "kind": "relative", "utterance": "3天后晚上7点提醒我参加班会", "kp": ["班会"], "days": 3, "clock": "19:00" },
+  "rem05": { "kind": "delta", "utterance": "20分钟后提醒我关电脑", "kp": ["关电脑"], "minutes": 20, "tolerance_min": 2 },
+  "rem06": { "kind": "delta", "utterance": "1小时后提醒我查成绩", "kp": ["查成绩", "成绩"], "minutes": 60, "tolerance_min": 2 },
+  "rem07": { "kind": "delta", "utterance": "30秒后提醒我做下一版", "kp": ["下一版"], "minutes": 1, "tolerance_min": 1 },
+  "rem08": { "kind": "clock", "utterance": "今天21:00提醒我给爸妈打电话", "kp": ["爸妈", "电话"], "clock": "21:00" },
+  "rem09": { "kind": "relative", "utterance": "明天中午12点提醒我交学生报表", "kp": ["报表", "学生报表"], "days": 1, "clock": "12:00" },
+  "rem10": { "kind": "clock", "utterance": "提醒我6:50起床跑步", "kp": ["跑步", "起床"], "clock": "06:50" },
+  "rem11": { "kind": "clock", "utterance": "晚上11点提醒我抢票", "kp": ["抢票", "票"], "clock": "23:00" },
+  "rem12": { "kind": "absolute", "utterance": "2026-12-31 09:00提醒我交年终总结", "kp": ["年终总结"], "date": "2026-12-31", "clock": "09:00" },
+  "rem13": { "kind": "fuzzy", "utterance": "下周三提醒我组会", "kp": ["组会"] },
+  "rem14": { "kind": "fuzzy", "utterance": "下课之后提醒我去拿快递", "kp": ["快递"] },
+  "rem15": { "kind": "fuzzy", "utterance": "尽快提醒我回老师消息", "kp": ["回老师", "消息", "老师"] },
+  "rem16": { "kind": "fuzzy", "utterance": "提醒我写周报", "kp": ["周报"] },
+  "rem17": { "kind": "fuzzy", "utterance": "过会儿提醒我", "kp": [] },
+  "rem18": { "kind": "relative", "utterance": "明天上午第一节下课(9:45)提醒我交作业", "kp": ["作业"], "days": 1, "clock": "09:45" },
+  "rem19": { "kind": "weekday", "utterance": "周日晚上8点提醒我看电影", "kp": ["电影"], "weekday": 7, "clock": "20:00" },
+  "rem20": { "kind": "delta", "utterance": "半小时后提醒我吃药", "kp": ["吃药", "药"], "minutes": 30, "tolerance_min": 2 }
+}

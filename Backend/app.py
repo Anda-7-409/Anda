@@ -47,7 +47,7 @@ def create_app() -> FastAPI:
     return app
 
 def register_routes(app: FastAPI):
-    from .routes import auth, agent, schedule, upload, memo, reminder, nav, asr
+    from .routes import auth, agent, schedule, upload, memo, reminder, nav
     app.include_router(auth.router, prefix="/auth")
     app.include_router(agent.router, prefix="/agent")
     app.include_router(schedule.router, prefix="/schedule")
@@ -55,7 +55,6 @@ def register_routes(app: FastAPI):
     app.include_router(memo.router, prefix="/memo")
     app.include_router(reminder.router, prefix="/reminder")
     app.include_router(nav.router, prefix="/nav")
-    app.include_router(asr.router, prefix="/asr")
 
 
 app = create_app()

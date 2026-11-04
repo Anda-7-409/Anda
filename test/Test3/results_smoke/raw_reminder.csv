@@ -1,0 +1,4 @@
+﻿case_id,kind,round,provider,ok,pass,type_ok,time_ok,expected_time,got_time,latency_s,error_type,raw_preview
+rem01,clock,1,siliconflow:deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,1,1,1,1,2026-11-03 17:00,2026-11-03 17:00,11.258,none," {""reminder_type"": ""交实验报告"", ""reminder_time"": ""2026-11-03 17:00""}"
+rem02,relative,1,siliconflow:deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,1,1,1,1,2026-11-03 08:00,2026-11-03 08:00,16.034,none," {""reminder_type"": ""背单词"", ""reminder_time"": ""2026-11-03 08:00""}"
+rem03,relative,1,siliconflow:deepseek-ai/DeepSeek-R1-0528-Qwen3-8B,1,1,1,1,2026-11-04 14:30,2026-11-04 14:30,16.198,none," {""reminder_type"": ""去取快递"", ""reminder_time"": ""2026-11-04 14:30""}"

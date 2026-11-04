@@ -173,12 +173,12 @@ contract.md/refactoring.md 写于重构前，部分契约已随实现演进，**
 
 - [x] 提交 5 个未跟踪文件 + 修复 requirements（立即）
 - [x] 补齐 .env.example / 更新契约文档
-- [ ] 接入课表图片导入：预览+确认两步走（视觉槽 GLM-4.6V-Flash / DeepSeek-OCR / PaddleOCR-VL 已在 models.json 就位）
-- [ ] 课前主动提醒闭环：APScheduler 定时扫描（课表+天气+通勤→推送）——核心卖点"主动服务"尚缺定时触发器
-- [ ] 路由增加"调用时间权重"（remind.txt TODO）：按实测响应时间动态调整链序
-- [ ] 生产部署：StaticFiles 挂载 + 公网域名（anda.dpdns.org）+ cloudflared tunnel
-- [ ] 评测数据化：20 张真实课表 + 20 条提醒指令实测抽取准确率，把"架构选型"变成答辩数据
-- [ ] 测试体系：优先 orchestrator 意图识别 + 工具链编排的 mock 测试
+- [x] 接入课表图片导入：预览+确认两步走（视觉槽 GLM-4.6V-Flash / DeepSeek-OCR / PaddleOCR-VL 已在 models.json 就位）
+- [x] 课前主动提醒闭环：APScheduler 定时扫描（课表+天气+通勤→推送）——核心卖点"主动服务"尚缺定时触发器
+- [x] 路由增加"调用时间权重"（remind.txt TODO）：按实测响应时间动态调整链序
+- [x] 生产部署：StaticFiles 挂载 + 公网域名（anda.dpdns.org）+ cloudflared tunnel
+- [x] 评测数据化：20 张真实课表 + 20 条提醒指令实测抽取准确率，把"架构选型"变成答辩数据
+- [x] 测试体系：优先 orchestrator 意图识别 + 工具链编排的 mock 测试
 
 ***
 

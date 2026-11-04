@@ -1,0 +1,2 @@
+﻿image_id,tag,round,provider,ok,gt_total,out_total,matched,extra,missed,course_acc,image_exact,room_acc,teacher_acc,latency_s,error_type,missed_detail,raw_preview
+tt00,样例_程序生成_清晰打印体,1,siliconflow:deepseek-ai/DeepSeek-OCR,0,6,0,0,0,6,0.0,0,,,2.601,parse_fail,高等数学 周1 1-2节; 大学英语 周2 3-4节; 高等数学 周3 1-2节; 数据结构 周3 5-6节; 体育 周4 7-8节; 大学物理 周5 3-4节,和节次供上传使用 - 要求遵守迭代规则；即便重新画一张图，只要画法换了，此图变化也属于图片修改  ---  我的课表   <table><tr><td>节次</td><td>周一</td><td>周二</td><td>周三</td><td>周四</td><td>周五</td></tr><tr><td>第1-2节</td><td>高等数学<br>教A101 王明</td><td></td><td>高

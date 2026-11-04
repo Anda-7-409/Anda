@@ -1,0 +1,55 @@
+{
+  "tt00.jpg": {
+    "tag": "样例_程序生成_清晰打印体",
+    "courses": [
+      {
+        "name": "高等数学",
+        "weekday": 1,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "大学英语",
+        "weekday": 2,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教B202",
+        "teacher": "李华"
+      },
+      {
+        "name": "高等数学",
+        "weekday": 3,
+        "start_slot": 1,
+        "end_slot": 2,
+        "classroom": "教A101",
+        "teacher": "王明"
+      },
+      {
+        "name": "数据结构",
+        "weekday": 3,
+        "start_slot": 5,
+        "end_slot": 6,
+        "classroom": "实验楼302",
+        "teacher": "张伟"
+      },
+      {
+        "name": "体育",
+        "weekday": 4,
+        "start_slot": 7,
+        "end_slot": 8,
+        "classroom": "操场",
+        "teacher": "刘强"
+      },
+      {
+        "name": "大学物理",
+        "weekday": 5,
+        "start_slot": 3,
+        "end_slot": 4,
+        "classroom": "教C303",
+        "teacher": "陈芳"
+      }
+    ]
+  }
+}
