@@ -11,6 +11,6 @@ package-lock.json
 .trae/
 .tmp_docx_unpacked/
 .venv/
-./cloudflared_tunnel/
-./docs/
-./src/
+cloudflared_tunnel/
+docs/
+src/
