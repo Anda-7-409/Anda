@@ -88,3 +88,5 @@ npm run dev                   # http://localhost:5173，/api 已反向代理到�
 8. Shishir G. Patil, et al. Gorilla: Large Language Model Connected with Massive APIs. NeurIPS 2024. https://arxiv.org/abs/2305.15334
 9. Charles Packer, et al. MemGPT: Towards LLMs as Operating Systems. 2023. https://arxiv.org/abs/2310.08560
 10. Percy Liang, et al. Holistic Evaluation of Language Models. TMLR 2023. https://arxiv.org/abs/2211.09110
+11. Leo Gao, et al. A framework for few-shot language model evaluation. Zenodo, 2021. https://doi.org/10.5281/zenodo.5371628
+12. Ali Basiri, et al. Chaos Engineering. IEEE Software, 2016, 33(3): 35-41. https://doi.org/10.1109/MS.2016.60

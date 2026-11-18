@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import re
 import secrets
 import threading
 import time
@@ -32,6 +33,16 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
     dk = hashlib.pbkdf2_hmac("sha256", plain_password.encode(), salt.encode(), 120_000)
     return secrets.compare_digest(dk.hex(), digest)
+
+
+# ---------- 密码策略：不少于 6 位，且必须英文字母 + 数字混合（注册/重置/改密三入口统一校验） ----------
+def validate_password(password: str) -> Optional[str]:
+    """合规返回 None；不合规返回给用户看的提示语。"""
+    if not password or len(password) < 6:
+        return "密码长度至少 6 位哦 (´･ω･`)"
+    if not re.search(r"[A-Za-z]", password) or not re.search(r"[0-9]", password):
+        return "密码需要英文字母和数字混合，不能用纯数字或纯字母哦 (¬‿¬)"
+    return None
 
 
 # ---------- 登录态 token 只存 SHA-256 摘要：拖库也无法直接冒用会话（安全小金库 (๑•̀ㅂ•́)و✧） ----------
@@ -72,6 +83,10 @@ def register_user(db: Session, username: str, password: str, email: str, client_
     if not _rate_limit(f"reg:ip:{client_ip}", *_REGISTER_LIMIT):
         log.warning("限流拦截 -> register ip=%s (。•́︿•̀。)", client_ip)
         return {"ok": False, "message": "操作太频繁啦，让服务器缓一缓，一小时后再试吧 (。•́︿•̀。)"}
+    bad = validate_password(password)
+    if bad:
+        log.info("注册拒绝 -> 密码不合规（ip=%s）", client_ip)
+        return {"ok": False, "message": bad}
     existing = db.query(User).filter(User.email == email).first()
     if existing and existing.is_active:
         log.info("注册拒绝 -> 邮箱已被激活账号占用（ip=%s）(´･ω･`)", client_ip)
@@ -179,6 +194,9 @@ def update_profile(db: Session, user: User, username: Optional[str] = None, emai
             return {"ok": False, "message": "这个邮箱已经有主人啦 (¬‿¬)"}
         user.email = email
     if password:
+        bad = validate_password(password)
+        if bad:
+            return {"ok": False, "message": bad}
         user.password_hash = hash_password(password)
     try:
         db.commit()
@@ -222,6 +240,9 @@ def reset_password(db: Session, token: str, new_password: str) -> dict:
     if not user or not user.reset_expires or user.reset_expires < datetime.utcnow():
         log.info("密码重置失败 -> token 无效或已过期 (＞﹏＜)")
         return {"ok": False, "message": "链接无效或已过期啦 (´•̥ω•̥`) 是时候重新申请一次了呢"}
+    bad = validate_password(new_password)
+    if bad:
+        return {"ok": False, "message": bad}
     user.password_hash = hash_password(new_password)
     user.reset_token = ""
     user.reset_expires = None

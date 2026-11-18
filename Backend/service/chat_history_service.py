@@ -26,7 +26,7 @@ def save_message(db: Session, user_id: int, chat_id: str, role: str,
 
 def delete_chat(db: Session, user_id: int, chat_id: str) -> int:
     n = db.query(ChatMessage).filter(
-        ChatMessage.user_id == user_id, ChatMessage.chat_id == str(chat_id)).delete()
+        ChatMessage.user_id == user_id, ChatMessage.chat_id == str(chat_id)[:32]).delete()
     db.commit()
     return n
 
@@ -53,10 +53,13 @@ def build_history(db: Session, user_id: int) -> list:
     return items
 
 
-def recall_window(db: Session, user_id: int, limit: int = 12) -> list:
+def recall_window(db: Session, user_id: int, limit: int = 12, chat_id: str = None) -> list:
     # 模型记忆：最近 limit 条 user/ai 消息（工具消息不进模型上下文，与旧 memory.py 行为一致）
-    rows = db.query(ChatMessage).filter(
+    # 传入 chat_id 则只取该对话内的消息——上下文按对话框隔离，删掉对话即彻底清除其全部上下文
+    q = db.query(ChatMessage).filter(
         ChatMessage.user_id == user_id,
-        ChatMessage.role.in_(("user", "ai")))\
-        .order_by(ChatMessage.id.desc()).limit(limit).all()
+        ChatMessage.role.in_(("user", "ai")))
+    if chat_id:
+        q = q.filter(ChatMessage.chat_id == str(chat_id)[:32])
+    rows = q.order_by(ChatMessage.id.desc()).limit(limit).all()
     return [{"role": r.role, "content": r.content} for r in reversed(rows)]

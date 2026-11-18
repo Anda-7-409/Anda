@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人隐私政策 - 安答：校园AI Agent助手</title>
+    <!-- 政策页样式内联，与 register.html 保持一致——祖传规矩，别手痒 (¬‿¬) -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "PingFang SC","Microsoft YaHei", "Segoe UI", sans-serif; min-height: 100vh; background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%); background-attachment: fixed; }
+        .container { max-width: 800px; margin: 60px auto; padding: 24px; }
+        .logo { text-align: center; font-size: 28px; font-weight: bold; color: #1a73e8; margin-bottom: 8px; }
+        .title { text-align: center; font-size: 22px; font-weight: 600; color: #333; letter-spacing: 2px; }
+        .subtitle { text-align: center; color: #666; font-size: 13px; margin: 8px 0 24px; letter-spacing: 0.5px; line-height: 1.7; }
+        .paper { background: #fff; border-radius: 16px; padding: 40px 44px; box-shadow: 0 1px 2px rgba(26,115,232,.10), 0 4px 12px rgba(26,115,232,.10), 0 20px 40px rgba(26,115,232,.14); border: 1px solid rgba(255,255,255,.8); color: #444; font-size: 14px; line-height: 1.9; }
+        .paper h2 { font-size: 17px; color: #1a73e8; margin: 24px 0 10px; }
+        .paper h2:first-child { margin-top: 0; }
+        .paper ul { padding-left: 22px; margin: 6px 0; }
+        .paper li { margin: 4px 0; }
+        .paper a { color: #1a73e8; text-decoration: none; }
+        .paper a:hover { text-decoration: underline; }
+        .paper ul ul { margin: 4px 0; }
+        .paper .update-note { background: #f1f6ff; border-left: 3px solid #1a73e8; padding: 10px 14px; border-radius: 6px; color: #555; font-size: 13px; margin-bottom: 20px; }
+        .back-links { margin-top: 20px; text-align: center; font-size: 13px; }
+        .back-links a { color: #1a73e8; text-decoration: none; margin: 0 8px; }
+        .footer { text-align: center; color: #999; font-size: 12px; margin-top: 32px; }
+        @media (max-width: 600px) { .paper { padding: 24px 20px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">安 答</div>
+        </div>
+        <div class="title">个人隐私政策</div>
+        <div class="subtitle">更新日期：2026年11月9日 · 生效日期：2026年11月9日</div>
+        <div class="paper">
+            <div class="update-note">「安答」（以下简称"本平台"）是由学生团队开发的校园 AI Agent 助手。我们深知个人信息对你的重要性，并会尽全力保护你的个人信息安全。请在使用本平台前仔细阅读并充分理解本政策。</div>
+
+            <h2>一、我们收集的信息</h2>
+            <ul>
+                <li><b>账号信息：</b>注册时收集的用户名、邮箱地址；密码经 PBKDF2 不可逆加密后存储，我们无法查看你的原始密码。</li>
+                <li><b>学习助手信息：</b>你主动录入的课表、备忘、提醒事项，以及与 AI 的对话记录。</li>
+                <li><b>上传文件：</b>你在对话中上传的图片、文档等附件，仅用于 AI 理解与分析。</li>
+                <li><b>网络位置信息：</b>仅当你使用校园导航功能时，收集你手动提供的出发地/目的地，不进行后台定位。</li>
+            </ul>
+
+            <h2>二、我们如何使用信息</h2>
+            <ul>
+                <li>为你提供 AI 对话、课程查询、备忘提醒、校园导航等核心功能；</li>
+                <li>通过你注册的邮箱发送账号激活邮件、找回密码邮件与课程提醒通知；</li>
+                <li>聚合分析（脱敏后）用于改进服务质量，不会关联到你的具体身份。</li>
+            </ul>
+
+            <h2>三、信息的共享与委托</h2>
+            <p>为实现功能，部分数据会传递给以下第三方服务，且仅传递完成任务所必需的最小内容：</p>
+            <ul>
+                <li><b>大模型服务（智谱开放平台 / 硅基流动 / Ollama 本地模型）：</b>对话内容与相关上下文，用于生成回答。使用云端大模型时，你的数据还将受其官方条款约束：
+                    <ul>
+                        <li>智谱开放平台：<a href="https://docs.bigmodel.cn/cn/terms/privacy-policy" target="_blank" rel="noopener">《隐私政策》</a> · <a href="https://docs.bigmodel.cn/cn/terms/user-agreement" target="_blank" rel="noopener">《用户协议》</a></li>
+                        <li>硅基流动（SiliconFlow）：<a href="https://docs.siliconflow.cn/docs/legals/privacy-policy" target="_blank" rel="noopener">《隐私政策》</a> · <a href="https://docs.siliconflow.cn/legals/terms-of-service" target="_blank" rel="noopener">《用户协议》</a></li>
+                    </ul>
+                    （Ollama 为本地部署模型，数据不出本服务器，不涉及第三方传输）</li>
+                <li><b>搜索引擎与高德地图 API：</b>联网搜索关键词、导航起终点，用于检索与路线规划；</li>
+                <li>除上述情形外，我们不会向任何第三方出售、共享你的个人信息。</li>
+            </ul>
+
+            <h2>四、信息的存储与保护</h2>
+            <ul>
+                <li>所有数据存储于服务器本地数据库（SQLite），不上架公开数据平台；</li>
+                <li>会话采用令牌鉴权，密码采用 PBKDF2 加盐哈希，登录与注册设有频率限制防暴力破解；</li>
+                <li>上传文件按用户隔离存放，接口带路径穿越防护；</li>
+                <li>我们仅在为你提供服务所必需的期限内保留数据。</li>
+            </ul>
+
+            <h2>五、你的权利</h2>
+            <ul>
+                <li>你可以在平台内随时查看、修改个人资料，删除自己的对话、备忘、课表与上传文件；</li>
+                <li>你可以通过"找回密码"功能自主重置密码；</li>
+                <li>如需彻底删除账号及全部关联数据，可通过页面底部联系方式与我们联系，我们将在核实后 7 个工作日内处理。</li>
+            </ul>
+
+            <h2>六、未成年人保护</h2>
+            <p>本平台面向高校师生提供服务。若你是未满 14 周岁的未成年人，请在监护人陪同下阅读本政策，并在征得监护人同意后使用本平台。</p>
+
+            <h2>七、政策的更新</h2>
+            <p>我们可能适时修订本政策，重大变更会通过平台公告或邮件通知你。若你继续使用本平台，即视为接受修订后的政策。</p>
+
+            <h2>八、联系我们</h2>
+            <p>如对本政策有任何疑问、意见或投诉，请通过 <b>2733729750@qq.com</b> 与我们联系，我们将在 15 个工作日内答复。</p>
+        </div>
+        <div class="back-links">
+            <a href="../index.html">返回登录</a> · <a href="docs.html">文档中心</a> · <a href="terms.html">网站服务政策</a>
+        </div>
+        <div class="footer">
+            <div class="copyright">© 2026 安答. All rights reserved.</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文档中心 - 安答：校园AI Agent助手</title>
+    <!-- 文档中心：内嵌使用指南 + 常见问题，研究报告/PPT 放 public/docs/ 供下载；样式内联与 register.html 保持一致——祖传规矩，别手痒 (¬‿¬) -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: "PingFang SC","Microsoft YaHei", "Segoe UI", sans-serif; min-height: 100vh; background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%); background-attachment: fixed; }
+        .container { max-width: 860px; margin: 60px auto; padding: 24px; }
+        .logo { text-align: center; font-size: 28px; font-weight: bold; color: #1a73e8; margin-bottom: 8px; }
+        .title { text-align: center; font-size: 22px; font-weight: 600; color: #333; letter-spacing: 2px; }
+        .subtitle { text-align: center; color: #666; font-size: 14px; margin: 8px 0 24px; letter-spacing: 0.5px; }
+        .paper { background: #fff; border-radius: 16px; padding: 36px 40px; box-shadow: 0 1px 2px rgba(26,115,232,.10), 0 4px 12px rgba(26,115,232,.10), 0 20px 40px rgba(26,115,232,.14); border: 1px solid rgba(255,255,255,.8); color: #444; font-size: 14px; line-height: 1.9; }
+        .paper h2 { font-size: 17px; color: #1a73e8; margin: 26px 0 10px; }
+        .paper h2:first-child { margin-top: 0; }
+        .paper ol, .paper ul { padding-left: 22px; margin: 6px 0; }
+        .paper li { margin: 4px 0; }
+        .doc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 12px; }
+        .doc-card { display: block; background: #f5f8ff; border: 1px solid #dbe6ff; border-radius: 10px; padding: 14px 16px; text-decoration: none; color: #333; transition: all .15s ease; }
+        .doc-card:hover { border-color: #1a73e8; box-shadow: 0 4px 12px rgba(26,115,232,.15); transform: translateY(-2px); }
+        .doc-card .doc-icon { font-size: 26px; }
+        .doc-card .doc-name { font-size: 14px; font-weight: 600; margin: 6px 0 2px; word-break: break-all; }
+        .doc-card .doc-meta { font-size: 12px; color: #888; }
+        .back-links { margin-top: 20px; text-align: center; font-size: 13px; }
+        .back-links a { color: #1a73e8; text-decoration: none; margin: 0 8px; }
+        .footer { text-align: center; color: #999; font-size: 12px; margin-top: 32px; }
+        @media (max-width: 600px) { .paper { padding: 24px 20px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">安 答</div>
+        </div>
+        <div class="title">文档中心</div>
+        <div class="subtitle">使用指南 · 常见问题 · 项目文档下载</div>
+        <div class="paper">
+            <h2>一、快速上手</h2>
+            <ol>
+                <li><b>注册账号：</b>填写用户名、密码（不少于 6 位，英文字母 + 数字混合）与邮箱，提交后到邮箱点击激活链接；</li>
+                <li><b>开始对话：</b>进入 AI 对话页，直接提问，或上传图片/文档让安答帮你分析；</li>
+                <li><b>录入课表：</b>在日程页添加课程，安答就能在课前通过邮件提醒你；</li>
+                <li><b>备忘与提醒：</b>对话里直接说"帮我记一下…"、"提醒我…"，也可以在页面里手动管理；</li>
+                <li><b>日历订阅：</b>在日程页获取 ICS 订阅链接，把课程与提醒同步进手机自带日历。</li>
+            </ol>
+
+            <h2>二、常见问题</h2>
+            <ul>
+                <li><b>激活邮件没收到？</b>先翻翻垃圾箱；仍未收到就稍等几分钟重试，邮件由 QQ 邮箱 SMTP 发送。</li>
+                <li><b>忘记密码？</b>在登录页点"忘记密码"，凭注册邮箱申请重置链接。</li>
+                <li><b>AI 回答有误？</b>安答的回答由大模型生成，可能出错，重要信息请自行核实；也可以让它联网搜索或查询校园知识库。</li>
+                <li><b>对话记录会丢吗？</b>每条对话独立保存，可在对话页切换查看；删除某条对话后其全部上下文将被彻底清除。</li>
+            </ul>
+
+            <h2>三、项目文档下载</h2>
+            <div class="doc-grid">
+                <a class="doc-card" href="/docs/安答：校园AI-Agent助手研究报告.docx" download>
+                    <div class="doc-icon">📄</div>
+                    <div class="doc-name">安答：校园AI Agent助手研究报告</div>
+                    <div class="doc-meta">DOCX · 项目完整研究报告</div>
+                </a>
+                <a class="doc-card" href="/docs/安答：校园AI Agent助手.pptx" download>
+                    <div class="doc-icon">📊</div>
+                    <div class="doc-name">安答：校园AI Agent助手</div>
+                    <div class="doc-meta">PPTX · 项目介绍演示文稿</div>
+                </a>
+            </div>
+        </div>
+        <div class="back-links">
+            <a href="../index.html">返回登录</a> · <a href="privacy.html">个人隐私政策</a> · <a href="terms.html">网站服务政策</a>
+        </div>
+        <div class="footer">
+            <div class="copyright">© 2026 安答. All rights reserved.</div>
+        </div>
+    </div>
+</body>
+</html>

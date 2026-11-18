@@ -215,7 +215,7 @@ def chat(db: Session, user: User, utterance: str, context=None, refs=None, chat_
     ref_block = _build_ref_block(user, refs)
     if user_block:
         ref_block = f"{user_block}\n\n{ref_block}" if ref_block else user_block
-    ctx = list(context) if context else chat_history_service.recall_window(db, user.id)
+    ctx = list(context) if context else chat_history_service.recall_window(db, user.id, chat_id=chat_id)
     result = orchestrator.run(user.id, utterance.strip(), ctx, ref_block=ref_block, refs=list(refs or []))
     if chat_id:
         # 带上 chat_id 才落库；页面记录与模型记忆同源（app.db/chat_message）
@@ -229,7 +229,7 @@ def chat_stream(db: Session, user: User, utterance: str, refs=None, chat_id=None
     ref_block = _build_ref_block(user, refs)
     if user_block:
         ref_block = f"{user_block}\n\n{ref_block}" if ref_block else user_block
-    ctx = chat_history_service.recall_window(db, user.id)   # 先取旧上下文再存本轮提问，模型不会重复看到当前问题
+    ctx = chat_history_service.recall_window(db, user.id, chat_id=chat_id)   # 先取旧上下文再存本轮提问，模型不会重复看到当前问题
     if chat_id:
         chat_history_service.save_message(db, user.id, chat_id, "user", utterance.strip())
     answer, reasoning = "", ""

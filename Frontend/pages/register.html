@@ -22,6 +22,9 @@
         .submit-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 0 0 #4c1d95, 0 3px 8px rgba(124,92,240,.4); }
         .submit-btn:hover:not(:disabled) { filter: brightness(1.08); }
         #register-msg { text-align: center; font-size: 13px; color: #e53935; min-height: 18px; margin-top: 8px; }
+        .agreement { text-align: center; font-size: 12px; color: #999; margin-top: 10px; line-height: 1.6; }
+        .agreement a { color: #1a73e8; text-decoration: none; }
+        .agreement a:hover { text-decoration: underline; }
         .auth-links { margin-top: 16px; text-align: center; font-size: 13px; }
         .auth-links a { color: #1a73e8; text-decoration: none; margin: 0 8px; }
         .footer { text-align: center; color: #999; font-size: 12px; margin-top: 32px; }
@@ -49,13 +52,14 @@
                     </div>
                     <div class="form-group">
                         <label for="password">密码</label>
-                        <input type="password" id="password" name="password" placeholder="密码至少 6 位，悄悄告诉我~" minlength="6" required>
+                        <input type="password" id="password" name="password" placeholder="至少 6 位，英文字母+数字混合哦~" minlength="6" required>
                     </div>
                     <div class="form-group">
                         <label for="email">邮箱</label>
                         <input type="email" id="email" name="email" placeholder="邮箱填这里哦~" required>
                     </div>
                     <button type="submit" class="submit-btn">注册 ✧</button>
+                    <p class="agreement">注册即代表我同意 <a href="privacy.html" target="_blank">《个人隐私政策》</a> 与 <a href="terms.html" target="_blank">《网站服务政策》</a></p>
                     <div id="register-msg"></div>
                 </form>
                 <div class="auth-links">
